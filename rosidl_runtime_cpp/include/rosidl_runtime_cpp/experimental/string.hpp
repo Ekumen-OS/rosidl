@@ -423,6 +423,22 @@ private:
   size_type size_;
 };
 
+template<typename CharT, std::size_t UpperBound>
+inline bool operator==(
+  const BasicString<CharT, UpperBound> & lhs,
+  const BasicString<CharT, UpperBound> & rhs)
+{
+  return lhs.view() == rhs.view();
+}
+
+template<typename CharT, std::size_t UpperBound>
+inline bool operator!=(
+  const BasicString<CharT, UpperBound> & lhs,
+  const BasicString<CharT, UpperBound> & rhs)
+{
+  return !(lhs == rhs);
+}
+
 class String : public BasicString<char>
 {
 public:

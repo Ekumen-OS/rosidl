@@ -86,6 +86,18 @@ private:
   std::variant<Memory, T> storage_;
 };
 
+template<typename T>
+inline bool operator==(const Scalar<T> & lhs, const Scalar<T> & rhs)
+{
+  return lhs.get() == rhs.get();
+}
+
+template<typename T>
+inline bool operator!=(const Scalar<T> & lhs, const Scalar<T> & rhs)
+{
+  return !(lhs == rhs);
+}
+
 }  // namespace rosidl_runtime_cpp
 
 #endif  // ROSIDL_RUNTIME_CPP__EXPERIMENTAL__SCALAR_HPP_

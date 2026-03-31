@@ -604,6 +604,22 @@ public:
   using BasicSequence<T, UpperBound>::BasicSequence;
 };
 
+template<typename T, std::size_t UpperBound>
+inline bool operator==(
+  const BasicSequence<T, UpperBound> & lhs,
+  const BasicSequence<T, UpperBound> & rhs)
+{
+  return lhs.size() == rhs.size() && std::equal(lhs.begin(), lhs.end(), rhs.begin());
+}
+
+template<typename T, std::size_t UpperBound>
+inline bool operator!=(
+  const BasicSequence<T, UpperBound> & lhs,
+  const BasicSequence<T, UpperBound> & rhs)
+{
+  return !(lhs == rhs);
+}
+
 }  // namespace rosidl_runtime_cpp
 
 #endif  // ROSIDL_RUNTIME_CPP__EXPERIMENTAL__SEQUENCE_HPP_

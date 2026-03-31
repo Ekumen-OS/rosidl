@@ -15,10 +15,13 @@
 #ifndef ROSIDL_RUNTIME_CPP__EXPERIMENTAL__ARRAY_HPP_
 #define ROSIDL_RUNTIME_CPP__EXPERIMENTAL__ARRAY_HPP_
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <iterator>
+#include <new>
 #include <stdexcept>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -190,7 +193,63 @@ public:
 private:
   struct InternalStorage
   {
-    T data[N]{};
+    alignas(T) std::byte raw[sizeof(T) * N];
+    T * data() noexcept {return reinterpret_cast<T *>(raw);}
+    const T * data() const noexcept {return reinterpret_cast<const T *>(raw);}
+
+    InternalStorage()
+    {
+      for (std::size_t i = 0; i < N; ++i) {
+        ::new (data() + i) T();
+      }
+    }
+
+    InternalStorage(const InternalStorage & other)
+    {
+      for (std::size_t i = 0; i < N; ++i) {
+        ::new (data() + i) T(other.data()[i]);
+      }
+    }
+
+    InternalStorage(InternalStorage && other) noexcept
+    {
+      for (std::size_t i = 0; i < N; ++i) {
+        ::new (data() + i) T(std::move(other.data()[i]));
+      }
+    }
+
+    InternalStorage & operator=(const InternalStorage & other)
+    {
+      if (this != &other) {
+        for (std::size_t i = 0; i < N; ++i) {
+          data()[i] = other.data()[i];
+        }
+      }
+      return *this;
+    }
+
+    InternalStorage & operator=(InternalStorage && other) noexcept
+    {
+      if (this != &other) {
+        for (std::size_t i = 0; i < N; ++i) {
+          data()[i] = std::move(other.data()[i]);
+        }
+      }
+      return *this;
+    }
+
+    ~InternalStorage()
+    {
+      if constexpr (!std::is_trivially_destructible_v<T>) {
+        for (std::size_t i = 0; i < N; ++i) {
+          data()[i].~T();
+        }
+      }
+    }
+
+    /// @brief Tag for uninitialized storage (used by the piecewise constructor).
+    struct uninit_t {};
+    explicit InternalStorage(uninit_t) noexcept {}
   };
 
 public:
@@ -220,6 +279,30 @@ public:
   explicit Array(MemoryRegion region)
   : storage_(region)
   {}
+
+  /// @brief Piecewise in-place constructor: constructs each element from its own
+  ///        arg tuple, in index order, with no intermediate default construction.
+  ///
+  /// Exactly N tuples must be provided, one per element.
+  /// @code
+  ///   Array<Msg, 3>(std::piecewise_construct,
+  ///     std::make_tuple(arg0), std::make_tuple(arg1), std::make_tuple(arg2));
+  /// @endcode
+  template<
+    typename ... ArgTuples,
+    std::enable_if_t<sizeof...(ArgTuples) == N, int> = 0>
+  explicit Array(std::piecewise_construct_t, ArgTuples && ... arg_tuples)
+  : storage_(InternalStorage{typename InternalStorage::uninit_t{}})
+  {
+    T * ptr = std::get<InternalStorage>(storage_).data();
+    std::size_t i = 0;
+    (..., std::apply(
+        [&](auto && ... args) {
+          ::new (static_cast<void *>(ptr + i)) T(std::forward<decltype(args)>(args)...);
+          ++i;
+        },
+        std::forward<ArgTuples>(arg_tuples)));
+  }
 
   /// @brief Assign from `std::array`.
   /// @param array Source array.
@@ -284,7 +367,7 @@ public:
       return *reinterpret_cast<pointer>(
         static_cast<std::byte *>(region.location.address) + position * sizeof(T));
     }
-    return std::get<InternalStorage>(storage_).data[position];
+    return std::get<InternalStorage>(storage_).data()[position];
   }
 
   /// @brief Unchecked element access.
@@ -295,7 +378,7 @@ public:
       return *reinterpret_cast<const_pointer>(
         static_cast<const std::byte *>(region.location.address) + position * sizeof(T));
     }
-    return std::get<InternalStorage>(storage_).data[position];
+    return std::get<InternalStorage>(storage_).data()[position];
   }
 
   /// @brief First element.
@@ -316,7 +399,7 @@ public:
     if (std::holds_alternative<MemoryRegion>(storage_)) {
       return reinterpret_cast<pointer>(std::get<MemoryRegion>(storage_).location.address);
     }
-    return std::get<InternalStorage>(storage_).data;
+    return std::get<InternalStorage>(storage_).data();
   }
 
   /// @brief Pointer to first element.
@@ -326,7 +409,7 @@ public:
       return reinterpret_cast<const_pointer>(
         std::get<MemoryRegion>(storage_).location.address);
     }
-    return std::get<InternalStorage>(storage_).data;
+    return std::get<InternalStorage>(storage_).data();
   }
 
   iterator begin() noexcept {return make_iterator(0);}
@@ -371,7 +454,7 @@ private:
         sizeof(T));
     }
     return iterator(
-      reinterpret_cast<std::byte *>(std::get<InternalStorage>(storage_).data) +
+      reinterpret_cast<std::byte *>(std::get<InternalStorage>(storage_).data()) +
       position * sizeof(T),
       sizeof(T));
   }
@@ -385,13 +468,25 @@ private:
         sizeof(T));
     }
     return const_iterator(
-      reinterpret_cast<const std::byte *>(std::get<InternalStorage>(storage_).data) +
+      reinterpret_cast<const std::byte *>(std::get<InternalStorage>(storage_).data()) +
       position * sizeof(T),
       sizeof(T));
   }
 
   std::variant<MemoryRegion, InternalStorage> storage_;
 };
+
+template<typename T, std::size_t N>
+inline bool operator==(const Array<T, N> & lhs, const Array<T, N> & rhs)
+{
+  return std::equal(lhs.begin(), lhs.end(), rhs.begin());
+}
+
+template<typename T, std::size_t N>
+inline bool operator!=(const Array<T, N> & lhs, const Array<T, N> & rhs)
+{
+  return !(lhs == rhs);
+}
 
 }  // namespace rosidl_runtime_cpp
 
