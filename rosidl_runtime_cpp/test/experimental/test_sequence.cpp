@@ -70,7 +70,7 @@ TEST(rosidl_runtime_cpp_experimental_sequence, upper_bound_is_enforced)
 TEST(rosidl_runtime_cpp_experimental_sequence, fixed_scalar_storage_capacity_is_enforced)
 {
   int storage[3] = {0, 0, 0};
-  rosidl_runtime_cpp::MemoryRegion region{};
+  rosidl_memory_region_t region;
   region.location.address = storage;
   region.location.attributes = 0;
   region.size = sizeof(storage);
@@ -88,7 +88,7 @@ TEST(rosidl_runtime_cpp_experimental_sequence, fixed_storage_capacity_uses_eleme
 {
   std::byte storage[3 * sizeof(int) + 1] = {};
 
-  rosidl_runtime_cpp::MemoryRegion region{};
+  rosidl_memory_region_t region;
   region.location.address = storage;
   region.location.attributes = 0;
   region.size = sizeof(storage);
@@ -103,7 +103,7 @@ TEST(rosidl_runtime_cpp_experimental_sequence, non_scalar_fixed_storage)
 {
   alignas(Widget) std::byte storage[2 * sizeof(Widget)] = {};
 
-  rosidl_runtime_cpp::MemoryRegion region{};
+  rosidl_memory_region_t region;
   region.location.address = storage;
   region.location.attributes = 0;
   region.size = sizeof(storage);

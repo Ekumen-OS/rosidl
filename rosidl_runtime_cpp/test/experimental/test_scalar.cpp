@@ -28,7 +28,7 @@ TEST(rosidl_runtime_cpp_experimental_scalar, inline_storage_roundtrip)
 TEST(rosidl_runtime_cpp_experimental_scalar, external_storage_aliasing)
 {
   int value = 3;
-  rosidl_runtime_cpp::Memory memory{};
+  rosidl_memory_t memory;
   memory.address = &value;
   memory.attributes = 0;
 

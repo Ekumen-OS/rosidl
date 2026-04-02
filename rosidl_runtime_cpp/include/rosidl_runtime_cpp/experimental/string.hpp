@@ -95,6 +95,9 @@ public:
   using reverse_iterator = std::reverse_iterator<iterator>;
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
+  // Storage type for external memory initialization
+  using ExternalStorage = MemoryRegion<CharT>;
+
   /// @brief Construct using default PMR storage.
   BasicString()
   : storage_pool_(std::pmr::get_default_resource()),
@@ -116,10 +119,10 @@ public:
   }
 
   /// @brief Construct over fixed external storage.
-  explicit BasicString(MemoryRegion storage_region)
+  explicit BasicString(MemoryRegion<CharT> storage_region)
   : storage_pool_(nullptr), storage_(storage_region), capacity_(0), size_(0)
   {
-    const size_type total_slots = storage_region.size / sizeof(CharT);
+    const size_type total_slots = storage_region.capacity();
     if (total_slots == 0) {
       throw std::invalid_argument(
               "BasicString storage region has no room for null terminator");
@@ -128,18 +131,16 @@ public:
     null_terminate();
   }
 
-  BasicString(
+  explicit BasicString(
     std::basic_string_view<CharT> value,
-    std::pmr::memory_resource * storage_pool = std::pmr::get_default_resource())
+    std::pmr::memory_resource * storage_pool)
   : BasicString(storage_pool)
   {
     assign(value);
   }
 
-  BasicString(
-    const std::basic_string<CharT> & value,
-    std::pmr::memory_resource * storage_pool = std::pmr::get_default_resource())
-  : BasicString(storage_pool)
+  BasicString(std::basic_string_view<CharT> value)  // NOLINT(runtime/explicit)
+  : BasicString(std::pmr::get_default_resource())
   {
     assign(value);
   }
@@ -198,12 +199,6 @@ public:
   }
 
   BasicString & operator=(std::basic_string_view<CharT> value)
-  {
-    assign(value);
-    return *this;
-  }
-
-  BasicString & operator=(const std::basic_string<CharT> & value)
   {
     assign(value);
     return *this;
@@ -321,6 +316,36 @@ public:
     return *this;
   }
 
+  friend bool operator==(const BasicString & lhs, const BasicString & rhs)
+  {
+    return lhs.view() == rhs.view();
+  }
+
+  friend bool operator!=(const BasicString & lhs, const BasicString & rhs)
+  {
+    return !(lhs == rhs);
+  }
+
+  friend bool operator==(const BasicString & lhs, std::basic_string_view<CharT> rhs)
+  {
+    return lhs.view() == rhs;
+  }
+
+  friend bool operator==(std::basic_string_view<CharT> lhs, const BasicString & rhs)
+  {
+    return lhs == rhs.view();
+  }
+
+  friend bool operator!=(const BasicString & lhs, std::basic_string_view<CharT> rhs)
+  {
+    return !(lhs == rhs);
+  }
+
+  friend bool operator!=(std::basic_string_view<CharT> lhs, const BasicString & rhs)
+  {
+    return !(lhs == rhs);
+  }
+
 private:
   struct InternalStorage
   {
@@ -367,107 +392,62 @@ private:
 
   void reallocate_owned_storage(size_type new_capacity)
   {
-    void * new_address = storage_pool_->allocate((new_capacity + 1) * sizeof(CharT),
-        alignof(CharT));
-    auto * new_storage_pointer = static_cast<std::byte *>(new_address);
+    pointer new_address = static_cast<pointer>(
+      storage_pool_->allocate((new_capacity + 1) * sizeof(CharT), alignof(CharT)));
     if (size_ > 0) {
-      std::memmove(new_storage_pointer, data(), size_ * sizeof(CharT));
+      std::memmove(new_address, data(), size_ * sizeof(CharT));
     }
-    auto * terminator_pointer = reinterpret_cast<pointer>(new_storage_pointer + size_ *
-      sizeof(CharT));
-    *terminator_pointer = CharT{};
+    new_address[size_] = CharT{};
 
     release_owned_storage();
 
-    MemoryRegion region{};
-    region.location.address = new_address;
-    region.location.attributes = 0;
-    region.size = (new_capacity + 1) * sizeof(CharT);
-    storage_ = region;
+    storage_ = MemoryRegion<CharT>(new_address, (new_capacity + 1) * sizeof(CharT));
     capacity_ = new_capacity;
   }
 
   void release_owned_storage()
   {
-    if (!storage_pool_ || !std::holds_alternative<MemoryRegion>(storage_)) {
+    if (!storage_pool_ || !std::holds_alternative<MemoryRegion<CharT>>(storage_)) {
       return;
     }
-    const auto & region = std::get<MemoryRegion>(storage_);
-    if (region.location.address == nullptr) {
+    auto & region = std::get<MemoryRegion<CharT>>(storage_);
+    if (!region) {
       return;
     }
-    storage_pool_->deallocate(region.location.address, region.size, alignof(CharT));
+    storage_pool_->deallocate(region.data(), region.size(), alignof(CharT));
     storage_ = InternalStorage{};
     capacity_ = InternalStorage::kCapacity;
   }
 
   pointer mutable_data_pointer() noexcept
   {
-    if (std::holds_alternative<MemoryRegion>(storage_)) {
-      return reinterpret_cast<pointer>(std::get<MemoryRegion>(storage_).location.address);
+    if (std::holds_alternative<MemoryRegion<CharT>>(storage_)) {
+      return std::get<MemoryRegion<CharT>>(storage_).data();
     }
     return std::get<InternalStorage>(storage_).data;
   }
 
   const_pointer const_data_pointer() const noexcept
   {
-    if (std::holds_alternative<MemoryRegion>(storage_)) {
-      return reinterpret_cast<const_pointer>(
-        std::get<MemoryRegion>(storage_).location.address);
+    if (std::holds_alternative<MemoryRegion<CharT>>(storage_)) {
+      return std::get<MemoryRegion<CharT>>(storage_).data();
     }
     return std::get<InternalStorage>(storage_).data;
   }
   std::pmr::memory_resource * storage_pool_;
-  std::variant<MemoryRegion, InternalStorage> storage_;
+  std::variant<MemoryRegion<CharT>, InternalStorage> storage_;
   size_type capacity_;
   size_type size_;
 };
 
-template<typename CharT, std::size_t UpperBound>
-inline bool operator==(
-  const BasicString<CharT, UpperBound> & lhs,
-  const BasicString<CharT, UpperBound> & rhs)
-{
-  return lhs.view() == rhs.view();
-}
+using String = BasicString<char>;
+using WString = BasicString<char16_t>;
 
-template<typename CharT, std::size_t UpperBound>
-inline bool operator!=(
-  const BasicString<CharT, UpperBound> & lhs,
-  const BasicString<CharT, UpperBound> & rhs)
-{
-  return !(lhs == rhs);
-}
-
-class String : public BasicString<char>
-{
-public:
-  using BasicString<char>::BasicString;
-};
-
-/// @brief Narrow-character experimental string.
-/// @tparam UpperBound Maximum length excluding null terminator.
 template<std::size_t UpperBound>
-class BoundedString : public BasicString<char, UpperBound>
-{
-public:
-  using BasicString<char, UpperBound>::BasicString;
-};
+using BoundedString = BasicString<char, UpperBound>;
 
-class WString : public BasicString<char16_t>
-{
-public:
-  using BasicString<char16_t>::BasicString;
-};
-
-/// @brief Wide-character experimental string.
-/// @tparam UpperBound Maximum length excluding null terminator.
 template<std::size_t UpperBound>
-class BoundedWString : public BasicString<char16_t, UpperBound>
-{
-public:
-  using BasicString<char16_t, UpperBound>::BasicString;
-};
+using BoundedWString = BasicString<char16_t, UpperBound>;
 
 }  // namespace rosidl_runtime_cpp
 

@@ -50,7 +50,7 @@ TEST(rosidl_runtime_cpp_experimental_string, upper_bound_is_enforced)
 TEST(rosidl_runtime_cpp_experimental_string, fixed_storage_capacity_is_enforced)
 {
   char storage[4] = {};
-  rosidl_runtime_cpp::MemoryRegion region{};
+  rosidl_memory_region_t region;
   region.location.address = storage;
   region.location.attributes = 0;
   region.size = sizeof(storage);
@@ -64,7 +64,7 @@ TEST(rosidl_runtime_cpp_experimental_string, fixed_storage_capacity_is_enforced)
 TEST(rosidl_runtime_cpp_experimental_string, supports_wide_characters)
 {
   char16_t storage[6] = {};
-  rosidl_runtime_cpp::MemoryRegion region{};
+  rosidl_memory_region_t region;
   region.location.address = storage;
   region.location.attributes = 0;
   region.size = sizeof(storage);
@@ -80,7 +80,7 @@ TEST(rosidl_runtime_cpp_experimental_string, supports_wide_characters)
 TEST(rosidl_runtime_cpp_experimental_string, empty_region_throws)
 {
   char storage[8] = {};
-  rosidl_runtime_cpp::MemoryRegion region{};
+  rosidl_memory_region_t region;
   region.location.address = storage;
   region.location.attributes = 0;
   region.size = 0;

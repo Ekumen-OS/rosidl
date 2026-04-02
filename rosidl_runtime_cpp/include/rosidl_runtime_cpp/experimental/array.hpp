@@ -48,145 +48,8 @@ public:
   using const_reference = const T &;
   using pointer = T *;
   using const_pointer = const T *;
-
-private:
-  template<bool IsConst>
-  class StridedIterator
-  {
-public:
-    using iterator_category = std::random_access_iterator_tag;
-    using value_type = T;
-    using difference_type = std::ptrdiff_t;
-    using pointer = typename std::conditional<IsConst, const T *, T *>::type;
-    using reference = typename std::conditional<IsConst, const T &, T &>::type;
-    using byte_pointer = typename std::conditional<IsConst, const std::byte *, std::byte *>::type;
-
-    /// @brief Construct a strided iterator.
-    /// @param raw_pointer Byte pointer to element storage.
-    /// @param stride Step size in bytes between consecutive elements.
-    StridedIterator(byte_pointer raw_pointer, std::size_t stride)
-    : raw_pointer_(raw_pointer), stride_(stride)
-    {}
-
-    template<bool B = IsConst, typename std::enable_if<B, int>::type = 0>
-    StridedIterator(const StridedIterator<false> & other)
-    : raw_pointer_(other.raw_pointer_), stride_(other.stride_)
-    {}
-
-    reference operator*() const
-    {
-      return *reinterpret_cast<pointer>(raw_pointer_);
-    }
-
-    pointer operator->() const
-    {
-      return reinterpret_cast<pointer>(raw_pointer_);
-    }
-
-    reference operator[](difference_type offset) const
-    {
-      return *(*this + offset);
-    }
-
-    StridedIterator & operator++()
-    {
-      raw_pointer_ += stride_;
-      return *this;
-    }
-
-    StridedIterator operator++(int)
-    {
-      auto copy = *this;
-      ++(*this);
-      return copy;
-    }
-
-    StridedIterator & operator--()
-    {
-      raw_pointer_ -= stride_;
-      return *this;
-    }
-
-    StridedIterator operator--(int)
-    {
-      auto copy = *this;
-      --(*this);
-      return copy;
-    }
-
-    StridedIterator & operator+=(difference_type offset)
-    {
-      raw_pointer_ += offset * static_cast<difference_type>(stride_);
-      return *this;
-    }
-
-    StridedIterator & operator-=(difference_type offset)
-    {
-      raw_pointer_ -= offset * static_cast<difference_type>(stride_);
-      return *this;
-    }
-
-    StridedIterator operator+(difference_type offset) const
-    {
-      auto copy = *this;
-      copy += offset;
-      return copy;
-    }
-
-    StridedIterator operator-(difference_type offset) const
-    {
-      auto copy = *this;
-      copy -= offset;
-      return copy;
-    }
-
-    difference_type operator-(const StridedIterator & other) const
-    {
-      return (raw_pointer_ - other.raw_pointer_) /
-             static_cast<difference_type>(stride_);
-    }
-
-    bool operator==(const StridedIterator & other) const
-    {
-      return raw_pointer_ == other.raw_pointer_;
-    }
-
-    bool operator!=(const StridedIterator & other) const
-    {
-      return !(*this == other);
-    }
-
-    bool operator<(const StridedIterator & other) const
-    {
-      return raw_pointer_ < other.raw_pointer_;
-    }
-
-    bool operator>(const StridedIterator & other) const
-    {
-      return other < *this;
-    }
-
-    bool operator<=(const StridedIterator & other) const
-    {
-      return !(other < *this);
-    }
-
-    bool operator>=(const StridedIterator & other) const
-    {
-      return !(*this < other);
-    }
-
-private:
-    byte_pointer raw_pointer_;
-    std::size_t stride_;
-
-    template<bool>
-    friend class StridedIterator;
-  };
-
-public:
-  using iterator = StridedIterator<false>;
-  using const_iterator = StridedIterator<true>;
+  using iterator = pointer;
+  using const_iterator = const_pointer;
   using reverse_iterator = std::reverse_iterator<iterator>;
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
@@ -276,7 +139,7 @@ public:
 
   /// @brief Construct over an external memory region.
   /// @param region External memory region.
-  explicit Array(MemoryRegion region)
+  explicit Array(MemoryRegion<T> region)
   : storage_(region)
   {}
 
@@ -297,9 +160,9 @@ public:
     T * ptr = std::get<InternalStorage>(storage_).data();
     std::size_t i = 0;
     (..., std::apply(
-        [&](auto && ... args) {
-          ::new (static_cast<void *>(ptr + i)) T(std::forward<decltype(args)>(args)...);
-          ++i;
+      [&](auto && ... args) {
+        ::new (static_cast<void *>(ptr + i)) T(std::forward<decltype(args)>(args)...);
+        ++i;
         },
         std::forward<ArgTuples>(arg_tuples)));
   }
@@ -362,10 +225,8 @@ public:
   /// @brief Unchecked element access.
   reference operator[](size_type position) noexcept
   {
-    if (std::holds_alternative<MemoryRegion>(storage_)) {
-      const auto & region = std::get<MemoryRegion>(storage_);
-      return *reinterpret_cast<pointer>(
-        static_cast<std::byte *>(region.location.address) + position * sizeof(T));
+    if (std::holds_alternative<MemoryRegion<T>>(storage_)) {
+      return std::get<MemoryRegion<T>>(storage_).data()[position];
     }
     return std::get<InternalStorage>(storage_).data()[position];
   }
@@ -373,10 +234,8 @@ public:
   /// @brief Unchecked element access.
   const_reference operator[](size_type position) const noexcept
   {
-    if (std::holds_alternative<MemoryRegion>(storage_)) {
-      const auto & region = std::get<MemoryRegion>(storage_);
-      return *reinterpret_cast<const_pointer>(
-        static_cast<const std::byte *>(region.location.address) + position * sizeof(T));
+    if (std::holds_alternative<MemoryRegion<T>>(storage_)) {
+      return std::get<MemoryRegion<T>>(storage_).data()[position];
     }
     return std::get<InternalStorage>(storage_).data()[position];
   }
@@ -396,8 +255,8 @@ public:
   /// @brief Pointer to first element.
   pointer data() noexcept
   {
-    if (std::holds_alternative<MemoryRegion>(storage_)) {
-      return reinterpret_cast<pointer>(std::get<MemoryRegion>(storage_).location.address);
+    if (std::holds_alternative<MemoryRegion<T>>(storage_)) {
+      return std::get<MemoryRegion<T>>(storage_).data();
     }
     return std::get<InternalStorage>(storage_).data();
   }
@@ -405,18 +264,17 @@ public:
   /// @brief Pointer to first element.
   const_pointer data() const noexcept
   {
-    if (std::holds_alternative<MemoryRegion>(storage_)) {
-      return reinterpret_cast<const_pointer>(
-        std::get<MemoryRegion>(storage_).location.address);
+    if (std::holds_alternative<MemoryRegion<T>>(storage_)) {
+      return std::get<MemoryRegion<T>>(storage_).data();
     }
     return std::get<InternalStorage>(storage_).data();
   }
 
-  iterator begin() noexcept {return make_iterator(0);}
-  const_iterator begin() const noexcept {return make_const_iterator(0);}
+  iterator begin() noexcept {return data();}
+  const_iterator begin() const noexcept {return data();}
   const_iterator cbegin() const noexcept {return begin();}
-  iterator end() noexcept {return make_iterator(N);}
-  const_iterator end() const noexcept {return make_const_iterator(N);}
+  iterator end() noexcept {return data() + N;}
+  const_iterator end() const noexcept {return data() + N;}
   const_iterator cend() const noexcept {return end();}
   reverse_iterator rbegin() noexcept {return reverse_iterator(end());}
   const_reverse_iterator rbegin() const noexcept {return const_reverse_iterator(end());}
@@ -444,49 +302,19 @@ public:
     storage_.swap(other.storage_);
   }
 
+  friend bool operator==(const Array & lhs, const Array & rhs)
+  {
+    return std::equal(lhs.begin(), lhs.end(), rhs.begin());
+  }
+
+  friend bool operator!=(const Array & lhs, const Array & rhs)
+  {
+    return !(lhs == rhs);
+  }
+
 private:
-  iterator make_iterator(size_type position) noexcept
-  {
-    if (std::holds_alternative<MemoryRegion>(storage_)) {
-      const auto & region = std::get<MemoryRegion>(storage_);
-      return iterator(
-        static_cast<std::byte *>(region.location.address) + position * sizeof(T),
-        sizeof(T));
-    }
-    return iterator(
-      reinterpret_cast<std::byte *>(std::get<InternalStorage>(storage_).data()) +
-      position * sizeof(T),
-      sizeof(T));
-  }
-
-  const_iterator make_const_iterator(size_type position) const noexcept
-  {
-    if (std::holds_alternative<MemoryRegion>(storage_)) {
-      const auto & region = std::get<MemoryRegion>(storage_);
-      return const_iterator(
-        static_cast<const std::byte *>(region.location.address) + position * sizeof(T),
-        sizeof(T));
-    }
-    return const_iterator(
-      reinterpret_cast<const std::byte *>(std::get<InternalStorage>(storage_).data()) +
-      position * sizeof(T),
-      sizeof(T));
-  }
-
-  std::variant<MemoryRegion, InternalStorage> storage_;
+  std::variant<MemoryRegion<T>, InternalStorage> storage_;
 };
-
-template<typename T, std::size_t N>
-inline bool operator==(const Array<T, N> & lhs, const Array<T, N> & rhs)
-{
-  return std::equal(lhs.begin(), lhs.end(), rhs.begin());
-}
-
-template<typename T, std::size_t N>
-inline bool operator!=(const Array<T, N> & lhs, const Array<T, N> & rhs)
-{
-  return !(lhs == rhs);
-}
 
 }  // namespace rosidl_runtime_cpp
 

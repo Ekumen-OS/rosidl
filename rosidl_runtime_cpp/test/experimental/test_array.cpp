@@ -47,7 +47,7 @@ TEST(rosidl_runtime_cpp_experimental_array, external_region_support)
 {
   int storage[3] = {1, 2, 3};
 
-  rosidl_runtime_cpp::MemoryRegion region{};
+  rosidl_memory_region_t region;
   region.location.address = storage;
   region.location.attributes = 0;
   region.size = sizeof(storage);

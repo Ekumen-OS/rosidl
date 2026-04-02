@@ -42,7 +42,7 @@ public:
 
   /// @brief Construct using external storage.
   /// @param memory External memory descriptor.
-  explicit Scalar(Memory memory)
+  explicit Scalar(Memory<T> memory)
   : storage_(memory)
   {}
 
@@ -59,8 +59,8 @@ public:
   /// @return Mutable value reference.
   T & get()
   {
-    if (std::holds_alternative<Memory>(storage_)) {
-      return *reinterpret_cast<T *>(std::get<Memory>(storage_).address);
+    if (std::holds_alternative<Memory<T>>(storage_)) {
+      return *std::get<Memory<T>>(storage_).data();
     }
     return std::get<T>(storage_);
   }
@@ -69,8 +69,8 @@ public:
   /// @return Immutable value reference.
   const T & get() const
   {
-    if (std::holds_alternative<Memory>(storage_)) {
-      return *reinterpret_cast<const T *>(std::get<Memory>(storage_).address);
+    if (std::holds_alternative<Memory<T>>(storage_)) {
+      return *std::get<Memory<T>>(storage_).data();
     }
     return std::get<T>(storage_);
   }
@@ -82,21 +82,39 @@ public:
     return get();
   }
 
+  friend bool operator==(const Scalar & lhs, const Scalar & rhs)
+  {
+    return lhs.get() == rhs.get();
+  }
+
+  friend bool operator!=(const Scalar & lhs, const Scalar & rhs)
+  {
+    return !(lhs == rhs);
+  }
+
+  // friend bool operator==(const Scalar & lhs, const T & rhs)
+  // {
+  //   return lhs.get() == rhs;
+  // }
+
+  // friend bool operator==(const T & lhs, const Scalar & rhs)
+  // {
+  //   return lhs == rhs.get();
+  // }
+
+  // friend bool operator!=(const Scalar & lhs, const T & rhs)
+  // {
+  //   return !(lhs == rhs);
+  // }
+
+  // friend bool operator!=(const T & lhs, const Scalar & rhs)
+  // {
+  //   return !(lhs == rhs);
+  // }
+
 private:
-  std::variant<Memory, T> storage_;
+  std::variant<Memory<T>, T> storage_;
 };
-
-template<typename T>
-inline bool operator==(const Scalar<T> & lhs, const Scalar<T> & rhs)
-{
-  return lhs.get() == rhs.get();
-}
-
-template<typename T>
-inline bool operator!=(const Scalar<T> & lhs, const Scalar<T> & rhs)
-{
-  return !(lhs == rhs);
-}
 
 }  // namespace rosidl_runtime_cpp
 
