@@ -84,6 +84,9 @@ struct @(action.namespaced_type.name)
   using Result = @(experimental_action_typename)@(ACTION_RESULT_SUFFIX);
   /// The feedback message defined in the action definition.
   using Feedback = @(experimental_action_typename)@(ACTION_FEEDBACK_SUFFIX);
+  using GoalConstraints = Goal::Constraints;
+  using ResultConstraints = Result::Constraints;
+  using FeedbackConstraints = Feedback::Constraints;
 
   struct Impl
   {

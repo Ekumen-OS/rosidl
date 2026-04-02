@@ -35,8 +35,8 @@ def generate_cpp(generator_arguments_file):
         'idl__struct.hpp.em': 'detail/%s__struct.hpp',
         'idl__traits.hpp.em': 'detail/%s__traits.hpp',
         'idl__type_support.hpp.em': 'detail/%s__type_support.hpp',
-        'idl__experimental_struct.hpp.em': 'detail/%s__experimental_struct.hpp',
-        'idl__experimental_traits.hpp.em': 'detail/%s__experimental_traits.hpp',
+        'idl__experimental_struct.hpp.em': 'experimental/detail/%s__struct.hpp',
+        'idl__experimental_traits.hpp.em': 'experimental/detail/%s__traits.hpp',
         'idl__experimental.hpp.em': 'experimental/%s.hpp',
     }
     return generate_files(
@@ -76,119 +76,6 @@ MSG_TYPE_TO_CPP = {
     'wstring': 'std::basic_string<char16_t, std::char_traits<char16_t>, typename ' +
                'std::allocator_traits<ContainerAllocator>::template rebind_alloc<char16_t>>',
 }
-
-# Mapping from rosidl BasicType typename to the raw C++ scalar type used in Scalar<T> and
-# as sequence/array element types in experimental message structs.
-BASIC_TYPE_TO_EXPERIMENTAL_CPP = {
-    'boolean': 'bool',
-    'octet': 'unsigned char',
-    'char': 'unsigned char',
-    'wchar': 'char16_t',
-    'float': 'float',
-    'double': 'double',
-    'long double': 'long double',
-    'uint8': 'uint8_t',
-    'int8': 'int8_t',
-    'uint16': 'uint16_t',
-    'int16': 'int16_t',
-    'uint32': 'uint32_t',
-    'int32': 'int32_t',
-    'uint64': 'uint64_t',
-    'int64': 'int64_t',
-}
-
-# BasicType typenames that require character_value_to_yaml in YAML traits.
-EXPERIMENTAL_CHARACTER_TYPES = ('octet', 'char', 'wchar')
-
-
-def experimental_namespaced_type_name(type_):
-    """Return the C++ experimental qualified name for a NamespacedType."""
-    return '::'.join(list(type_.namespaces) + ['experimental', type_.name])
-
-
-def msg_element_type_to_experimental_cpp(type_):
-    """Return the experimental C++ element type for sequence and array members.
-
-    BasicType members use raw scalars (not Scalar<T>) as sequence/array elements,
-    preserving the contiguous-storage fast paths in BasicSequence.
-    """
-    if isinstance(type_, BasicType):
-        return BASIC_TYPE_TO_EXPERIMENTAL_CPP[type_.typename]
-    elif isinstance(type_, AbstractString):
-        if type_.has_maximum_size():
-            return 'rosidl_runtime_cpp::BoundedString<{}>'.format(type_.maximum_size)
-        return 'rosidl_runtime_cpp::String'
-    elif isinstance(type_, AbstractWString):
-        if type_.has_maximum_size():
-            return 'rosidl_runtime_cpp::BoundedWString<{}>'.format(type_.maximum_size)
-        return 'rosidl_runtime_cpp::WString'
-    elif isinstance(type_, NamespacedType):
-        return experimental_namespaced_type_name(type_)
-    else:
-        assert False, type_
-
-
-def msg_type_only_to_experimental_cpp(type_):
-    """Convert a top-level message member type to its experimental C++ type.
-
-    BasicType top-level members are wrapped in Scalar<T>.
-    """
-    if isinstance(type_, AbstractNestedType):
-        type_ = type_.value_type
-    if isinstance(type_, BasicType):
-        return 'rosidl_runtime_cpp::Scalar<{}>'.format(
-            BASIC_TYPE_TO_EXPERIMENTAL_CPP[type_.typename])
-    elif isinstance(type_, AbstractString):
-        if type_.has_maximum_size():
-            return 'rosidl_runtime_cpp::BoundedString<{}>'.format(type_.maximum_size)
-        return 'rosidl_runtime_cpp::String'
-    elif isinstance(type_, AbstractWString):
-        if type_.has_maximum_size():
-            return 'rosidl_runtime_cpp::BoundedWString<{}>'.format(type_.maximum_size)
-        return 'rosidl_runtime_cpp::WString'
-    elif isinstance(type_, NamespacedType):
-        return experimental_namespaced_type_name(type_)
-    else:
-        assert False, type_
-
-
-def msg_type_to_experimental_cpp(type_):
-    """Convert a message type to its experimental C++ type, including array/sequence wrapping."""
-    if isinstance(type_, Array):
-        value_type = type_.value_type
-        if isinstance(value_type, BasicType):
-            raw = BASIC_TYPE_TO_EXPERIMENTAL_CPP[value_type.typename]
-            return 'rosidl_runtime_cpp::Array<{}, {}>'.format(raw, type_.size)
-        else:
-            elem = msg_element_type_to_experimental_cpp(value_type)
-            return 'std::array<{}, {}>'.format(elem, type_.size)
-    elif isinstance(type_, BoundedSequence):
-        elem = msg_element_type_to_experimental_cpp(type_.value_type)
-        return 'rosidl_runtime_cpp::BoundedSequence<{}, {}>'.format(
-            elem, type_.maximum_size)
-    elif isinstance(type_, UnboundedSequence):
-        elem = msg_element_type_to_experimental_cpp(type_.value_type)
-        return 'rosidl_runtime_cpp::Sequence<{}>'.format(elem)
-    else:
-        return msg_type_only_to_experimental_cpp(type_)
-
-
-def experimental_member_needs_pmr(type_):
-    """Return True if this member type needs PMR resource propagation in the PMR constructor."""
-    if isinstance(type_, BasicType):
-        return False  # Scalar<T> uses inline storage
-    if isinstance(type_, Array):
-        return not isinstance(type_.value_type, BasicType)  # Array<scalar,N> is inline
-    return True  # strings, sequences, and sub-messages all need PMR propagation
-
-
-def experimental_pmr_init_expr(member_name, type_):
-    """Return the member-initializer list expression for the PMR constructor."""
-    if isinstance(type_, Array) and not isinstance(type_.value_type, BasicType):
-        tuples = ', '.join(['std::make_tuple(mem_res)'] * type_.size)
-        return '{}(std::piecewise_construct, {})'.format(member_name, tuples)
-    return '{}(mem_res)'.format(member_name)
-
 
 def msg_type_only_to_cpp(type_):
     """

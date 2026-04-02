@@ -1,12 +1,15 @@
 @# Included from rosidl_generator_cpp/resource/idl__experimental_struct.hpp.em
 @{
-from rosidl_generator_cpp import BASIC_TYPE_TO_EXPERIMENTAL_CPP
-from rosidl_generator_cpp import EXPERIMENTAL_CHARACTER_TYPES
 from rosidl_generator_cpp import escape_string
 from rosidl_generator_cpp import escape_wstring
-from rosidl_generator_cpp import experimental_member_needs_pmr
-from rosidl_generator_cpp import experimental_pmr_init_expr
-from rosidl_generator_cpp import msg_type_to_experimental_cpp
+from rosidl_generator_cpp.experimental import BASIC_TYPE_TO_EXPERIMENTAL_CPP
+from rosidl_generator_cpp.experimental import EXPERIMENTAL_CHARACTER_TYPES
+from rosidl_generator_cpp.experimental import experimental_constraint_type
+from rosidl_generator_cpp.experimental import experimental_member_needs_pmr
+from rosidl_generator_cpp.experimental import experimental_pmr_init_expr
+from rosidl_generator_cpp.experimental import experimental_storage_init_expr
+from rosidl_generator_cpp.experimental import experimental_storage_type
+from rosidl_generator_cpp.experimental import msg_type_to_experimental_cpp
 from rosidl_parser.definition import AbstractNestedType
 from rosidl_parser.definition import AbstractString
 from rosidl_parser.definition import AbstractWString
@@ -60,9 +63,9 @@ for member in message.structure.members:
         else:
             typename = type_.name
         member_names = includes.setdefault(
-            '/'.join(type_.namespaces + ['detail',
+            '/'.join(type_.namespaces + ['experimental', 'detail',
                 convert_camel_case_to_lower_case_underscore(typename)]) +
-            '__experimental_struct.hpp', [])
+            '__struct.hpp', [])
         member_names.append(member.name)
 }@
 @#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -82,7 +85,7 @@ for member in message.structure.members:
 #include "@(header_file)"
 @[    end for]@
 @[end if]@
-@
+
 @[for ns in message.structure.namespaced_type.namespaces]@
 namespace @(ns)
 {
@@ -95,6 +98,37 @@ namespace experimental
 struct @(message.structure.namespaced_type.name)
 {
   using Type = @(message.structure.namespaced_type.name);
+
+@{
+storage_fields = [
+    (m.name, experimental_storage_type(m.type))
+    for m in message.structure.members
+]
+}@
+  // storage for external memory initialization
+  struct ExternalStorage
+  {
+@[for field_name, field_type in storage_fields]@
+    @(field_type) @(field_name){};
+@[end for]@
+
+    bool operator==(const ExternalStorage & other) const
+    {
+@[if not storage_fields]@
+      (void)other;
+@[end if]@
+@[for field_name, _ in storage_fields]@
+      if (this->@(field_name) != other.@(field_name)) {
+        return false;
+      }
+@[end for]@
+      return true;
+    }
+    bool operator!=(const ExternalStorage & other) const
+    {
+      return !this->operator==(other);
+    }
+  };  // struct ExternalStorage
 
 @{
 pmr_init_list = []
@@ -112,6 +146,18 @@ for member in message.structure.members:
   {
 @[if not pmr_init_list]@
     (void)mem_res;
+@[end if]@
+  }
+
+@{storage_init_list = [experimental_storage_init_expr(member.name, member.type) for member in message.structure.members]}@
+  explicit @(message.structure.namespaced_type.name)(
+    const ExternalStorage & storage)
+@[if storage_init_list]@
+  : @(',\n    '.join(storage_init_list))
+@[end if]@
+  {
+@[if not storage_init_list]@
+    (void)storage;
 @[end if]@
   }
 
@@ -153,7 +199,8 @@ for member in message.structure.members:
   static constexpr @(BASIC_TYPE_TO_EXPERIMENTAL_CPP[constant.type.typename]) @(constant.name) =
 @[    if constant.type.typename in (*INTEGER_TYPES, *CHARACTER_TYPES, BOOLEAN_TYPE, OCTET_TYPE)]@
     @(int(constant.value))@
-@[      if constant.type.typename in UNSIGNED_INTEGER_TYPES]@u@
+@[      if constant.type.typename in UNSIGNED_INTEGER_TYPES]@
+u@
 @[      end if]@
 @[    elif constant.type.typename == 'float']@
     @(constant.value)f@
@@ -199,6 +246,37 @@ for member in message.structure.members:
   {
     return !this->operator==(other);
   }
+
+@{
+constraint_fields = [
+    (m.name, experimental_constraint_type(m.type))
+    for m in message.structure.members
+    if experimental_constraint_type(m.type) is not None
+]
+}@
+  // constraints for variable-length members
+  struct Constraints
+  {
+@[for field_name, field_type in constraint_fields]@
+    @(field_type) @(field_name){};
+@[end for]@
+    bool operator==(const Constraints & other) const
+    {
+@[if not constraint_fields]@
+      (void)other;
+@[end if]@
+@[for field_name, _ in constraint_fields]@
+      if (this->@(field_name) != other.@(field_name)) {
+        return false;
+      }
+@[end for]@
+      return true;
+    }
+    bool operator!=(const Constraints & other) const
+    {
+      return !this->operator==(other);
+    }
+  };  // struct Constraints
 };  // struct @(message.structure.namespaced_type.name)
 
 }  // namespace experimental
@@ -206,3 +284,34 @@ for member in message.structure.members:
 
 }  // namespace @(ns)
 @[end for]@
+
+namespace rosidl_runtime_cpp
+{
+
+// Constraints for a sequence of @(message_typename) messages.
+template<>
+struct SequenceConstraint<@(message_typename)>
+{
+  // Maximum number of elements in the sequence.
+  std::size_t size{0};
+  // Constraints applied to each element in the sequence.
+  @(message_typename)::Constraints element{};
+
+  bool operator==(const SequenceConstraint & other) const
+  {
+    if (size != other.size) {
+      return false;
+    }
+    if (element != other.element) {
+      return false;
+    }
+    return true;
+  }
+
+  bool operator!=(const SequenceConstraint & other) const
+  {
+    return !(*this == other);
+  }
+};
+
+}  // namespace rosidl_runtime_cpp

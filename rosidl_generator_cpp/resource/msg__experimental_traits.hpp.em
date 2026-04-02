@@ -1,8 +1,8 @@
 @# Included from rosidl_generator_cpp/resource/idl__experimental_traits.hpp.em
 @{
-from rosidl_generator_cpp import BASIC_TYPE_TO_EXPERIMENTAL_CPP
-from rosidl_generator_cpp import EXPERIMENTAL_CHARACTER_TYPES
-from rosidl_generator_cpp import experimental_namespaced_type_name
+from rosidl_generator_cpp.experimental import BASIC_TYPE_TO_EXPERIMENTAL_CPP
+from rosidl_generator_cpp.experimental import EXPERIMENTAL_CHARACTER_TYPES
+from rosidl_generator_cpp.experimental import experimental_namespaced_type_name
 from rosidl_parser.definition import AbstractGenericString
 from rosidl_parser.definition import AbstractNestedType
 from rosidl_parser.definition import AbstractString
@@ -58,9 +58,9 @@ for member in message.structure.members:
         else:
             typename = type_.name
         member_names = includes.setdefault(
-            '/'.join(type_.namespaces + ['detail',
+            '/'.join(type_.namespaces + ['experimental', 'detail',
                 convert_camel_case_to_lower_case_underscore(typename)]) +
-            '__experimental_traits.hpp', [])
+            '__traits.hpp', [])
         member_names.append(member.name)
 }@
 @#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -244,12 +244,12 @@ constexpr auto as_tuple_ref(T && msg)
 @(',\n'.join(forward_args)));
 @[end if]@
 }
+
+}  // namespace experimental
 @[for ns in reversed(message.structure.namespaced_type.namespaces)]@
 
 }  // namespace @(ns)
 @[end for]@
-
-}  // namespace experimental
 
 @{
 fixed_template_string = 'true'

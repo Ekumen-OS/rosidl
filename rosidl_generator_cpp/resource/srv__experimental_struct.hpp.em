@@ -42,6 +42,8 @@ struct @(service.namespaced_type.name)
   using Request = @(experimental_service_typename)@(SERVICE_REQUEST_MESSAGE_SUFFIX);
   using Response = @(experimental_service_typename)@(SERVICE_RESPONSE_MESSAGE_SUFFIX);
   using Event = @(experimental_service_typename)@(SERVICE_EVENT_MESSAGE_SUFFIX);
+  using RequestConstraints = Request::Constraints;
+  using ResponseConstraints = Response::Constraints;
 };
 
 }  // namespace experimental

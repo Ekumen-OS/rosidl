@@ -16,9 +16,9 @@
 @{
 from rosidl_pycommon import convert_camel_case_to_lower_case_underscore
 include_parts = [package_name] + list(interface_path.parents[0].parts) + [
-    'detail', convert_camel_case_to_lower_case_underscore(interface_path.stem)]
+    'experimental', 'detail', convert_camel_case_to_lower_case_underscore(interface_path.stem)]
 header_guard_variable = '__'.join([x.upper() for x in include_parts]) + \
-    '__EXPERIMENTAL_STRUCT_HPP_'
+    '__STRUCT_HPP_'
 
 include_directives = set()
 }@
@@ -30,8 +30,12 @@ include_directives = set()
 #include <cstdint>
 #include <memory>
 #include <memory_resource>
+#include <string>
+#include <vector>
 
 #include "rosidl_runtime_cpp/experimental/array.hpp"
+#include "rosidl_runtime_cpp/experimental/constraints.hpp"
+#include "rosidl_runtime_cpp/experimental/memory.hpp"
 #include "rosidl_runtime_cpp/experimental/scalar.hpp"
 #include "rosidl_runtime_cpp/experimental/sequence.hpp"
 #include "rosidl_runtime_cpp/experimental/string.hpp"
