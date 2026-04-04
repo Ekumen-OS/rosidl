@@ -16,6 +16,7 @@
 #define ROSIDL_RUNTIME_CPP__EXPERIMENTAL__SCALAR_HPP_
 
 #include <type_traits>
+#include <utility>
 #include <variant>
 
 #include "rosidl_runtime_cpp/experimental/memory.hpp"
@@ -36,20 +37,45 @@ class Scalar
 public:
   /// @brief Construct using inline storage.
   /// @param value Initial value.
-  explicit Scalar(T value = T{})
+  explicit Scalar(T value = T{}) noexcept
   : storage_(value)
-  {}
+  {
+  }
 
   /// @brief Construct using external storage.
   /// @param memory External memory descriptor.
-  explicit Scalar(Memory<T> memory)
+  explicit Scalar(Memory<T> memory) noexcept
   : storage_(memory)
-  {}
+  {
+  }
+
+  Scalar(const Scalar & other) noexcept
+  : storage_(other.get())
+  {
+  }
+
+  Scalar(Scalar && other) noexcept
+  : storage_(std::move(other.storage_))
+  {
+    other.storage_ = T{};
+  }
+
+  Scalar & operator=(const Scalar & other) noexcept
+  {
+    get() = other.get();
+    return *this;
+  }
+
+  Scalar & operator=(Scalar && other) noexcept
+  {
+    get() = std::move(other.get());
+    return *this;
+  }
 
   /// @brief Assign the scalar value.
   /// @param value New value.
   /// @return Reference to this scalar.
-  Scalar & operator=(const T & value)
+  Scalar & operator=(const T & value) noexcept
   {
     get() = value;
     return *this;
@@ -57,7 +83,7 @@ public:
 
   /// @brief Access the scalar value.
   /// @return Mutable value reference.
-  T & get()
+  T & get() noexcept
   {
     if (std::holds_alternative<Memory<T>>(storage_)) {
       return *std::get<Memory<T>>(storage_).data();
@@ -67,7 +93,7 @@ public:
 
   /// @brief Access the scalar value.
   /// @return Immutable value reference.
-  const T & get() const
+  const T & get() const noexcept
   {
     if (std::holds_alternative<Memory<T>>(storage_)) {
       return *std::get<Memory<T>>(storage_).data();
@@ -77,40 +103,31 @@ public:
 
   /// @brief Implicit conversion to value type.
   /// @return Scalar value copy.
-  operator T() const
+  operator T() const noexcept
   {
     return get();
   }
 
-  friend bool operator==(const Scalar & lhs, const Scalar & rhs)
+  void swap(Scalar & other) noexcept
+  {
+    using std::swap;
+    swap(storage_, other.storage_);
+  }
+
+  friend void swap(Scalar & lhs, Scalar & rhs) noexcept
+  {
+    lhs.swap(rhs);
+  }
+
+  friend bool operator==(const Scalar & lhs, const Scalar & rhs) noexcept
   {
     return lhs.get() == rhs.get();
   }
 
-  friend bool operator!=(const Scalar & lhs, const Scalar & rhs)
+  friend bool operator!=(const Scalar & lhs, const Scalar & rhs) noexcept
   {
     return !(lhs == rhs);
   }
-
-  // friend bool operator==(const Scalar & lhs, const T & rhs)
-  // {
-  //   return lhs.get() == rhs;
-  // }
-
-  // friend bool operator==(const T & lhs, const Scalar & rhs)
-  // {
-  //   return lhs == rhs.get();
-  // }
-
-  // friend bool operator!=(const Scalar & lhs, const T & rhs)
-  // {
-  //   return !(lhs == rhs);
-  // }
-
-  // friend bool operator!=(const T & lhs, const Scalar & rhs)
-  // {
-  //   return !(lhs == rhs);
-  // }
 
 private:
   std::variant<Memory<T>, T> storage_;

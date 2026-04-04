@@ -11,6 +11,7 @@ from rosidl_generator_cpp.experimental import experimental_storage_init_expr
 from rosidl_generator_cpp.experimental import experimental_storage_type
 from rosidl_generator_cpp.experimental import msg_type_to_experimental_cpp
 from rosidl_parser.definition import AbstractNestedType
+from rosidl_parser.definition import AbstractSequence
 from rosidl_parser.definition import AbstractString
 from rosidl_parser.definition import AbstractWString
 from rosidl_parser.definition import ACTION_FEEDBACK_SUFFIX
@@ -108,17 +109,22 @@ storage_fields = [
   // storage for external memory initialization
   struct ExternalStorage
   {
+    rosidl_runtime_cpp::MemoryRegion<void> block{};
+
+    struct
+    {
 @[for field_name, field_type in storage_fields]@
-    @(field_type) @(field_name){};
+      @(field_type) @(field_name){};
 @[end for]@
+    } members;
 
     bool operator==(const ExternalStorage & other) const
     {
-@[if not storage_fields]@
-      (void)other;
-@[end if]@
+      if (this->block != other.block) {
+        return false;
+      }
 @[for field_name, _ in storage_fields]@
-      if (this->@(field_name) != other.@(field_name)) {
+      if (this->members.@(field_name) != other.members.@(field_name)) {
         return false;
       }
 @[end for]@
@@ -131,15 +137,51 @@ storage_fields = [
   };  // struct ExternalStorage
 
 @{
-pmr_init_list = []
-for member in message.structure.members:
-    if experimental_member_needs_pmr(member.type):
-        pmr_init_list.append(experimental_pmr_init_expr(member.name, member.type))
+from rosidl_generator_cpp.experimental import generate_experimental_default_string
+from rosidl_generator_cpp.experimental import create_experimental_member_list
+from rosidl_generator_cpp.experimental import generate_experimental_zero_string
+
+init_list, member_list = create_experimental_member_list(message)
+
+default_value_members = [m for m in member_list if m.members[0].default_value]
+zero_value_members = [m for m in member_list if m.members[0].zero_value]
+non_defaulted_zero_initialized_members = [
+    m for m in member_list if m.members[0].zero_value and not m.members[0].default_value
+]
+
+pmr_init_list = [
+    experimental_pmr_init_expr(m.name, m.type)
+    for m in message.structure.members
+    if experimental_member_needs_pmr(m.type)
+]
+storage_init_list = [
+    experimental_storage_init_expr(m.name, m.type)
+    for m in message.structure.members
+]
+
+# Sub-message members (NamespacedType, or an Array thereof) that
+# need _reset() called on them to propagate _init recursively.
+submsg_members = [
+    m for m in message.structure.members
+    if isinstance(m.type, NamespacedType) or (
+        isinstance(m.type, (Array, AbstractSequence)) and
+        isinstance(m.type.value_type, NamespacedType))
+]
 }@
-  @(message.structure.namespaced_type.name)() = default;
+  explicit @(message.structure.namespaced_type.name)(
+    rosidl_runtime_cpp::MessageInitialization _init =
+    rosidl_runtime_cpp::MessageInitialization::ALL)
+@[if init_list]@
+  : @(',\n    '.join(init_list))
+@[end if]@
+  {
+    _reset(_init);
+  }
 
   explicit @(message.structure.namespaced_type.name)(
-    std::pmr::memory_resource * mem_res)
+    std::pmr::memory_resource * mem_res,
+    rosidl_runtime_cpp::MessageInitialization _init =
+    rosidl_runtime_cpp::MessageInitialization::ALL)
 @[if pmr_init_list]@
   : @(',\n    '.join(pmr_init_list))
 @[end if]@
@@ -147,18 +189,44 @@ for member in message.structure.members:
 @[if not pmr_init_list]@
     (void)mem_res;
 @[end if]@
+    _reset(_init);
   }
 
-@{storage_init_list = [experimental_storage_init_expr(member.name, member.type) for member in message.structure.members]}@
   explicit @(message.structure.namespaced_type.name)(
-    const ExternalStorage & storage)
+    const ExternalStorage & storage,
+    rosidl_runtime_cpp::MessageInitialization _init =
+    rosidl_runtime_cpp::MessageInitialization::ALL)
 @[if storage_init_list]@
-  : @(',\n    '.join(storage_init_list))
+  : @(',\n    '.join(storage_init_list)),
+    _external_storage(storage)
 @[end if]@
   {
-@[if not storage_init_list]@
-    (void)storage;
+    _reset(_init);
+  }
+
+  @(message.structure.namespaced_type.name)(const @(message.structure.namespaced_type.name) & other)
+@[if message.structure.members]@
+  : @(',\n    '.join('{name}(other.{name})'.format(name=member.name) for member in message.structure.members))
 @[end if]@
+  {
+  }
+
+  @(message.structure.namespaced_type.name)(@(message.structure.namespaced_type.name) && other) = default;
+
+  @(message.structure.namespaced_type.name) & operator=(const @(message.structure.namespaced_type.name) & other)
+  {
+@[for member in message.structure.members]@
+    this->@(member.name) = other.@(member.name);
+@[end for]@
+    return *this;
+  }
+
+  @(message.structure.namespaced_type.name) & operator=(@(message.structure.namespaced_type.name) && other)
+  {
+@[for member in message.structure.members]@
+    this->@(member.name) = std::move(other.@(member.name));
+@[end for]@
+    return *this;
   }
 
   // field types and members
@@ -167,8 +235,23 @@ for member in message.structure.members:
     @(msg_type_to_experimental_cpp(member.type));
   _@(member.name)_type @(member.name);
 @[end for]@
+  std::optional<ExternalStorage> _external_storage;
 
+  void swap(@(message.structure.namespaced_type.name) & other)
+  {
+    using std::swap;
+@[for member in message.structure.members]@
+    swap(this->@(member.name), other.@(member.name));
+@[end for]@
+    swap(this->_external_storage, other._external_storage);
+  }
+
+  friend void swap(@(message.structure.namespaced_type.name) & lhs, @(message.structure.namespaced_type.name) & rhs)
+  {
+    lhs.swap(rhs);
+  }
 @[if len(message.structure.members) != 1 or message.structure.members[0].name != EMPTY_STRUCTURE_REQUIRED_MEMBER_NAME]@
+
   // setters for named parameter idiom
 @[    for member in message.structure.members]@
   Type & set__@(member.name)(
@@ -179,10 +262,11 @@ for member in message.structure.members:
   }
 @[    end for]@
 @[end if]@
+@[if message.constants]@
 
   // constant declarations
-@[for constant in message.constants]@
-@[  if constant.name in msvc_common_macros]@
+@[  for constant in message.constants]@
+@[    if constant.name in msvc_common_macros]@
   // guard against '@(constant.name)' being predefined by MSVC by temporarily undefining it
 #if defined(_WIN32)
 #  if defined(@(constant.name))
@@ -190,31 +274,95 @@ for member in message.structure.members:
 #    undef @(constant.name)
 #  endif
 #endif
-@[  end if]@
-@[  if isinstance(constant.type, AbstractString)]@
+@[    end if]@
+@[    if isinstance(constant.type, AbstractString)]@
   inline static const std::string @(constant.name) = "@(escape_string(constant.value))";
-@[  elif isinstance(constant.type, AbstractWString)]@
+@[    elif isinstance(constant.type, AbstractWString)]@
   inline static const std::u16string @(constant.name) = u"@(escape_wstring(constant.value))";
-@[  else]@
-  static constexpr @(BASIC_TYPE_TO_EXPERIMENTAL_CPP[constant.type.typename]) @(constant.name) =
-@[    if constant.type.typename in (*INTEGER_TYPES, *CHARACTER_TYPES, BOOLEAN_TYPE, OCTET_TYPE)]@
-    @(int(constant.value))@
-@[      if constant.type.typename in UNSIGNED_INTEGER_TYPES]@
-u@
-@[      end if]@
-@[    elif constant.type.typename == 'float']@
-    @(constant.value)f@
 @[    else]@
+  static constexpr @(BASIC_TYPE_TO_EXPERIMENTAL_CPP[constant.type.typename]) @(constant.name) =
+@[      if constant.type.typename in (*INTEGER_TYPES, *CHARACTER_TYPES, BOOLEAN_TYPE, OCTET_TYPE)]@
+    @(int(constant.value))@
+@[        if constant.type.typename in UNSIGNED_INTEGER_TYPES]@
+u@
+@[        end if]@
+@[      elif constant.type.typename == 'float']@
+    @(constant.value)f@
+@[      else]@
     @(constant.value)@
-@[    end if];
-@[  end if]@
-@[  if constant.name in msvc_common_macros]@
+@[      end if];
+@[    end if]@
+@[    if constant.name in msvc_common_macros]@
 #if defined(_WIN32)
 #  pragma warning(suppress : 4602)
 #  pragma pop_macro("@(constant.name)")
 #endif
+@[    end if]@
+@[  end for]@
+@[end if]@
+
+  void _reset(
+    rosidl_runtime_cpp::MessageInitialization _init =
+    rosidl_runtime_cpp::MessageInitialization::ALL)
+  {
+@[if not member_list and not submsg_members]@
+    (void)_init;
+@[end if]@
+    switch(_init) {
+@[if default_value_members or non_defaulted_zero_initialized_members]@
+      case rosidl_runtime_cpp::MessageInitialization::ALL:
+@[  if default_value_members]@
+@[    for membset in default_value_members]@
+@[      for line in generate_experimental_default_string(membset)]@
+        @(line)
+@[      end for]@
+@[    end for]@
 @[  end if]@
-@[end for]@
+@[  if non_defaulted_zero_initialized_members]@
+@[    for membset in non_defaulted_zero_initialized_members]@
+@[      for line in generate_experimental_zero_string(membset)]@
+@[        if line]@
+        @(line)
+@[        end if]@
+@[      end for]@
+@[    end for]@
+@[  end if]@
+        break;
+@[end if]@
+@[if default_value_members]@
+      case rosidl_runtime_cpp::MessageInitialization::DEFAULTS_ONLY:
+@[  for membset in default_value_members]@
+@[    for line in generate_experimental_default_string(membset)]@
+        @(line)
+@[    end for]@
+@[  end for]@
+        break;
+@[end if]@
+@[if zero_value_members]@
+      case rosidl_runtime_cpp::MessageInitialization::ZERO:
+@[  for membset in zero_value_members]@
+@[    for line in generate_experimental_zero_string(membset)]@
+        @(line)
+@[    end for]@
+@[  end for]@
+        break;
+@[end if]@
+      default:
+        break;
+    }
+@[if submsg_members]@
+    // propagate _init recursively to sub-message members
+@[  for member in submsg_members]@
+@[    if isinstance(member.type, (Array, AbstractSequence))]@
+    for (auto & _elem : this->@(member.name)) {
+      _elem._reset(_init);
+    }
+@[    else]@
+    this->@(member.name)._reset(_init);
+@[    end if]@
+@[  end for]@
+@[end if]@
+  }
 
   // pointer types
   using RawPtr = @(message.structure.namespaced_type.name) *;
@@ -257,9 +405,12 @@ constraint_fields = [
   // constraints for variable-length members
   struct Constraints
   {
-@[for field_name, field_type in constraint_fields]@
+@[if constraint_fields]@
+@[  for field_name, field_type in constraint_fields]@
     @(field_type) @(field_name){};
-@[end for]@
+@[  end for]@
+
+@[end if]@
     bool operator==(const Constraints & other) const
     {
 @[if not constraint_fields]@

@@ -30,7 +30,9 @@ include_directives = set()
 #include <cstdint>
 #include <memory>
 #include <memory_resource>
+#include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "rosidl_runtime_cpp/experimental/array.hpp"
@@ -39,6 +41,7 @@ include_directives = set()
 #include "rosidl_runtime_cpp/experimental/scalar.hpp"
 #include "rosidl_runtime_cpp/experimental/sequence.hpp"
 #include "rosidl_runtime_cpp/experimental/string.hpp"
+#include "rosidl_runtime_cpp/message_initialization.hpp"
 
 @#######################################################################
 @# Handle message

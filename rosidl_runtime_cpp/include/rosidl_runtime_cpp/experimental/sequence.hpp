@@ -157,24 +157,21 @@ public:
     assign(first, last);
   }
 
-  BasicSequence(
-    std::initializer_list<value_type> values,
-    std::pmr::memory_resource * storage_pool = std::pmr::get_default_resource())
-  : BasicSequence(storage_pool)
-  {
-    assign(values.begin(), values.end());
-  }
+  BasicSequence(std::initializer_list<value_type> values) = delete;
 
   BasicSequence(const std::vector<value_type> & source_vector)  // NOLINT(runtime/explicit)
   : BasicSequence(std::pmr::get_default_resource())
   {
-    *this = source_vector;
+    assign(source_vector.begin(), source_vector.end());
   }
 
   BasicSequence(std::vector<value_type> && source_vector)  // NOLINT(runtime/explicit)
   : BasicSequence(std::pmr::get_default_resource())
   {
-    *this = std::move(source_vector);
+    ensure_capacity_or_fail(source_vector.size());
+    for (size_type position = 0; position < source_vector.size(); ++position) {
+      emplace_back(std::move(source_vector[position]));
+    }
   }
 
   BasicSequence(const BasicSequence & other)
@@ -192,7 +189,6 @@ public:
     capacity_(other.capacity_),
     size_(other.size_)
   {
-    other.shared_storage_pool_ = std::pmr::get_default_resource();
     other.storage_ = MemoryRegion<value_type>();
     other.element_storage_pool_.clear();
     other.capacity_ = 0;
@@ -205,15 +201,16 @@ public:
     release_owned_storage();
   }
 
+  BasicSequence & operator=(std::initializer_list<value_type> list)
+  {
+    assign(list.begin(), list.end());
+    return *this;
+  }
+
   BasicSequence & operator=(const BasicSequence & other)
   {
     if (this == &other) {
       return *this;
-    }
-    clear();
-    release_owned_storage();
-    if (shared_storage_pool_) {
-      capacity_ = 0;
     }
     assign(other.begin(), other.end());
     return *this;
@@ -224,34 +221,20 @@ public:
     if (this == &other) {
       return *this;
     }
+    if (!shared_storage_pool_ || shared_storage_pool_ != other.shared_storage_pool_) {
+      assign(std::make_move_iterator(other.begin()), std::make_move_iterator(other.end()));
+      return *this;
+    }
     clear();
     release_owned_storage();
-    shared_storage_pool_ = other.shared_storage_pool_;
     storage_ = other.storage_;
     element_storage_pool_ = std::move(other.element_storage_pool_);
     capacity_ = other.capacity_;
     size_ = other.size_;
-    other.shared_storage_pool_ = std::pmr::get_default_resource();
     other.storage_ = MemoryRegion<value_type>();
     other.element_storage_pool_.clear();
     other.capacity_ = 0;
     other.size_ = 0;
-    return *this;
-  }
-
-  BasicSequence & operator=(const std::vector<value_type> & source_vector)
-  {
-    assign(source_vector.begin(), source_vector.end());
-    return *this;
-  }
-
-  BasicSequence & operator=(std::vector<value_type> && source_vector)
-  {
-    clear();
-    ensure_capacity_or_fail(source_vector.size());
-    for (size_type position = 0; position < source_vector.size(); ++position) {
-      emplace_back(std::move(source_vector[position]));
-    }
     return *this;
   }
 
@@ -411,11 +394,17 @@ public:
 
   void swap(BasicSequence & other) noexcept
   {
-    std::swap(shared_storage_pool_, other.shared_storage_pool_);
-    std::swap(storage_, other.storage_);
-    std::swap(element_storage_pool_, other.element_storage_pool_);
-    std::swap(capacity_, other.capacity_);
-    std::swap(size_, other.size_);
+    using std::swap;
+    swap(shared_storage_pool_, other.shared_storage_pool_);
+    swap(storage_, other.storage_);
+    swap(element_storage_pool_, other.element_storage_pool_);
+    swap(capacity_, other.capacity_);
+    swap(size_, other.size_);
+  }
+
+  friend void swap(BasicSequence & lhs, BasicSequence & rhs) noexcept
+  {
+    lhs.swap(rhs);
   }
 
   friend bool operator==(const BasicSequence & lhs, const BasicSequence & rhs)
@@ -585,24 +574,26 @@ public:
     assign(first, last);
   }
 
-  BasicSequence(
-    std::initializer_list<value_type> values,
-    std::pmr::memory_resource * storage_pool = std::pmr::get_default_resource())
-  : BasicSequence(storage_pool)
-  {
-    assign(values.begin(), values.end());
-  }
+  BasicSequence(std::initializer_list<value_type> values) = delete;
 
   BasicSequence(const std::vector<T> & source_vector)  // NOLINT(runtime/explicit)
   : BasicSequence(std::pmr::get_default_resource())
   {
-    *this = source_vector;
+    assign(source_vector.begin(), source_vector.end());
   }
 
   BasicSequence(std::vector<T> && source_vector)  // NOLINT(runtime/explicit)
   : BasicSequence(std::pmr::get_default_resource())
   {
-    *this = std::move(source_vector);
+    ensure_capacity_or_fail(source_vector.size());
+    if (std::is_trivially_copyable<T>::value && !source_vector.empty()) {
+      std::memmove(data(), source_vector.data(), source_vector.size() * sizeof(T));
+      size_ = source_vector.size();
+    } else {
+      for (size_type position = 0; position < source_vector.size(); ++position) {
+        emplace_back(std::move(source_vector[position]));
+      }
+    }
   }
 
   BasicSequence(const BasicSequence & other)
@@ -631,19 +622,21 @@ public:
     release_owned_storage();
   }
 
+  BasicSequence & operator=(std::initializer_list<value_type> list)
+  {
+    assign(list.begin(), list.end());
+    return *this;
+  }
+
   BasicSequence & operator=(const BasicSequence & other)
   {
     if (this == &other) {
       return *this;
     }
-    clear();
-    release_owned_storage();
-    if (shared_storage_pool_) {
-      capacity_ = 0;
-    }
     assign(other.begin(), other.end());
     return *this;
   }
+
   BasicSequence & operator=(BasicSequence && other) noexcept
   {
     if (this == &other) {
@@ -661,26 +654,7 @@ public:
     other.size_ = 0;
     return *this;
   }
-  BasicSequence & operator=(const std::vector<T> & source_vector)
-  {
-    assign(source_vector.begin(), source_vector.end());
-    return *this;
-  }
 
-  BasicSequence & operator=(std::vector<T> && source_vector)
-  {
-    clear();
-    ensure_capacity_or_fail(source_vector.size());
-    if (std::is_trivially_copyable<T>::value && !source_vector.empty()) {
-      std::memmove(data(), source_vector.data(), source_vector.size() * sizeof(T));
-      size_ = source_vector.size();
-      return *this;
-    }
-    for (size_type position = 0; position < source_vector.size(); ++position) {
-      emplace_back(std::move(source_vector[position]));
-    }
-    return *this;
-  }
   operator std::vector<T>() const
   {
     std::vector<T> vector;
@@ -847,10 +821,16 @@ public:
 
   void swap(BasicSequence & other) noexcept
   {
-    std::swap(shared_storage_pool_, other.shared_storage_pool_);
-    std::swap(storage_, other.storage_);
-    std::swap(capacity_, other.capacity_);
-    std::swap(size_, other.size_);
+    using std::swap;
+    swap(shared_storage_pool_, other.shared_storage_pool_);
+    swap(storage_, other.storage_);
+    swap(capacity_, other.capacity_);
+    swap(size_, other.size_);
+  }
+
+  friend void swap(BasicSequence & lhs, BasicSequence & rhs) noexcept
+  {
+    lhs.swap(rhs);
   }
 
   friend bool operator==(const BasicSequence & lhs, const BasicSequence & rhs)

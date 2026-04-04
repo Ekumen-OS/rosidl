@@ -110,7 +110,7 @@ public:
 
   /// @brief Construct using a specific PMR resource.
   explicit BasicString(std::pmr::memory_resource * storage_pool)
-  : storage_pool_(storage_pool ? storage_pool : std::pmr::get_default_resource()),
+  : storage_pool_(storage_pool),
     storage_(InternalStorage{}),
     capacity_(InternalStorage::kCapacity),
     size_(0)
@@ -122,19 +122,19 @@ public:
   explicit BasicString(MemoryRegion<CharT> storage_region)
   : storage_pool_(nullptr), storage_(storage_region), capacity_(0), size_(0)
   {
-    const size_type total_slots = storage_region.capacity();
-    if (total_slots == 0) {
-      throw std::invalid_argument(
-              "BasicString storage region has no room for null terminator");
+    if (storage_region) {
+      const size_type total_slots = storage_region.capacity();
+      if (total_slots == 0) {
+        throw std::invalid_argument(
+                "BasicString storage region has no room for null terminator");
+      }
+      capacity_ = total_slots - 1;
     }
-    capacity_ = total_slots - 1;
     null_terminate();
   }
 
-  explicit BasicString(
-    std::basic_string_view<CharT> value,
-    std::pmr::memory_resource * storage_pool)
-  : BasicString(storage_pool)
+  BasicString(const CharT * value)  // NOLINT(runtime/explicit)
+  : BasicString(std::pmr::get_default_resource())
   {
     assign(value);
   }
@@ -145,8 +145,16 @@ public:
     assign(value);
   }
 
+  explicit BasicString(
+    std::basic_string_view<CharT> value,
+    std::pmr::memory_resource * storage_pool)
+  : BasicString(storage_pool)
+  {
+    assign(value);
+  }
+
   BasicString(const BasicString & other)
-  : BasicString(other.storage_pool_ ? other.storage_pool_ : std::pmr::get_default_resource())
+  : BasicString(other.storage_pool_)
   {
     assign(other.view());
   }
@@ -157,24 +165,22 @@ public:
     capacity_(other.capacity_),
     size_(other.size_)
   {
-    other.storage_pool_ = std::pmr::get_default_resource();
     other.storage_ = InternalStorage{};
     other.capacity_ = InternalStorage::kCapacity;
     other.size_ = 0;
     other.null_terminate();
   }
 
-  ~BasicString() {release_owned_storage();}
+  ~BasicString()
+  {
+    release_owned_storage();
+  }
 
   BasicString & operator=(const BasicString & other)
   {
     if (this == &other) {
       return *this;
     }
-    clear();
-    release_owned_storage();
-    storage_ = InternalStorage{};
-    capacity_ = InternalStorage::kCapacity;
     assign(other.view());
     return *this;
   }
@@ -184,23 +190,19 @@ public:
     if (this == &other) {
       return *this;
     }
+    if (!storage_pool_ || storage_pool_ != other.storage_pool_) {
+      assign(other.view());
+      return *this;
+    }
     clear();
     release_owned_storage();
-    storage_pool_ = other.storage_pool_;
     storage_ = std::move(other.storage_);
     size_ = other.size_;
     capacity_ = other.capacity_;
-    other.storage_pool_ = std::pmr::get_default_resource();
     other.storage_ = InternalStorage{};
     other.size_ = 0;
     other.capacity_ = InternalStorage::kCapacity;
     other.null_terminate();
-    return *this;
-  }
-
-  BasicString & operator=(std::basic_string_view<CharT> value)
-  {
-    assign(value);
     return *this;
   }
 
@@ -255,7 +257,10 @@ public:
     null_terminate();
   }
 
-  void reserve(size_type new_capacity) {ensure_capacity_or_fail(new_capacity);}
+  void reserve(size_type new_capacity)
+  {
+    ensure_capacity_or_fail(new_capacity);
+  }
 
   void resize(size_type new_size)
   {
@@ -316,6 +321,20 @@ public:
     return *this;
   }
 
+  void swap(BasicString & other) noexcept
+  {
+    using std::swap;
+    swap(storage_pool_, other.storage_pool_);
+    swap(storage_, other.storage_);
+    swap(capacity_, other.capacity_);
+    swap(size_, other.size_);
+  }
+
+  friend void swap(BasicString & lhs, BasicString & rhs) noexcept
+  {
+    lhs.swap(rhs);
+  }
+
   friend bool operator==(const BasicString & lhs, const BasicString & rhs)
   {
     return lhs.view() == rhs.view();
@@ -331,17 +350,37 @@ public:
     return lhs.view() == rhs;
   }
 
-  friend bool operator==(std::basic_string_view<CharT> lhs, const BasicString & rhs)
-  {
-    return lhs == rhs.view();
-  }
-
   friend bool operator!=(const BasicString & lhs, std::basic_string_view<CharT> rhs)
   {
     return !(lhs == rhs);
   }
 
+  friend bool operator==(std::basic_string_view<CharT> lhs, const BasicString & rhs)
+  {
+    return lhs == rhs.view();
+  }
+
   friend bool operator!=(std::basic_string_view<CharT> lhs, const BasicString & rhs)
+  {
+    return !(lhs == rhs);
+  }
+
+  friend bool operator==(const BasicString & lhs, const CharT * rhs)
+  {
+    return lhs.view() == std::basic_string_view<CharT>(rhs);
+  }
+
+  friend bool operator!=(const BasicString & lhs, const CharT * rhs)
+  {
+    return !(lhs == rhs);
+  }
+
+  friend bool operator==(const CharT * lhs, const BasicString & rhs)
+  {
+    return std::basic_string_view<CharT>(lhs) == rhs.view();
+  }
+
+  friend bool operator!=(const CharT * lhs, const BasicString & rhs)
   {
     return !(lhs == rhs);
   }

@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <cstring>
 #include <iterator>
 #include <new>
 #include <stdexcept>
@@ -69,23 +70,35 @@ private:
 
     InternalStorage(const InternalStorage & other)
     {
-      for (std::size_t i = 0; i < N; ++i) {
-        ::new (data() + i) T(other.data()[i]);
+      if constexpr (std::is_trivially_copyable_v<T>) {
+        std::memcpy(raw, other.raw, sizeof(T) * N);
+      } else {
+        for (std::size_t i = 0; i < N; ++i) {
+          ::new (data() + i) T(other.data()[i]);
+        }
       }
     }
 
     InternalStorage(InternalStorage && other) noexcept
     {
-      for (std::size_t i = 0; i < N; ++i) {
-        ::new (data() + i) T(std::move(other.data()[i]));
+      if constexpr (std::is_trivially_copyable_v<T>) {
+        std::memcpy(raw, other.raw, sizeof(T) * N);
+      } else {
+        for (std::size_t i = 0; i < N; ++i) {
+          ::new (data() + i) T(std::move(other.data()[i]));
+        }
       }
     }
 
     InternalStorage & operator=(const InternalStorage & other)
     {
       if (this != &other) {
-        for (std::size_t i = 0; i < N; ++i) {
-          data()[i] = other.data()[i];
+        if constexpr (std::is_trivially_copyable_v<T>) {
+          std::memcpy(raw, other.raw, sizeof(T) * N);
+        } else {
+          for (std::size_t i = 0; i < N; ++i) {
+            data()[i] = other.data()[i];
+          }
         }
       }
       return *this;
@@ -94,8 +107,12 @@ private:
     InternalStorage & operator=(InternalStorage && other) noexcept
     {
       if (this != &other) {
-        for (std::size_t i = 0; i < N; ++i) {
-          data()[i] = std::move(other.data()[i]);
+        if constexpr (std::is_trivially_copyable_v<T>) {
+          std::memcpy(raw, other.raw, sizeof(T) * N);
+        } else {
+          for (std::size_t i = 0; i < N; ++i) {
+            data()[i] = std::move(other.data()[i]);
+          }
         }
       }
       return *this;
@@ -121,20 +138,60 @@ public:
   : storage_(InternalStorage{})
   {}
 
+  /// @brief Copy constructor.
+  /// @param other Source array.
+  Array(const Array & other)
+  : storage_(std::is_trivially_copyable_v<T> ?
+      InternalStorage{typename InternalStorage::uninit_t{}} :
+      InternalStorage{})
+  {
+    if constexpr (std::is_trivially_copyable_v<T>) {
+      std::memcpy(data(), other.data(), sizeof(T) * N);
+    } else {
+      for (size_type i = 0; i < N; ++i) {
+        (*this)[i] = other[i];
+      }
+    }
+  }
+
+  /// @brief Move constructor.
+  /// @param other Source array.
+  Array(Array && other) noexcept
+  : storage_(std::move(other.storage_))
+  {
+    other.storage_ = InternalStorage{};
+  }
+
   /// @brief Construct from `std::array`.
   /// @param array Source array.
   Array(const std::array<T, N> & array)  // NOLINT(runtime/explicit)
-  : storage_(InternalStorage{})
+  : storage_(std::is_trivially_copyable_v<T> ?
+      InternalStorage{typename InternalStorage::uninit_t{}} :
+      InternalStorage{})
   {
-    *this = array;
+    if constexpr (std::is_trivially_copyable_v<T>) {
+      std::memcpy(data(), array.data(), sizeof(T) * N);
+    } else {
+      for (size_type i = 0; i < N; ++i) {
+        (*this)[i] = array[i];
+      }
+    }
   }
 
   /// @brief Construct from moved `std::array`.
   /// @param array Source array.
   Array(std::array<T, N> && array)  // NOLINT(runtime/explicit)
-  : storage_(InternalStorage{})
+  : storage_(std::is_trivially_copyable_v<T> ?
+      InternalStorage{typename InternalStorage::uninit_t{}} :
+      InternalStorage{})
   {
-    *this = std::move(array);
+    if constexpr (std::is_trivially_copyable_v<T>) {
+      std::memcpy(data(), array.data(), sizeof(T) * N);
+    } else {
+      for (size_type i = 0; i < N; ++i) {
+        (*this)[i] = std::move(array[i]);
+      }
+    }
   }
 
   /// @brief Construct over an external memory region.
@@ -167,24 +224,54 @@ public:
         std::forward<ArgTuples>(arg_tuples)));
   }
 
-  /// @brief Assign from `std::array`.
-  /// @param array Source array.
-  /// @return Reference to this array.
-  Array & operator=(const std::array<T, N> & array)
+  Array & operator=(const Array & array)
   {
-    for (size_type i = 0; i < N; ++i) {
-      (*this)[i] = array[i];
+    if constexpr (std::is_trivially_copyable_v<T>) {
+      if (this != &array) {
+        std::memcpy(data(), array.data(), sizeof(T) * N);
+      }
+    } else {
+      for (size_type i = 0; i < N; ++i) {
+        (*this)[i] = array[i];
+      }
     }
     return *this;
   }
 
-  /// @brief Move-assign from `std::array`.
-  /// @param array Source array.
-  /// @return Reference to this array.
-  Array & operator=(std::array<T, N> && array)
+  Array & operator=(Array && array)
   {
-    for (size_type i = 0; i < N; ++i) {
-      (*this)[i] = std::move(array[i]);
+    if constexpr (std::is_trivially_copyable_v<T>) {
+      if (this != &array) {
+        std::memcpy(data(), array.data(), sizeof(T) * N);
+      }
+    } else {
+      for (size_type i = 0; i < N; ++i) {
+        (*this)[i] = std::move(array[i]);
+      }
+    }
+    return *this;
+  }
+
+  Array & operator=(const T(& array)[N])
+  {
+    if constexpr (std::is_trivially_copyable_v<T>) {
+      std::memcpy(data(), array, sizeof(T) * N);
+    } else {
+      for (size_type i = 0; i < N; ++i) {
+        (*this)[i] = array[i];
+      }
+    }
+    return *this;
+  }
+
+  Array & operator=(T(&& array)[N])
+  {
+    if constexpr (std::is_trivially_copyable_v<T>) {
+      std::memcpy(data(), array, sizeof(T) * N);
+    } else {
+      for (size_type i = 0; i < N; ++i) {
+        (*this)[i] = std::move(array[i]);
+      }
     }
     return *this;
   }
@@ -193,11 +280,17 @@ public:
   /// @return Copied `std::array` value.
   operator std::array<T, N>() const
   {
-    std::array<T, N> array{};
-    for (size_type i = 0; i < N; ++i) {
-      array[i] = (*this)[i];
+    if constexpr (std::is_trivially_copyable_v<T>) {
+      std::array<T, N> result;
+      std::memcpy(result.data(), data(), sizeof(T) * N);
+      return result;
+    } else {
+      std::array<T, N> array{};
+      for (size_type i = 0; i < N; ++i) {
+        array[i] = (*this)[i];
+      }
+      return array;
     }
-    return array;
   }
 
   /// @brief Bounds-checked element access.
@@ -299,7 +392,13 @@ public:
   /// @param other Array to swap with.
   void swap(Array & other) noexcept
   {
-    storage_.swap(other.storage_);
+    using std::swap;
+    swap(storage_, other.storage_);
+  }
+
+  friend void swap(Array & lhs, Array & rhs) noexcept
+  {
+    lhs.swap(rhs);
   }
 
   friend bool operator==(const Array & lhs, const Array & rhs)

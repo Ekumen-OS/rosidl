@@ -13,7 +13,9 @@
 # limitations under the License.
 
 """Experimental code generation helpers for rosidl_generator_cpp."""
+from ast import literal_eval
 
+from rosidl_parser.definition import AbstractGenericString
 from rosidl_parser.definition import AbstractNestedType
 from rosidl_parser.definition import AbstractSequence
 from rosidl_parser.definition import AbstractString
@@ -120,6 +122,95 @@ def msg_type_to_experimental_cpp(type_):
         return msg_type_only_to_experimental_cpp(type_)
 
 
+def create_experimental_member_list(message):
+    """Return (init_list, member_list) for experimental message constructors.
+
+    Like create_init_alloc_and_member_lists but for experimental types:
+    - No allocator constructor; alloc_list is not produced.
+    - NamespacedType (sub-message) members appear in init_list with SKIP so
+      that reset() can propagate the actual MessageInitialization afterwards
+      without double-initializing.
+    - member_list carries the same zero/default annotation tracking as the
+      standard version, used to generate the body of reset().
+    """
+    from rosidl_generator_cpp import default_value_from_type
+    from rosidl_generator_cpp import primitive_value_to_cpp
+
+    class Member:
+        def __init__(self, name):
+            self.name = name
+            self.default_value = None
+            self.zero_value = None
+            self.type = None
+
+        def same_default_and_zero_value(self, other):
+            return (self.default_value == other.default_value and
+                    self.zero_value == other.zero_value)
+
+    class CommonMemberSet:
+        def __init__(self):
+            self.members = []
+
+        def add_member(self, member):
+            if not self.members or self.members[-1].same_default_and_zero_value(member):
+                self.members.append(member)
+                return True
+            return False
+
+    init_list = []
+    member_list = []
+    for field in message.structure.members:
+        member = Member(field.name)
+        member.type = field.type
+        if isinstance(field.type, Array):
+            if isinstance(field.type.value_type, (BasicType, AbstractGenericString)):
+                default = default_value_from_type(field.type.value_type)
+                single = primitive_value_to_cpp(field.type.value_type, default)
+                member.zero_value = [single]
+                if field.has_annotation('default'):
+                    default_value = literal_eval(
+                        field.get_annotation_value('default')['value'])
+                    member.default_value = [
+                        primitive_value_to_cpp(field.type.value_type, v)
+                        for v in default_value]
+            else:
+                assert isinstance(field.type.value_type, NamespacedType)
+                # Piecewise-construct each element with SKIP to avoid double init.
+                tuples = ', '.join(
+                    ['std::make_tuple(rosidl_runtime_cpp::MessageInitialization::SKIP)']
+                    * field.type.size)
+                init_list.append(
+                    '{}(std::piecewise_construct, {})'.format(field.name, tuples))
+        elif isinstance(field.type, AbstractSequence):
+            if field.has_annotation('default'):
+                default_value = literal_eval(
+                    field.get_annotation_value('default')['value'])
+                member.default_value = [
+                    primitive_value_to_cpp(field.type.value_type, v)
+                    for v in default_value]
+            else:
+                member.zero_value = '{}'  # clear when no default
+        elif isinstance(field.type, (BasicType, AbstractGenericString)):
+            default = default_value_from_type(field.type)
+            member.zero_value = primitive_value_to_cpp(field.type, default)
+            if field.has_annotation('default'):
+                member.default_value = primitive_value_to_cpp(
+                    field.type,
+                    field.get_annotation_value('default')['value'])
+        else:
+            # NamespacedType: initialize with SKIP; reset() propagates _init.
+            init_list.append(
+                '{}(rosidl_runtime_cpp::MessageInitialization::SKIP)'.format(field.name))
+
+        if field.has_annotation('default') or member.zero_value is not None:
+            if not member_list or not member_list[-1].add_member(member):
+                commonset = CommonMemberSet()
+                commonset.add_member(member)
+                member_list.append(commonset)
+
+    return init_list, member_list
+
+
 def experimental_member_needs_pmr(type_):
     """Return True if this member type needs PMR resource propagation in the PMR constructor."""
     if isinstance(type_, BasicType):
@@ -130,11 +221,63 @@ def experimental_member_needs_pmr(type_):
 
 
 def experimental_pmr_init_expr(member_name, type_):
-    """Return the member-initializer list expression for the PMR constructor."""
+    """Return the member-initializer list expression for the PMR constructor.
+
+    Sub-messages (NamespacedType) are constructed with SKIP so that _initialize()
+    can propagate the actual MessageInitialization value afterwards.
+    """
     if isinstance(type_, Array) and not isinstance(type_.value_type, BasicType):
-        tuples = ', '.join(['std::make_tuple(mem_res)'] * type_.size)
+        if isinstance(type_.value_type, NamespacedType):
+            tuples = ', '.join(
+                ['std::make_tuple(mem_res, rosidl_runtime_cpp::MessageInitialization::SKIP)'
+                 ] * type_.size)
+        else:
+            tuples = ', '.join(['std::make_tuple(mem_res)'] * type_.size)
         return '{}(std::piecewise_construct, {})'.format(member_name, tuples)
+    if isinstance(type_, NamespacedType):
+        return '{}(mem_res, rosidl_runtime_cpp::MessageInitialization::SKIP)'.format(member_name)
     return '{}(mem_res)'.format(member_name)
+
+
+def generate_experimental_default_string(membset: list) -> list[str]:
+    strlist: list[str] = []
+    for member in membset.members:
+        if member.default_value is not None:
+            if isinstance(member.default_value, list):
+                if len(member.default_value) > 1 and \
+                        all(v == member.default_value[0] for v in member.default_value):
+                    if isinstance(member.type, AbstractSequence):
+                        strlist.append('this->%s.resize(%d);' % (
+                            member.name, len(member.default_value)))
+                    strlist.append(
+                        'std::fill(this->%s.begin(), this->%s.end(), %s);' % (
+                            member.name, member.name, member.default_value[0]))
+                else:
+                    strlist.append('this->%s = {%s};' % (
+                        member.name, ', '.join(member.default_value)))
+            else:
+                strlist.append('this->%s = %s;' % (member.name, member.default_value))
+    return strlist
+
+
+def generate_experimental_zero_string(membset):
+    """Like generate_zero_string but uses experimental C++ type names for array fill.
+
+    For Array<NamespacedType, N> members the fill element type is the experimental
+    message name (e.g. pkg::ns::experimental::Sub) rather than the standard
+    allocator-based type (e.g. pkg::ns::Sub_<std::allocator<void>>).
+    """
+    strlist = []
+    for member in membset.members:
+        if isinstance(member.zero_value, list):
+            if isinstance(member.type, AbstractSequence):
+                strlist.append('this->%s.resize(%d);' % (
+                    member.name, len(member.zero_value)))
+            strlist.append('std::fill(this->%s.begin(), this->%s.end(), %s);' % (
+                member.name, member.name, member.zero_value[0]))
+        else:
+            strlist.append('this->%s = %s;' % (member.name, member.zero_value))
+    return strlist
 
 
 def experimental_storage_type(type_):
@@ -217,13 +360,24 @@ def experimental_storage_init_expr(member_name, type_):
     from its storage field via a single-argument constructor.  For Array<non-scalar, N>
     the piecewise constructor is used, passing each storage element as its own
     single-element tuple — identical in shape to the PMR constructor.
+
+    Sub-messages (NamespacedType) are constructed with SKIP so that _initialize()
+    can propagate the actual MessageInitialization value afterwards.
     """
     if isinstance(type_, Array) and not isinstance(type_.value_type, BasicType):
-        tuples = ', '.join(
-            ['std::make_tuple(storage.{}[{}])'.format(member_name, i)
-             for i in range(type_.size)])
+        if isinstance(type_.value_type, NamespacedType):
+            tuples = ', '.join(
+                ['std::make_tuple(storage.members.{}[{}], rosidl_runtime_cpp::MessageInitialization::SKIP)'
+                 .format(member_name, i) for i in range(type_.size)])
+        else:
+            tuples = ', '.join(
+                ['std::make_tuple(storage.members.{}[{}])'.format(member_name, i)
+                 for i in range(type_.size)])
         return '{}(std::piecewise_construct, {})'.format(member_name, tuples)
-    return '{}(storage.{})'.format(member_name, member_name)
+    if isinstance(type_, NamespacedType):
+        return '{}(storage.members.{}, rosidl_runtime_cpp::MessageInitialization::SKIP)'.format(
+            member_name, member_name)
+    return '{}(storage.members.{})'.format(member_name, member_name)
 
 
 def experimental_constraint_type(type_):
