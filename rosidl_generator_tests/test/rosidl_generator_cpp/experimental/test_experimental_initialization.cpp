@@ -36,20 +36,12 @@
 
 namespace experimental = rosidl_generator_tests::msg::experimental;
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 struct Arena
 {
   alignas(std::max_align_t) std::array<std::byte, 65536> buf{};
   std::pmr::monotonic_buffer_resource res{buf.data(), buf.size()};
   std::pmr::memory_resource * get() {return &res;}
 };
-
-// ---------------------------------------------------------------------------
-// Default construction — value initialisation for every message type
-// ---------------------------------------------------------------------------
 
 TEST(test_experimental_initialization_default, empty) {
   experimental::Empty a, b;
@@ -125,10 +117,6 @@ TEST(test_experimental_initialization_default, multi_nested_sequences_empty) {
   EXPECT_EQ(0u, msg.unbounded_sequence_of_bounded_sequences.size());
 }
 
-// ---------------------------------------------------------------------------
-// PMR constructor — resource propagation
-// ---------------------------------------------------------------------------
-
 TEST(test_experimental_initialization_pmr, basic_types_no_pmr_members_compiles) {
   // BasicTypes has no PMR members; constructor accepts mem_res without error.
   Arena arena;
@@ -200,10 +188,6 @@ TEST(test_experimental_initialization_pmr, multi_nested_pmr_compiles_and_is_usab
   EXPECT_EQ("deep", msg.array_of_arrays[0].string_values[0]);
 }
 
-// ---------------------------------------------------------------------------
-// Storage struct — default construction and equality
-// ---------------------------------------------------------------------------
-
 TEST(test_experimental_initialization_storage, basic_types_storage_equality) {
   experimental::BasicTypes::ExternalStorage s1, s2;
   EXPECT_EQ(s1, s2);
@@ -250,78 +234,194 @@ TEST(test_experimental_initialization_storage, multi_nested_storage_equality) {
   EXPECT_EQ(s1, s2);
 }
 
-// ---------------------------------------------------------------------------
-// Storage constructor — initialise message from external memory descriptors
-//
-// For scalar fields the Storage holds a rosidl_runtime_cpp::Memory descriptor
-// (address + attributes).  A default-constructed descriptor has address==nullptr;
-// we must NOT dereference the resulting Scalar but the constructor must run.
-// For real use a caller would set descriptor.address to a valid allocation.
-// ---------------------------------------------------------------------------
-
 TEST(test_experimental_initialization_storage_ctor, empty_storage_ctor_compiles) {
   experimental::Empty::ExternalStorage s;
-  experimental::Empty msg{s};
+  experimental::Empty msg{s, rosidl_runtime_cpp::MessageInitialization::SKIP};
   (void)msg;
 }
 
 TEST(test_experimental_initialization_storage_ctor, constants_storage_ctor_compiles) {
   experimental::Constants::ExternalStorage s;
-  experimental::Constants msg{s};
+  experimental::Constants msg{s, rosidl_runtime_cpp::MessageInitialization::SKIP};
   (void)msg;
 }
 
-TEST(test_experimental_initialization_storage_ctor, basic_types_storage_ctor_compiles) {
-  // Null address — do not dereference, just verify construction doesn't crash.
-  experimental::BasicTypes::ExternalStorage s;
-  experimental::BasicTypes msg{s};
-  (void)msg;
-}
-
-TEST(test_experimental_initialization_storage_ctor, basic_types_storage_ctor_with_real_memory) {
-  // Provide a real backing buffer so we can safely read back through .
+TEST(test_experimental_initialization_storage_ctor, basic_types_storage_ctor_skip_preserves_value) {
+  // SKIP leaves the backed region untouched — whatever was there before is
+  // still readable through the message interface.
   alignas(int32_t) std::byte int32_buf[sizeof(int32_t)];
-  std::memset(int32_buf, 0, sizeof(int32_buf));
   *reinterpret_cast<int32_t *>(int32_buf) = 1234;
-
   experimental::BasicTypes::ExternalStorage s;
-  s.int32_value.assign(int32_buf);
-  experimental::BasicTypes msg{s};
+  s.members.int32_value.assign(int32_buf);
+  experimental::BasicTypes msg{s, rosidl_runtime_cpp::MessageInitialization::SKIP};
   EXPECT_EQ(1234, msg.int32_value);
 }
 
-TEST(test_experimental_initialization_storage_ctor, strings_storage_ctor_compiles) {
+TEST(test_experimental_initialization_storage_ctor, basic_types_storage_ctor_all_with_full_backing) {
+  // ALL must zero every field. Back all 13 scalars so reset() has valid targets.
+  bool bv = true; uint8_t byv = 255; uint8_t chv = 99;
+  float f32v = 1.0f; double f64v = 1.0;
+  int8_t i8v = -1; uint8_t u8v = 255;
+  int16_t i16v = -1; uint16_t u16v = 65535;
+  int32_t i32v = -1; uint32_t u32v = 4294967295u;
+  int64_t i64v = -1; uint64_t u64v = 18446744073709551615ull;
+  experimental::BasicTypes::ExternalStorage s;
+  s.members.bool_value.assign(&bv);
+  s.members.byte_value.assign(&byv);
+  s.members.char_value.assign(&chv);
+  s.members.float32_value.assign(&f32v);
+  s.members.float64_value.assign(&f64v);
+  s.members.int8_value.assign(&i8v);
+  s.members.uint8_value.assign(&u8v);
+  s.members.int16_value.assign(&i16v);
+  s.members.uint16_value.assign(&u16v);
+  s.members.int32_value.assign(&i32v);
+  s.members.uint32_value.assign(&u32v);
+  s.members.int64_value.assign(&i64v);
+  s.members.uint64_value.assign(&u64v);
+  experimental::BasicTypes msg{s, rosidl_runtime_cpp::MessageInitialization::ALL};
+  EXPECT_FALSE(msg.bool_value);
+  EXPECT_EQ(0, msg.int32_value);
+  EXPECT_EQ(0.0, msg.float64_value);
+  EXPECT_EQ(0u, msg.uint64_value);
+}
+
+TEST(test_experimental_initialization_storage_ctor, defaults_storage_ctor_all_with_full_backing) {
+  // ALL must apply field defaults. Back all 13 scalars of Defaults.
+  bool bv = false; uint8_t byv = 0; uint8_t chv = 0;
+  float f32v = 0.0f; double f64v = 0.0;
+  int8_t i8v = 0; uint8_t u8v = 0;
+  int16_t i16v = 0; uint16_t u16v = 0;
+  int32_t i32v = 0; uint32_t u32v = 0;
+  int64_t i64v = 0; uint64_t u64v = 0;
+  experimental::Defaults::ExternalStorage s;
+  s.members.bool_value.assign(&bv);
+  s.members.byte_value.assign(&byv);
+  s.members.char_value.assign(&chv);
+  s.members.float32_value.assign(&f32v);
+  s.members.float64_value.assign(&f64v);
+  s.members.int8_value.assign(&i8v);
+  s.members.uint8_value.assign(&u8v);
+  s.members.int16_value.assign(&i16v);
+  s.members.uint16_value.assign(&u16v);
+  s.members.int32_value.assign(&i32v);
+  s.members.uint32_value.assign(&u32v);
+  s.members.int64_value.assign(&i64v);
+  s.members.uint64_value.assign(&u64v);
+  experimental::Defaults msg{s, rosidl_runtime_cpp::MessageInitialization::ALL};
+  EXPECT_TRUE(msg.bool_value);           // true
+  EXPECT_EQ(50u, msg.byte_value);        // 50
+  EXPECT_EQ(-30000, msg.int32_value);    // -30000
+  EXPECT_EQ(50000000u, msg.uint64_value); // 50000000
+}
+
+TEST(test_experimental_initialization_storage_ctor, strings_storage_ctor_all_with_full_backing) {
+  // Strings has 5 unbounded + 5 bounded string fields (constants don't need backing).
+  // ALL zeroes the non-defaulted ones (empty) and fills the defaulted ones.
+  char s0[64]{}, s1[64]{}, s2[64]{}, s3[64]{}, s4[64]{}, s5[64]{};
+  char b0[23]{}, b1[23]{}, b2[23]{}, b3[23]{}, b4[23]{}, b5[23]{};
   experimental::Strings::ExternalStorage s;
-  experimental::Strings msg{s};
-  (void)msg;
+  s.members.string_value.assign(s0, sizeof(s0));
+  s.members.string_value_default1.assign(s1, sizeof(s1));
+  s.members.string_value_default2.assign(s2, sizeof(s2));
+  s.members.string_value_default3.assign(s3, sizeof(s3));
+  s.members.string_value_default4.assign(s4, sizeof(s4));
+  s.members.string_value_default5.assign(s5, sizeof(s5));
+  s.members.bounded_string_value.assign(b0, sizeof(b0));
+  s.members.bounded_string_value_default1.assign(b1, sizeof(b1));
+  s.members.bounded_string_value_default2.assign(b2, sizeof(b2));
+  s.members.bounded_string_value_default3.assign(b3, sizeof(b3));
+  s.members.bounded_string_value_default4.assign(b4, sizeof(b4));
+  s.members.bounded_string_value_default5.assign(b5, sizeof(b5));
+  experimental::Strings msg{s, rosidl_runtime_cpp::MessageInitialization::ALL};
+  EXPECT_TRUE(msg.string_value.empty());
+  EXPECT_EQ("Hello world!", msg.string_value_default1);
+  EXPECT_TRUE(msg.bounded_string_value.empty());
+  EXPECT_EQ("Hello world!", msg.bounded_string_value_default1);
+  msg.string_value = "hello";
+  EXPECT_EQ("hello", msg.string_value);
 }
 
-TEST(test_experimental_initialization_storage_ctor, nested_storage_ctor_compiles) {
+TEST(test_experimental_initialization_storage_ctor, nested_storage_ctor_all_with_full_backing) {
+  // Nested wraps a single BasicTypes sub-message — back all 13 of its scalars.
+  bool bv = true; uint8_t byv = 1; uint8_t chv = 1;
+  float f32v = 1.0f; double f64v = 1.0;
+  int8_t i8v = -1; uint8_t u8v = 1;
+  int16_t i16v = -1; uint16_t u16v = 1;
+  int32_t i32v = -1; uint32_t u32v = 1;
+  int64_t i64v = -1; uint64_t u64v = 1;
+  experimental::BasicTypes::ExternalStorage sub;
+  sub.members.bool_value.assign(&bv);       
+  sub.members.byte_value.assign(&byv);
+  sub.members.char_value.assign(&chv);      
+  sub.members.float32_value.assign(&f32v);
+  sub.members.float64_value.assign(&f64v);
+  sub.members.int8_value.assign(&i8v);
+  sub.members.uint8_value.assign(&u8v);
+  sub.members.int16_value.assign(&i16v);
+  sub.members.uint16_value.assign(&u16v);
+  sub.members.int32_value.assign(&i32v);
+  sub.members.uint32_value.assign(&u32v);
+  sub.members.int64_value.assign(&i64v);
+  sub.members.uint64_value.assign(&u64v);
   experimental::Nested::ExternalStorage s;
-  experimental::Nested msg{s};
-  (void)msg;
+  s.members.basic_types_value = sub;
+  experimental::Nested msg{s, rosidl_runtime_cpp::MessageInitialization::ALL};
+  EXPECT_FALSE(msg.basic_types_value.bool_value);
+  EXPECT_EQ(0, msg.basic_types_value.int32_value);
 }
 
-TEST(test_experimental_initialization_storage_ctor, arrays_storage_ctor_compiles) {
+TEST(test_experimental_initialization_storage_ctor, arrays_storage_ctor_skip_scalar_region_preserves_values) {
+  // Partial backing (int32_values only) — SKIP must leave the values untouched.
+  std::array<int32_t, 3> buf{10, 20, 30};
   experimental::Arrays::ExternalStorage s;
-  experimental::Arrays msg{s};
-  (void)msg;
+  s.members.int32_values.assign(buf.data(), 3);
+  experimental::Arrays msg{s, rosidl_runtime_cpp::MessageInitialization::SKIP};
+  EXPECT_EQ(10, msg.int32_values[0]);
+  EXPECT_EQ(20, msg.int32_values[1]);
+  EXPECT_EQ(30, msg.int32_values[2]);
 }
 
-TEST(test_experimental_initialization_storage_ctor, bounded_sequences_storage_ctor_compiles) {
+TEST(test_experimental_initialization_storage_ctor, arrays_storage_ctor_skip_string_region_is_usable) {
+  // Partial backing (string_values only) — SKIP must leave the regions usable.
+  char bufs[3][64] = {};
+  experimental::Arrays::ExternalStorage s;
+  for (int i = 0; i < 3; ++i) {
+    s.members.string_values[i].assign(bufs[i], sizeof(bufs[i]));
+  }
+  experimental::Arrays msg{s, rosidl_runtime_cpp::MessageInitialization::SKIP};
+  EXPECT_TRUE(msg.string_values[0].empty());
+  msg.string_values[0] = "first";
+  EXPECT_EQ("first", msg.string_values[0]);
+}
+
+TEST(test_experimental_initialization_storage_ctor, bounded_sequences_storage_ctor_skip_empty) {
+  // Without full backing, SKIP is the only safe init.
+  // size() reads stored length metadata — safe even with null data pointer.
   experimental::BoundedSequences::ExternalStorage s;
-  experimental::BoundedSequences msg{s};
-  (void)msg;
+  experimental::BoundedSequences msg{s, rosidl_runtime_cpp::MessageInitialization::SKIP};
+  EXPECT_EQ(0u, msg.int32_values.size());
+  EXPECT_EQ(0u, msg.string_values.size());
+  EXPECT_EQ(0u, msg.basic_types_values.size());
+  EXPECT_EQ(0u, msg.int32_values_default.size());
 }
 
-TEST(test_experimental_initialization_storage_ctor, unbounded_sequences_storage_ctor_compiles) {
+TEST(test_experimental_initialization_storage_ctor, unbounded_sequences_storage_ctor_skip_empty) {
+  // Same as bounded: SKIP with null regions; check size only.
   experimental::UnboundedSequences::ExternalStorage s;
-  experimental::UnboundedSequences msg{s};
-  (void)msg;
+  experimental::UnboundedSequences msg{s, rosidl_runtime_cpp::MessageInitialization::SKIP};
+  EXPECT_EQ(0u, msg.int32_values.size());
+  EXPECT_EQ(0u, msg.string_values.size());
+  EXPECT_EQ(0u, msg.basic_types_values.size());
+  EXPECT_EQ(0u, msg.int32_values_default.size());
 }
 
-TEST(test_experimental_initialization_storage_ctor, multi_nested_storage_ctor_compiles) {
+TEST(test_experimental_initialization_storage_ctor, multi_nested_storage_ctor_skip_sequences_empty) {
+  // No backing for array-of-submessage regions; SKIP only.
   experimental::MultiNested::ExternalStorage s;
-  experimental::MultiNested msg{s};
-  (void)msg;
+  experimental::MultiNested msg{s, rosidl_runtime_cpp::MessageInitialization::SKIP};
+  EXPECT_EQ(0u, msg.bounded_sequence_of_arrays.size());
+  EXPECT_EQ(0u, msg.bounded_sequence_of_bounded_sequences.size());
+  EXPECT_EQ(0u, msg.unbounded_sequence_of_arrays.size());
+  EXPECT_EQ(0u, msg.unbounded_sequence_of_bounded_sequences.size());
 }
