@@ -57,11 +57,16 @@ extern "C"
     } _impl; \
   } STRUCT_NAME; \
   bool STRUCT_NAME ## __init( \
+    STRUCT_NAME * _string); \
+  bool STRUCT_NAME ## __init_with_allocator( \
     STRUCT_NAME * _string, \
     const rcutils_allocator_t * allocator); \
   bool STRUCT_NAME ## __init_from_region( \
     STRUCT_NAME * _string, \
     rosidl_memory_region_t region); \
+  bool STRUCT_NAME ## __init_from_storage( \
+    STRUCT_NAME * _string, \
+    const rosidl_memory_region_t * storage); \
   void STRUCT_NAME ## __fini( \
     STRUCT_NAME * _string); \
   bool STRUCT_NAME ## __reserve( \
@@ -95,7 +100,7 @@ extern "C"
 /// @brief Define basic string functions.
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__BASIC_BOUNDED_STRING_DEFINE(STRUCT_NAME, CHAR_TYPE, \
     UPPER_BOUND) \
-  bool STRUCT_NAME ## __init( \
+  bool STRUCT_NAME ## __init_with_allocator( \
     STRUCT_NAME * _string, \
     const rcutils_allocator_t * allocator) \
   { \
@@ -113,6 +118,11 @@ extern "C"
     _string->size = 0U; \
     _string->value[0] = (CHAR_TYPE)0; \
     return true; \
+  } \
+  bool STRUCT_NAME ## __init( \
+    STRUCT_NAME * _string) \
+  { \
+    return STRUCT_NAME ## __init_with_allocator(_string, NULL); \
   } \
   bool STRUCT_NAME ## __init_from_region( \
     STRUCT_NAME * _string, \
@@ -135,6 +145,15 @@ extern "C"
     _string->size = 0U; \
     _string->value[0] = (CHAR_TYPE)0; \
     return true; \
+  } \
+  bool STRUCT_NAME ## __init_from_storage( \
+    STRUCT_NAME * _string, \
+    const rosidl_memory_region_t * storage) \
+  { \
+    if (storage == NULL) { \
+      return false; \
+    } \
+    return STRUCT_NAME ## __init_from_region(_string, *storage); \
   } \
   void STRUCT_NAME ## __fini( \
     STRUCT_NAME * _string) \
@@ -322,6 +341,12 @@ ROSIDL_RUNTIME_C__EXPERIMENTAL__BASIC_STRING_DECLARE(
   rosidl_runtime_c__experimental__String, char);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__BASIC_STRING_DECLARE(
   rosidl_runtime_c__experimental__WString, char16_t);
+
+/// @brief External storage type for String initialization.
+typedef rosidl_memory_region_t rosidl_runtime_c__experimental__String__ExternalStorage;
+
+/// @brief External storage type for WString initialization.
+typedef rosidl_memory_region_t rosidl_runtime_c__experimental__WString__ExternalStorage;
 
 #ifdef __cplusplus
 }

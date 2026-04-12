@@ -64,7 +64,7 @@ extern "C"
     } \
     _scalar->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__LOCAL; \
     _scalar->_impl.storage.local.data = (VALUE_TYPE)0; \
-    _scalar->value = &_scalar->_impl.storage.local; \
+    _scalar->value = (void *)&_scalar->_impl.storage.local; \
     return true; \
   } \
   bool STRUCT_NAME ## __init_from_memory( \
@@ -87,7 +87,7 @@ extern "C"
     } \
     if (_scalar->_impl.kind == ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__LOCAL) { \
       _scalar->_impl.storage.local.data = (VALUE_TYPE)0; \
-      _scalar->value = &_scalar->_impl.storage.local; \
+      _scalar->value = (void *)&_scalar->_impl.storage.local; \
       return; \
     } \
     _scalar->value = NULL; \
@@ -106,7 +106,6 @@ ROSIDL_RUNTIME_C__EXPERIMENTAL__SCALAR_DECLARE(rosidl_runtime_c__experimental__L
 ROSIDL_RUNTIME_C__EXPERIMENTAL__SCALAR_DECLARE(rosidl_runtime_c__experimental__Char, char);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__SCALAR_DECLARE(rosidl_runtime_c__experimental__WChar, char16_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__SCALAR_DECLARE(rosidl_runtime_c__experimental__Boolean, bool);
-ROSIDL_RUNTIME_C__EXPERIMENTAL__SCALAR_DECLARE(rosidl_runtime_c__experimental__Octet, uint8_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__SCALAR_DECLARE(rosidl_runtime_c__experimental__UInt8, uint8_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__SCALAR_DECLARE(rosidl_runtime_c__experimental__Int8, int8_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__SCALAR_DECLARE(rosidl_runtime_c__experimental__UInt16, uint16_t);
