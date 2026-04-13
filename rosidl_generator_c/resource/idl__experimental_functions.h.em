@@ -54,6 +54,96 @@ TEMPLATE(
 }@
 
 @[end for]@
+@
+@#######################################################################
+@# Handle service
+@#######################################################################
+@{
+from rosidl_parser.definition import Service
+}@
+@[for service in content.get_elements_of_type(Service)]@
+
+@{
+TEMPLATE(
+    'msg__experimental_functions.h.em',
+    package_name=package_name, interface_path=interface_path,
+    message=service.request_message)
+}@
+
+@{
+TEMPLATE(
+    'msg__experimental_functions.h.em',
+    package_name=package_name, interface_path=interface_path,
+    message=service.response_message)
+}@
+
+@[end for]@
+@
+@#######################################################################
+@# Handle action
+@#######################################################################
+@{
+from rosidl_parser.definition import Action
+}@
+@[for action in content.get_elements_of_type(Action)]@
+
+@{
+TEMPLATE(
+    'msg__experimental_functions.h.em',
+    package_name=package_name, interface_path=interface_path,
+    message=action.goal)
+}@
+
+@{
+TEMPLATE(
+    'msg__experimental_functions.h.em',
+    package_name=package_name, interface_path=interface_path,
+    message=action.result)
+}@
+
+@{
+TEMPLATE(
+    'msg__experimental_functions.h.em',
+    package_name=package_name, interface_path=interface_path,
+    message=action.feedback)
+}@
+
+@{
+TEMPLATE(
+    'msg__experimental_functions.h.em',
+    package_name=package_name, interface_path=interface_path,
+    message=action.send_goal_service.request_message)
+}@
+
+@{
+TEMPLATE(
+    'msg__experimental_functions.h.em',
+    package_name=package_name, interface_path=interface_path,
+    message=action.send_goal_service.response_message)
+}@
+
+@{
+TEMPLATE(
+    'msg__experimental_functions.h.em',
+    package_name=package_name, interface_path=interface_path,
+    message=action.get_result_service.request_message)
+}@
+
+@{
+TEMPLATE(
+    'msg__experimental_functions.h.em',
+    package_name=package_name, interface_path=interface_path,
+    message=action.get_result_service.response_message)
+}@
+
+@{
+TEMPLATE(
+    'msg__experimental_functions.h.em',
+    package_name=package_name, interface_path=interface_path,
+    message=action.feedback_message)
+}@
+
+@[end for]@
 
 #ifdef __cplusplus
 }

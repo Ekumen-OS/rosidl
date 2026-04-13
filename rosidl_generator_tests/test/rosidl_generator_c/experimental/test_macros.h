@@ -73,7 +73,7 @@
 //   As a function:  EXP(Foo__bar)(args)
 // ---------------------------------------------------------------------------
 
-#define EXP(T) rosidl_generator_tests__msg__experimental__##T
+#define EXP(T) rosidl_generator_tests__msg__experimental__ ## T
 
 // ---------------------------------------------------------------------------
 // Test-runner helper

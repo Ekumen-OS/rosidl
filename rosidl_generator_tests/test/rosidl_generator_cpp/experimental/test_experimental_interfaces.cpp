@@ -131,9 +131,9 @@ TEST(test_experimental_interfaces_basic_types, implicit_conversion_to_underlying
 
 TEST(test_experimental_interfaces_basic_types, setters_via_named_parameter_idiom) {
   experimental::BasicTypes msg;
-  msg.set__bool_value(rosidl_runtime_cpp::Scalar<bool>{true})
-  .set__int32_value(rosidl_runtime_cpp::Scalar<int32_t>{7})
-  .set__float32_value(rosidl_runtime_cpp::Scalar<float>{1.0f});
+  msg.set__bool_value(rosidl_runtime_cpp::Scalar<bool> {true})
+  .set__int32_value(rosidl_runtime_cpp::Scalar<int32_t> {7})
+  .set__float32_value(rosidl_runtime_cpp::Scalar<float> {1.0f});
   EXPECT_TRUE(msg.bool_value);
   EXPECT_EQ(7, msg.int32_value);
   EXPECT_EQ(1.0f, msg.float32_value);
@@ -331,8 +331,8 @@ TEST(test_experimental_interfaces_wstrings, bounded_sequence_empty_by_default) {
 
 TEST(test_experimental_interfaces_wstrings, unbounded_sequence_push_back_and_read) {
   experimental::WStrings msg;
-  msg.unbounded_sequence_of_wstrings.push_back(rosidl_runtime_cpp::WString{u"a"});
-  msg.unbounded_sequence_of_wstrings.push_back(rosidl_runtime_cpp::WString{u"b"});
+  msg.unbounded_sequence_of_wstrings.push_back(rosidl_runtime_cpp::WString {u"a"});
+  msg.unbounded_sequence_of_wstrings.push_back(rosidl_runtime_cpp::WString {u"b"});
   ASSERT_EQ(2u, msg.unbounded_sequence_of_wstrings.size());
   EXPECT_EQ(u"a", msg.unbounded_sequence_of_wstrings[0]);
   EXPECT_EQ(u"b", msg.unbounded_sequence_of_wstrings[1]);
@@ -517,7 +517,7 @@ TEST(test_experimental_interfaces_bounded_sequences, scalar_push_back_and_index)
 
 TEST(test_experimental_interfaces_bounded_sequences, string_push_back_and_view) {
   experimental::BoundedSequences msg;
-  msg.string_values.push_back(rosidl_runtime_cpp::String{"hello"});
+  msg.string_values.push_back(rosidl_runtime_cpp::String {"hello"});
   ASSERT_EQ(1u, msg.string_values.size());
   EXPECT_EQ("hello", msg.string_values[0]);
 }
@@ -651,8 +651,8 @@ TEST(test_experimental_interfaces_unbounded_sequences, scalar_push_grow_clear) {
 
 TEST(test_experimental_interfaces_unbounded_sequences, string_push_back_and_view) {
   experimental::UnboundedSequences msg;
-  msg.string_values.push_back(rosidl_runtime_cpp::String{"alpha"});
-  msg.string_values.push_back(rosidl_runtime_cpp::String{"beta"});
+  msg.string_values.push_back(rosidl_runtime_cpp::String {"alpha"});
+  msg.string_values.push_back(rosidl_runtime_cpp::String {"beta"});
   ASSERT_EQ(2u, msg.string_values.size());
   EXPECT_EQ("alpha", msg.string_values[0]);
   EXPECT_EQ("beta", msg.string_values[1]);

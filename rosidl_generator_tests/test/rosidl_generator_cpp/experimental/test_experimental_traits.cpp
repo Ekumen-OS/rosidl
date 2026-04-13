@@ -296,12 +296,12 @@ void normalize_float(std::string & s)
 
 TEST(test_experimental_traits_to_yaml, empty_block_style) {
   using experimental::to_yaml;
-  EXPECT_EQ("null\n", to_yaml(experimental::Empty{}));
+  EXPECT_EQ("null\n", to_yaml(experimental::Empty {}));
 }
 
 TEST(test_experimental_traits_to_yaml, empty_flow_style) {
   using experimental::to_yaml;
-  EXPECT_EQ("null", to_yaml(experimental::Empty{}, /*use_flow_style=*/true));
+  EXPECT_EQ("null", to_yaml(experimental::Empty {}, /*use_flow_style=*/true));
 }
 
 TEST(test_experimental_traits_to_yaml, basic_types_all_zero_block) {
@@ -495,7 +495,7 @@ TEST(test_experimental_traits_to_yaml, empty_bounded_sequences_block) {
 TEST(test_experimental_traits_to_yaml, bounded_sequences_with_one_defaults_element_block) {
   using experimental::to_yaml;
   experimental::BoundedSequences msg;
-  msg.defaults_values.push_back(experimental::Defaults{});
+  msg.defaults_values.push_back(experimental::Defaults {});
   std::string yaml = to_yaml(msg);
   normalize_float(yaml);
   EXPECT_NE(std::string::npos, yaml.find("defaults_values:\n"));
@@ -512,7 +512,7 @@ TEST(test_experimental_traits_as_tuple_ref, modifies_original_message) {
   EXPECT_EQ(-1000, msg.int16_value);
   // Zero-initialise all fields via tuple reference.
   std::apply(
-    [](auto & ... f) {((f = {}), ...);},
+    [] (auto & ... f) {((f = {}), ...);},
     as_tuple_ref(msg));
   EXPECT_EQ(0, msg.int16_value);
   EXPECT_FALSE(msg.bool_value);

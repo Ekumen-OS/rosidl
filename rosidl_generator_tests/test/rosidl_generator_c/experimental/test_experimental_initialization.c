@@ -71,27 +71,44 @@ static int test_storage_empty(void)
 
 static int test_storage_basic_types_preserves_value(void)
 {
-  // Allocate backing storage on the stack.
-  int32_t i32 = 0;
-  int8_t  i8  = 0;
-  bool    b   = false;
-  float   f32 = 0.0f;
+  // Allocate backing storage on the stack for ALL fields.
+  bool     b = false;
+  uint8_t  byte = 0;
+  uint8_t  c = 0;
+  float    f32 = 0.0f;
+  double   f64 = 0.0;
+  int8_t   i8 = 0;
+  uint8_t  u8 = 0;
+  int16_t  i16 = 0;
+  uint16_t u16 = 0;
+  int32_t  i32 = 0;
+  uint32_t u32 = 0;
+  int64_t  i64 = 0;
+  uint64_t u64 = 0;
 
   EXP(BasicTypes__ExternalStorage) storage;
   memset(&storage, 0, sizeof(storage));
 
-  storage.members.int32_value  = make_memory(&i32);
-  storage.members.int8_value   = make_memory(&i8);
-  storage.members.bool_value   = make_memory(&b);
+  storage.members.bool_value = make_memory(&b);
+  storage.members.byte_value = make_memory(&byte);
+  storage.members.char_value = make_memory(&c);
   storage.members.float32_value = make_memory(&f32);
-  // Leave remaining members zeroed (NULL address → managed allocation)
+  storage.members.float64_value = make_memory(&f64);
+  storage.members.int8_value = make_memory(&i8);
+  storage.members.uint8_value = make_memory(&u8);
+  storage.members.int16_value = make_memory(&i16);
+  storage.members.uint16_value = make_memory(&u16);
+  storage.members.int32_value = make_memory(&i32);
+  storage.members.uint32_value = make_memory(&u32);
+  storage.members.int64_value = make_memory(&i64);
+  storage.members.uint64_value = make_memory(&u64);
 
   EXP(BasicTypes) msg;
   EXPECT_TRUE(EXP(BasicTypes__init_from_storage)(&msg, &storage));
 
   // Scalar value starts zero (as initialized)
   EXPECT_EQ(0, msg.int32_value.value->data);
-  EXPECT_EQ(&i32, msg.int32_value.value);
+  EXPECT_EQ(&i32, (int32_t *)msg.int32_value.value);
 
   // Write through the message field; read back via the original variable
   msg.int32_value.value->data = 42;
@@ -115,24 +132,37 @@ static int test_storage_basic_types_preserves_value(void)
 
 static int test_storage_defaults_backed_values(void)
 {
-  bool    b   = false;
-  uint8_t u8  = 0u;
-  int32_t i32 = 0;
-  int16_t i16 = 0;
+  // Allocate backing storage for ALL fields
+  bool     b = false;
+  uint8_t  u8 = 0u;
+  uint8_t  c = 0u;
+  float    f32 = 0.0f;
+  double   f64 = 0.0;
+  int8_t   i8 = 0;
+  uint8_t  u8_2 = 0u;
+  int16_t  i16 = 0;
+  uint16_t u16 = 0u;
+  int32_t  i32 = 0;
+  uint32_t u32 = 0u;
+  int64_t  i64 = 0;
   uint64_t u64 = 0u;
-  float   f32 = 0.0f;
-  double  f64 = 0.0;
 
   EXP(Defaults__ExternalStorage) storage;
   memset(&storage, 0, sizeof(storage));
 
-  storage.members.bool_value   = make_memory(&b);
-  storage.members.byte_value   = make_memory(&u8);
-  storage.members.int32_value  = make_memory(&i32);
-  storage.members.int16_value  = make_memory(&i16);
-  storage.members.uint64_value = make_memory(&u64);
+  storage.members.bool_value = make_memory(&b);
+  storage.members.byte_value = make_memory(&u8);
+  storage.members.char_value = make_memory(&c);
   storage.members.float32_value = make_memory(&f32);
   storage.members.float64_value = make_memory(&f64);
+  storage.members.int8_value = make_memory(&i8);
+  storage.members.uint8_value = make_memory(&u8_2);
+  storage.members.int16_value = make_memory(&i16);
+  storage.members.uint16_value = make_memory(&u16);
+  storage.members.int32_value = make_memory(&i32);
+  storage.members.uint32_value = make_memory(&u32);
+  storage.members.int64_value = make_memory(&i64);
+  storage.members.uint64_value = make_memory(&u64);
 
   EXP(Defaults) msg;
   EXPECT_TRUE(EXP(Defaults__init_from_storage)(&msg, &storage));
@@ -158,17 +188,35 @@ static int test_storage_defaults_backed_values(void)
 
 static int test_storage_strings_regions(void)
 {
+  // Allocate backing storage for ALL string fields
   char buf_sv[64] = {0};
+  char buf_svd1[64] = {0};
+  char buf_svd2[64] = {0};
+  char buf_svd3[64] = {0};
+  char buf_svd4[64] = {0};
+  char buf_svd5[64] = {0};
   char buf_bsv[32] = {0};
+  char buf_bsvd1[32] = {0};
+  char buf_bsvd2[32] = {0};
+  char buf_bsvd3[32] = {0};
+  char buf_bsvd4[32] = {0};
+  char buf_bsvd5[32] = {0};
 
   EXP(Strings__ExternalStorage) storage;
   memset(&storage, 0, sizeof(storage));
 
-  storage.members.string_value =
-    make_region(buf_sv, sizeof(buf_sv));
-  storage.members.bounded_string_value =
-    make_region(buf_bsv, sizeof(buf_bsv));
-  // Leave remaining string fields as null → managed
+  storage.members.string_value = make_region(buf_sv, sizeof(buf_sv));
+  storage.members.string_value_default1 = make_region(buf_svd1, sizeof(buf_svd1));
+  storage.members.string_value_default2 = make_region(buf_svd2, sizeof(buf_svd2));
+  storage.members.string_value_default3 = make_region(buf_svd3, sizeof(buf_svd3));
+  storage.members.string_value_default4 = make_region(buf_svd4, sizeof(buf_svd4));
+  storage.members.string_value_default5 = make_region(buf_svd5, sizeof(buf_svd5));
+  storage.members.bounded_string_value = make_region(buf_bsv, sizeof(buf_bsv));
+  storage.members.bounded_string_value_default1 = make_region(buf_bsvd1, sizeof(buf_bsvd1));
+  storage.members.bounded_string_value_default2 = make_region(buf_bsvd2, sizeof(buf_bsvd2));
+  storage.members.bounded_string_value_default3 = make_region(buf_bsvd3, sizeof(buf_bsvd3));
+  storage.members.bounded_string_value_default4 = make_region(buf_bsvd4, sizeof(buf_bsvd4));
+  storage.members.bounded_string_value_default5 = make_region(buf_bsvd5, sizeof(buf_bsvd5));
 
   EXP(Strings) msg;
   EXPECT_TRUE(EXP(Strings__init_from_storage)(&msg, &storage));
@@ -179,7 +227,7 @@ static int test_storage_strings_regions(void)
 
   // Assign into the region-backed field
   EXPECT_TRUE(
-    EXP(Strings__string_value_t__assign)(&msg.string_value, "hello"));
+    rosidl_runtime_c__experimental__String__assign(&msg.string_value, "hello"));
   EXPECT_EQ(5u, msg.string_value.size);
   EXPECT_EQ(0, strcmp(buf_sv, "hello"));
   EXPECT_EQ(0, strcmp((const char *)msg.string_value.value, "hello"));
@@ -199,13 +247,36 @@ static int test_storage_strings_regions(void)
 
 static int test_storage_nested(void)
 {
-  int32_t inner_i32 = 0;
-  float   inner_f32 = 0.0f;
+  // Allocate backing storage for all nested BasicTypes fields
+  bool     b = false;
+  uint8_t  byte = 0;
+  uint8_t  c = 0;
+  float    f32 = 0.0f;
+  double   f64 = 0.0;
+  int8_t   i8 = 0;
+  uint8_t  u8 = 0;
+  int16_t  i16 = 0;
+  uint16_t u16 = 0;
+  int32_t  i32 = 0;
+  uint32_t u32 = 0;
+  int64_t  i64 = 0;
+  uint64_t u64 = 0;
 
   EXP(BasicTypes__ExternalStorage) inner_storage;
   memset(&inner_storage, 0, sizeof(inner_storage));
-  inner_storage.members.int32_value  = make_memory(&inner_i32);
-  inner_storage.members.float32_value = make_memory(&inner_f32);
+  inner_storage.members.bool_value = make_memory(&b);
+  inner_storage.members.byte_value = make_memory(&byte);
+  inner_storage.members.char_value = make_memory(&c);
+  inner_storage.members.float32_value = make_memory(&f32);
+  inner_storage.members.float64_value = make_memory(&f64);
+  inner_storage.members.int8_value = make_memory(&i8);
+  inner_storage.members.uint8_value = make_memory(&u8);
+  inner_storage.members.int16_value = make_memory(&i16);
+  inner_storage.members.uint16_value = make_memory(&u16);
+  inner_storage.members.int32_value = make_memory(&i32);
+  inner_storage.members.uint32_value = make_memory(&u32);
+  inner_storage.members.int64_value = make_memory(&i64);
+  inner_storage.members.uint64_value = make_memory(&u64);
 
   EXP(Nested__ExternalStorage) storage;
   memset(&storage, 0, sizeof(storage));
@@ -215,13 +286,13 @@ static int test_storage_nested(void)
   EXPECT_TRUE(EXP(Nested__init_from_storage)(&msg, &storage));
 
   EXPECT_EQ(0, msg.basic_types_value.int32_value.value->data);
-  EXPECT_EQ(&inner_i32, msg.basic_types_value.int32_value.value);
+  EXPECT_EQ(&i32, (int32_t *)msg.basic_types_value.int32_value.value);
 
   msg.basic_types_value.int32_value.value->data = 111;
-  EXPECT_EQ(111, inner_i32);
+  EXPECT_EQ(111, i32);
 
   msg.basic_types_value.float32_value.value->data = 2.5f;
-  EXPECT_EQ(2.5f, inner_f32);
+  EXPECT_EQ(2.5f, f32);
 
   EXP(Nested__fini)(&msg);
   return 0;
@@ -234,13 +305,227 @@ static int test_storage_nested(void)
 
 static int test_storage_arrays_scalar_region(void)
 {
+  // Allocate backing storage for all scalar array fields
+  bool bool_buf[3] = {false, false, false};
+  uint8_t byte_buf[3] = {0, 0, 0};
+  uint8_t char_buf[3] = {0, 0, 0};
+  float float32_buf[3] = {0.0f, 0.0f, 0.0f};
+  double float64_buf[3] = {0.0, 0.0, 0.0};
+  int8_t int8_buf[3] = {0, 0, 0};
+  uint8_t uint8_buf[3] = {0, 0, 0};
+  int16_t int16_buf[3] = {0, 0, 0};
+  uint16_t uint16_buf[3] = {0, 0, 0};
   int32_t int32_buf[3] = {0, 0, 0};
+  uint32_t uint32_buf[3] = {0, 0, 0};
+  int64_t int64_buf[3] = {0, 0, 0};
+  uint64_t uint64_buf[3] = {0, 0, 0};
 
+  // String arrays
+  char string_buf0[64] = {0}, string_buf1[64] = {0}, string_buf2[64] = {0};
+
+  // BasicTypes arrays - need 3 complete BasicTypes storages
+  // Each BasicTypes needs 13 scalar fields
+  bool bt0_b = false, bt1_b = false, bt2_b = false;
+  uint8_t bt0_byte = 0, bt1_byte = 0, bt2_byte = 0;
+  uint8_t bt0_char = 0, bt1_char = 0, bt2_char = 0;
+  float bt0_f32 = 0.0f, bt1_f32 = 0.0f, bt2_f32 = 0.0f;
+  double bt0_f64 = 0.0, bt1_f64 = 0.0, bt2_f64 = 0.0;
+  int8_t bt0_i8 = 0, bt1_i8 = 0, bt2_i8 = 0;
+  uint8_t bt0_u8 = 0, bt1_u8 = 0, bt2_u8 = 0;
+  int16_t bt0_i16 = 0, bt1_i16 = 0, bt2_i16 = 0;
+  uint16_t bt0_u16 = 0, bt1_u16 = 0, bt2_u16 = 0;
+  int32_t bt0_i32 = 0, bt1_i32 = 0, bt2_i32 = 0;
+  uint32_t bt0_u32 = 0, bt1_u32 = 0, bt2_u32 = 0;
+  int64_t bt0_i64 = 0, bt1_i64 = 0, bt2_i64 = 0;
+  uint64_t bt0_u64 = 0, bt1_u64 = 0, bt2_u64 = 0;
+
+  // Constants arrays - Constants only has structure_needs_at_least_one_member field
+  uint8_t const0_member = 0, const1_member = 0, const2_member = 0;
+  EXP(Constants__ExternalStorage) const_storage[3];
+  memset(const_storage, 0, sizeof(const_storage));
+  const_storage[0].members.structure_needs_at_least_one_member = make_memory(&const0_member);
+  const_storage[1].members.structure_needs_at_least_one_member = make_memory(&const1_member);
+  const_storage[2].members.structure_needs_at_least_one_member = make_memory(&const2_member);
+
+  // Defaults arrays - need 3 complete Defaults storages
+  bool df0_b = false, df1_b = false, df2_b = false;
+  uint8_t df0_byte = 0, df1_byte = 0, df2_byte = 0;
+  uint8_t df0_char = 0, df1_char = 0, df2_char = 0;
+  float df0_f32 = 0.0f, df1_f32 = 0.0f, df2_f32 = 0.0f;
+  double df0_f64 = 0.0, df1_f64 = 0.0, df2_f64 = 0.0;
+  int8_t df0_i8 = 0, df1_i8 = 0, df2_i8 = 0;
+  uint8_t df0_u8 = 0, df1_u8 = 0, df2_u8 = 0;
+  int16_t df0_i16 = 0, df1_i16 = 0, df2_i16 = 0;
+  uint16_t df0_u16 = 0, df1_u16 = 0, df2_u16 = 0;
+  int32_t df0_i32 = 0, df1_i32 = 0, df2_i32 = 0;
+  uint32_t df0_u32 = 0, df1_u32 = 0, df2_u32 = 0;
+  int64_t df0_i64 = 0, df1_i64 = 0, df2_i64 = 0;
+  uint64_t df0_u64 = 0, df1_u64 = 0, df2_u64 = 0;
+
+  // Default value arrays
+  bool bool_def_buf[3] = {false, false, false};
+  uint8_t byte_def_buf[3] = {0, 0, 0};
+  uint8_t char_def_buf[3] = {0, 0, 0};
+  float float32_def_buf[3] = {0.0f, 0.0f, 0.0f};
+  double float64_def_buf[3] = {0.0, 0.0, 0.0};
+  int8_t int8_def_buf[3] = {0, 0, 0};
+  uint8_t uint8_def_buf[3] = {0, 0, 0};
+  int16_t int16_def_buf[3] = {0, 0, 0};
+  uint16_t uint16_def_buf[3] = {0, 0, 0};
+  int32_t int32_def_buf[3] = {0, 0, 0};
+  uint32_t uint32_def_buf[3] = {0, 0, 0};
+  int64_t int64_def_buf[3] = {0, 0, 0};
+  uint64_t uint64_def_buf[3] = {0, 0, 0};
+  char string_def_buf0[64] = {0}, string_def_buf1[64] = {0}, string_def_buf2[64] = {0};
+
+  // Alignment check
+  int32_t alignment = 0;
+
+  // Initialize BasicTypes storages
+  EXP(BasicTypes__ExternalStorage) bt_storage[3];
+  memset(bt_storage, 0, sizeof(bt_storage));
+
+  bt_storage[0].members.bool_value = make_memory(&bt0_b);
+  bt_storage[0].members.byte_value = make_memory(&bt0_byte);
+  bt_storage[0].members.char_value = make_memory(&bt0_char);
+  bt_storage[0].members.float32_value = make_memory(&bt0_f32);
+  bt_storage[0].members.float64_value = make_memory(&bt0_f64);
+  bt_storage[0].members.int8_value = make_memory(&bt0_i8);
+  bt_storage[0].members.uint8_value = make_memory(&bt0_u8);
+  bt_storage[0].members.int16_value = make_memory(&bt0_i16);
+  bt_storage[0].members.uint16_value = make_memory(&bt0_u16);
+  bt_storage[0].members.int32_value = make_memory(&bt0_i32);
+  bt_storage[0].members.uint32_value = make_memory(&bt0_u32);
+  bt_storage[0].members.int64_value = make_memory(&bt0_i64);
+  bt_storage[0].members.uint64_value = make_memory(&bt0_u64);
+
+  bt_storage[1].members.bool_value = make_memory(&bt1_b);
+  bt_storage[1].members.byte_value = make_memory(&bt1_byte);
+  bt_storage[1].members.char_value = make_memory(&bt1_char);
+  bt_storage[1].members.float32_value = make_memory(&bt1_f32);
+  bt_storage[1].members.float64_value = make_memory(&bt1_f64);
+  bt_storage[1].members.int8_value = make_memory(&bt1_i8);
+  bt_storage[1].members.uint8_value = make_memory(&bt1_u8);
+  bt_storage[1].members.int16_value = make_memory(&bt1_i16);
+  bt_storage[1].members.uint16_value = make_memory(&bt1_u16);
+  bt_storage[1].members.int32_value = make_memory(&bt1_i32);
+  bt_storage[1].members.uint32_value = make_memory(&bt1_u32);
+  bt_storage[1].members.int64_value = make_memory(&bt1_i64);
+  bt_storage[1].members.uint64_value = make_memory(&bt1_u64);
+
+  bt_storage[2].members.bool_value = make_memory(&bt2_b);
+  bt_storage[2].members.byte_value = make_memory(&bt2_byte);
+  bt_storage[2].members.char_value = make_memory(&bt2_char);
+  bt_storage[2].members.float32_value = make_memory(&bt2_f32);
+  bt_storage[2].members.float64_value = make_memory(&bt2_f64);
+  bt_storage[2].members.int8_value = make_memory(&bt2_i8);
+  bt_storage[2].members.uint8_value = make_memory(&bt2_u8);
+  bt_storage[2].members.int16_value = make_memory(&bt2_i16);
+  bt_storage[2].members.uint16_value = make_memory(&bt2_u16);
+  bt_storage[2].members.int32_value = make_memory(&bt2_i32);
+  bt_storage[2].members.uint32_value = make_memory(&bt2_u32);
+  bt_storage[2].members.int64_value = make_memory(&bt2_i64);
+  bt_storage[2].members.uint64_value = make_memory(&bt2_u64);
+
+  // Initialize Defaults storages
+  EXP(Defaults__ExternalStorage) df_storage[3];
+  memset(df_storage, 0, sizeof(df_storage));
+
+  df_storage[0].members.bool_value = make_memory(&df0_b);
+  df_storage[0].members.byte_value = make_memory(&df0_byte);
+  df_storage[0].members.char_value = make_memory(&df0_char);
+  df_storage[0].members.float32_value = make_memory(&df0_f32);
+  df_storage[0].members.float64_value = make_memory(&df0_f64);
+  df_storage[0].members.int8_value = make_memory(&df0_i8);
+  df_storage[0].members.uint8_value = make_memory(&df0_u8);
+  df_storage[0].members.int16_value = make_memory(&df0_i16);
+  df_storage[0].members.uint16_value = make_memory(&df0_u16);
+  df_storage[0].members.int32_value = make_memory(&df0_i32);
+  df_storage[0].members.uint32_value = make_memory(&df0_u32);
+  df_storage[0].members.int64_value = make_memory(&df0_i64);
+  df_storage[0].members.uint64_value = make_memory(&df0_u64);
+
+  df_storage[1].members.bool_value = make_memory(&df1_b);
+  df_storage[1].members.byte_value = make_memory(&df1_byte);
+  df_storage[1].members.char_value = make_memory(&df1_char);
+  df_storage[1].members.float32_value = make_memory(&df1_f32);
+  df_storage[1].members.float64_value = make_memory(&df1_f64);
+  df_storage[1].members.int8_value = make_memory(&df1_i8);
+  df_storage[1].members.uint8_value = make_memory(&df1_u8);
+  df_storage[1].members.int16_value = make_memory(&df1_i16);
+  df_storage[1].members.uint16_value = make_memory(&df1_u16);
+  df_storage[1].members.int32_value = make_memory(&df1_i32);
+  df_storage[1].members.uint32_value = make_memory(&df1_u32);
+  df_storage[1].members.int64_value = make_memory(&df1_i64);
+  df_storage[1].members.uint64_value = make_memory(&df1_u64);
+
+  df_storage[2].members.bool_value = make_memory(&df2_b);
+  df_storage[2].members.byte_value = make_memory(&df2_byte);
+  df_storage[2].members.char_value = make_memory(&df2_char);
+  df_storage[2].members.float32_value = make_memory(&df2_f32);
+  df_storage[2].members.float64_value = make_memory(&df2_f64);
+  df_storage[2].members.int8_value = make_memory(&df2_i8);
+  df_storage[2].members.uint8_value = make_memory(&df2_u8);
+  df_storage[2].members.int16_value = make_memory(&df2_i16);
+  df_storage[2].members.uint16_value = make_memory(&df2_u16);
+  df_storage[2].members.int32_value = make_memory(&df2_i32);
+  df_storage[2].members.uint32_value = make_memory(&df2_u32);
+  df_storage[2].members.int64_value = make_memory(&df2_i64);
+  df_storage[2].members.uint64_value = make_memory(&df2_u64);
+
+  // Now initialize the Arrays storage
   EXP(Arrays__ExternalStorage) storage;
   memset(&storage, 0, sizeof(storage));
-  storage.members.int32_values =
-    make_region(int32_buf, sizeof(int32_buf));
-  // Leave all other fields null → managed
+
+  storage.members.bool_values = make_region(bool_buf, sizeof(bool_buf));
+  storage.members.byte_values = make_region(byte_buf, sizeof(byte_buf));
+  storage.members.char_values = make_region(char_buf, sizeof(char_buf));
+  storage.members.float32_values = make_region(float32_buf, sizeof(float32_buf));
+  storage.members.float64_values = make_region(float64_buf, sizeof(float64_buf));
+  storage.members.int8_values = make_region(int8_buf, sizeof(int8_buf));
+  storage.members.uint8_values = make_region(uint8_buf, sizeof(uint8_buf));
+  storage.members.int16_values = make_region(int16_buf, sizeof(int16_buf));
+  storage.members.uint16_values = make_region(uint16_buf, sizeof(uint16_buf));
+  storage.members.int32_values = make_region(int32_buf, sizeof(int32_buf));
+  storage.members.uint32_values = make_region(uint32_buf, sizeof(uint32_buf));
+  storage.members.int64_values = make_region(int64_buf, sizeof(int64_buf));
+  storage.members.uint64_values = make_region(uint64_buf, sizeof(uint64_buf));
+
+  storage.members.string_values[0] = make_region(string_buf0, sizeof(string_buf0));
+  storage.members.string_values[1] = make_region(string_buf1, sizeof(string_buf1));
+  storage.members.string_values[2] = make_region(string_buf2, sizeof(string_buf2));
+
+  storage.members.basic_types_values[0] = bt_storage[0];
+  storage.members.basic_types_values[1] = bt_storage[1];
+  storage.members.basic_types_values[2] = bt_storage[2];
+
+  storage.members.constants_values[0] = const_storage[0];
+  storage.members.constants_values[1] = const_storage[1];
+  storage.members.constants_values[2] = const_storage[2];
+
+  storage.members.defaults_values[0] = df_storage[0];
+  storage.members.defaults_values[1] = df_storage[1];
+  storage.members.defaults_values[2] = df_storage[2];
+
+  storage.members.bool_values_default = make_region(bool_def_buf, sizeof(bool_def_buf));
+  storage.members.byte_values_default = make_region(byte_def_buf, sizeof(byte_def_buf));
+  storage.members.char_values_default = make_region(char_def_buf, sizeof(char_def_buf));
+  storage.members.float32_values_default = make_region(float32_def_buf, sizeof(float32_def_buf));
+  storage.members.float64_values_default = make_region(float64_def_buf, sizeof(float64_def_buf));
+  storage.members.int8_values_default = make_region(int8_def_buf, sizeof(int8_def_buf));
+  storage.members.uint8_values_default = make_region(uint8_def_buf, sizeof(uint8_def_buf));
+  storage.members.int16_values_default = make_region(int16_def_buf, sizeof(int16_def_buf));
+  storage.members.uint16_values_default = make_region(uint16_def_buf, sizeof(uint16_def_buf));
+  storage.members.int32_values_default = make_region(int32_def_buf, sizeof(int32_def_buf));
+  storage.members.uint32_values_default = make_region(uint32_def_buf, sizeof(uint32_def_buf));
+  storage.members.int64_values_default = make_region(int64_def_buf, sizeof(int64_def_buf));
+  storage.members.uint64_values_default = make_region(uint64_def_buf, sizeof(uint64_def_buf));
+
+  storage.members.string_values_default[0] = make_region(string_def_buf0, sizeof(string_def_buf0));
+  storage.members.string_values_default[1] = make_region(string_def_buf1, sizeof(string_def_buf1));
+  storage.members.string_values_default[2] = make_region(string_def_buf2, sizeof(string_def_buf2));
+
+  storage.members.alignment_check = make_memory(&alignment);
 
   EXP(Arrays) msg;
   EXPECT_TRUE(EXP(Arrays__init_from_storage)(&msg, &storage));

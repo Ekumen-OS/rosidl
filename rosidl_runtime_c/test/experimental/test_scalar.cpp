@@ -35,13 +35,14 @@ template<typename T>
 struct ScalarWrapper;
 
 #define DEFINE_SCALAR_WRAPPER(T) \
-  template<> struct ScalarWrapper<T> { \
+  template<> \
+  struct ScalarWrapper<T> { \
     static bool init(T * s) \
-    { return T ## __init(s); } \
+    {return T ## __init(s);} \
     static bool init_from_memory(T * s, rosidl_memory_t m) \
-    { return T ## __init_from_memory(s, m); } \
+    {return T ## __init_from_memory(s, m);} \
     static void fini(T * s) \
-    { T ## __fini(s); } \
+    {T ## __fini(s);} \
   };
 
 // clang-format off
@@ -65,27 +66,28 @@ template<typename T>
 struct ScalarTestTraits;
 
 #define DEFINE_SCALAR_TEST_TRAITS(T, VALUE, TEST_VAL) \
-  template<> struct ScalarTestTraits<T> { \
+  template<> \
+  struct ScalarTestTraits<T> { \
     using scalar_type = T; \
     using value_type = VALUE; \
-    static constexpr VALUE test_value() { return TEST_VAL; } \
+    static constexpr VALUE test_value() {return TEST_VAL;} \
   };
 
 // clang-format off
-DEFINE_SCALAR_TEST_TRAITS(rosidl_runtime_c__experimental__Float,      float,       3.14f)
-DEFINE_SCALAR_TEST_TRAITS(rosidl_runtime_c__experimental__Double,     double,      3.14)
+DEFINE_SCALAR_TEST_TRAITS(rosidl_runtime_c__experimental__Float, float, 3.14f)
+DEFINE_SCALAR_TEST_TRAITS(rosidl_runtime_c__experimental__Double, double, 3.14)
 DEFINE_SCALAR_TEST_TRAITS(rosidl_runtime_c__experimental__LongDouble, long double, 3.14L)
-DEFINE_SCALAR_TEST_TRAITS(rosidl_runtime_c__experimental__Char,       char,        'A')
-DEFINE_SCALAR_TEST_TRAITS(rosidl_runtime_c__experimental__WChar,      char16_t,    u'A')
-DEFINE_SCALAR_TEST_TRAITS(rosidl_runtime_c__experimental__Boolean,    bool,        true)
-DEFINE_SCALAR_TEST_TRAITS(rosidl_runtime_c__experimental__UInt8,      uint8_t,     42u)
-DEFINE_SCALAR_TEST_TRAITS(rosidl_runtime_c__experimental__Int8,       int8_t,      42)
-DEFINE_SCALAR_TEST_TRAITS(rosidl_runtime_c__experimental__UInt16,     uint16_t,    1000u)
-DEFINE_SCALAR_TEST_TRAITS(rosidl_runtime_c__experimental__Int16,      int16_t,     -500)
-DEFINE_SCALAR_TEST_TRAITS(rosidl_runtime_c__experimental__UInt32,     uint32_t,    100000u)
-DEFINE_SCALAR_TEST_TRAITS(rosidl_runtime_c__experimental__Int32,      int32_t,     -42)
-DEFINE_SCALAR_TEST_TRAITS(rosidl_runtime_c__experimental__UInt64,     uint64_t,    1000000000ULL)
-DEFINE_SCALAR_TEST_TRAITS(rosidl_runtime_c__experimental__Int64,      int64_t,     -1000000000LL)
+DEFINE_SCALAR_TEST_TRAITS(rosidl_runtime_c__experimental__Char, char, 'A')
+DEFINE_SCALAR_TEST_TRAITS(rosidl_runtime_c__experimental__WChar, char16_t, u'A')
+DEFINE_SCALAR_TEST_TRAITS(rosidl_runtime_c__experimental__Boolean, bool, true)
+DEFINE_SCALAR_TEST_TRAITS(rosidl_runtime_c__experimental__UInt8, uint8_t, 42u)
+DEFINE_SCALAR_TEST_TRAITS(rosidl_runtime_c__experimental__Int8, int8_t, 42)
+DEFINE_SCALAR_TEST_TRAITS(rosidl_runtime_c__experimental__UInt16, uint16_t, 1000u)
+DEFINE_SCALAR_TEST_TRAITS(rosidl_runtime_c__experimental__Int16, int16_t, -500)
+DEFINE_SCALAR_TEST_TRAITS(rosidl_runtime_c__experimental__UInt32, uint32_t, 100000u)
+DEFINE_SCALAR_TEST_TRAITS(rosidl_runtime_c__experimental__Int32, int32_t, -42)
+DEFINE_SCALAR_TEST_TRAITS(rosidl_runtime_c__experimental__UInt64, uint64_t, 1000000000ULL)
+DEFINE_SCALAR_TEST_TRAITS(rosidl_runtime_c__experimental__Int64, int64_t, -1000000000LL)
 // clang-format on
 
 template<typename T>

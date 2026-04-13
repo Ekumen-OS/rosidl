@@ -67,17 +67,18 @@ template<typename T>
 struct ArrayWrapper;
 
 #define DEFINE_ARRAY_WRAPPER(T) \
-  template<> struct ArrayWrapper<T> { \
+  template<> \
+  struct ArrayWrapper<T> { \
     static bool init(T * a) \
-    { return T ## __init(a); } \
+    {return T ## __init(a);} \
     static bool init_from_region(T * a, rosidl_memory_region_t r) \
-    { return T ## __init_from_region(a, r); } \
+    {return T ## __init_from_region(a, r);} \
     static void fini(T * a) \
-    { T ## __fini(a); } \
+    {T ## __fini(a);} \
     static bool are_equal(const T * l, const T * r) \
-    { return T ## __are_equal(l, r); } \
+    {return T ## __are_equal(l, r);} \
     static bool copy(const T * in, T * out) \
-    { return T ## __copy(in, out); } \
+    {return T ## __copy(in, out);} \
   };
 
 // clang-format off
@@ -110,42 +111,47 @@ template<typename T>
 struct ArrayTestTraits;
 
 #define DEFINE_PRIMITIVE_ARRAY_TEST_TRAITS(T, ELEM, TEST_VAL) \
-  template<> struct ArrayTestTraits<T> { \
+  template<> \
+  struct ArrayTestTraits<T> { \
     using element_type = ELEM; \
     static constexpr size_t size = 4U; \
     static constexpr element_type test_value() \
-    { return static_cast<ELEM>(TEST_VAL); } \
+    {return static_cast<ELEM>(TEST_VAL);} \
   };
 
 // clang-format off
-DEFINE_PRIMITIVE_ARRAY_TEST_TRAITS(rosidl_runtime_c__experimental__FloatArray4,      float,       3.14f)
-DEFINE_PRIMITIVE_ARRAY_TEST_TRAITS(rosidl_runtime_c__experimental__DoubleArray4,     double,      3.14)
-DEFINE_PRIMITIVE_ARRAY_TEST_TRAITS(rosidl_runtime_c__experimental__LongDoubleArray4, long double, 3.14L)
-DEFINE_PRIMITIVE_ARRAY_TEST_TRAITS(rosidl_runtime_c__experimental__CharArray4,       char,        'Z')
-DEFINE_PRIMITIVE_ARRAY_TEST_TRAITS(rosidl_runtime_c__experimental__WCharArray4,      char16_t,    u'Z')
-DEFINE_PRIMITIVE_ARRAY_TEST_TRAITS(rosidl_runtime_c__experimental__BooleanArray4,    bool,        true)
-DEFINE_PRIMITIVE_ARRAY_TEST_TRAITS(rosidl_runtime_c__experimental__UInt8Array4,      uint8_t,     42u)
-DEFINE_PRIMITIVE_ARRAY_TEST_TRAITS(rosidl_runtime_c__experimental__Int8Array4,       int8_t,      42)
-DEFINE_PRIMITIVE_ARRAY_TEST_TRAITS(rosidl_runtime_c__experimental__UInt16Array4,     uint16_t,    1000u)
-DEFINE_PRIMITIVE_ARRAY_TEST_TRAITS(rosidl_runtime_c__experimental__Int16Array4,      int16_t,     -500)
-DEFINE_PRIMITIVE_ARRAY_TEST_TRAITS(rosidl_runtime_c__experimental__UInt32Array4,     uint32_t,    100000u)
-DEFINE_PRIMITIVE_ARRAY_TEST_TRAITS(rosidl_runtime_c__experimental__Int32Array4,      int32_t,     -42)
-DEFINE_PRIMITIVE_ARRAY_TEST_TRAITS(rosidl_runtime_c__experimental__UInt64Array4,     uint64_t,    1000000000ULL)
-DEFINE_PRIMITIVE_ARRAY_TEST_TRAITS(rosidl_runtime_c__experimental__Int64Array4,      int64_t,     -1000000000LL)
+DEFINE_PRIMITIVE_ARRAY_TEST_TRAITS(rosidl_runtime_c__experimental__FloatArray4, float, 3.14f)
+DEFINE_PRIMITIVE_ARRAY_TEST_TRAITS(rosidl_runtime_c__experimental__DoubleArray4, double, 3.14)
+DEFINE_PRIMITIVE_ARRAY_TEST_TRAITS(rosidl_runtime_c__experimental__LongDoubleArray4, long double,
+  3.14L)
+DEFINE_PRIMITIVE_ARRAY_TEST_TRAITS(rosidl_runtime_c__experimental__CharArray4, char, 'Z')
+DEFINE_PRIMITIVE_ARRAY_TEST_TRAITS(rosidl_runtime_c__experimental__WCharArray4, char16_t, u'Z')
+DEFINE_PRIMITIVE_ARRAY_TEST_TRAITS(rosidl_runtime_c__experimental__BooleanArray4, bool, true)
+DEFINE_PRIMITIVE_ARRAY_TEST_TRAITS(rosidl_runtime_c__experimental__UInt8Array4, uint8_t, 42u)
+DEFINE_PRIMITIVE_ARRAY_TEST_TRAITS(rosidl_runtime_c__experimental__Int8Array4, int8_t, 42)
+DEFINE_PRIMITIVE_ARRAY_TEST_TRAITS(rosidl_runtime_c__experimental__UInt16Array4, uint16_t, 1000u)
+DEFINE_PRIMITIVE_ARRAY_TEST_TRAITS(rosidl_runtime_c__experimental__Int16Array4, int16_t, -500)
+DEFINE_PRIMITIVE_ARRAY_TEST_TRAITS(rosidl_runtime_c__experimental__UInt32Array4, uint32_t, 100000u)
+DEFINE_PRIMITIVE_ARRAY_TEST_TRAITS(rosidl_runtime_c__experimental__Int32Array4, int32_t, -42)
+DEFINE_PRIMITIVE_ARRAY_TEST_TRAITS(rosidl_runtime_c__experimental__UInt64Array4, uint64_t,
+  1000000000ULL)
+DEFINE_PRIMITIVE_ARRAY_TEST_TRAITS(rosidl_runtime_c__experimental__Int64Array4, int64_t,
+  -1000000000LL)
 // clang-format on
 
 // String array traits add: char_type, element_type, assign(), and string literals.
 #define DEFINE_STRING_ARRAY_TEST_TRAITS(T, ELEM_T, CHAR_T, HELLO, WORLD) \
-  template<> struct ArrayTestTraits<T> { \
+  template<> \
+  struct ArrayTestTraits<T> { \
     using element_type = ELEM_T; \
     using char_type = CHAR_T; \
     static constexpr size_t size = 4U; \
     static constexpr size_t hello_len = 5U; \
     static constexpr size_t world_len = 5U; \
-    static const CHAR_T * hello() { return HELLO; } \
-    static const CHAR_T * world() { return WORLD; } \
+    static const CHAR_T * hello() {return HELLO;} \
+    static const CHAR_T * world() {return WORLD;} \
     static bool assign(ELEM_T * e, const CHAR_T * s) \
-    { return ELEM_T ## __assign(e, s); } \
+    {return ELEM_T ## __assign(e, s);} \
   };
 
 DEFINE_STRING_ARRAY_TEST_TRAITS(

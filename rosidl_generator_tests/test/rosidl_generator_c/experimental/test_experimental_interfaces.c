@@ -160,7 +160,7 @@ static int test_strings(void)
     "Hello world!"));
 
   // Assign and re-read
-  EXPECT_TRUE(EXP(Strings__string_value_t__assign)(&msg->string_value, "rosidl"));
+  EXPECT_TRUE(EXP(Strings__string_value__assign)(&msg->string_value, "rosidl"));
   EXPECT_EQ(6u, msg->string_value.size);
   EXPECT_EQ(0, strcmp((const char *)msg->string_value.value, "rosidl"));
 
@@ -245,32 +245,32 @@ static int test_arrays(void)
   EXPECT_EQ(1u, msg->uint64_values_default.value->data[1]);
   EXPECT_EQ(UINT64_MAX, msg->uint64_values_default.value->data[2]);
 
-  // String array (ARRAY): data[i] is the element directly
-  EXPECT_EQ(0u, msg->string_values.data[0].size);
+  // String array (ARRAY): access via value->data[i]
+  EXPECT_EQ(0u, msg->string_values.value->data[0].size);
   EXPECT_TRUE(
-    EXP(Arrays__string_values__elem_t__assign)(
-      &msg->string_values.data[0], "first"));
+    rosidl_runtime_c__experimental__String__assign(
+      &msg->string_values.value->data[0], "first"));
   EXPECT_TRUE(
-    EXP(Arrays__string_values__elem_t__assign)(
-      &msg->string_values.data[2], "third"));
-  EXPECT_EQ(0, strcmp((const char *)msg->string_values.data[0].value, "first"));
-  EXPECT_EQ(0u, msg->string_values.data[1].size);
-  EXPECT_EQ(0, strcmp((const char *)msg->string_values.data[2].value, "third"));
+    rosidl_runtime_c__experimental__String__assign(
+      &msg->string_values.value->data[2], "third"));
+  EXPECT_EQ(0, strcmp((const char *)msg->string_values.value->data[0].value, "first"));
+  EXPECT_EQ(0u, msg->string_values.value->data[1].size);
+  EXPECT_EQ(0, strcmp((const char *)msg->string_values.value->data[2].value, "third"));
 
   // String array defaults
   EXPECT_EQ(0,
-    strcmp((const char *)msg->string_values_default.data[0].value, ""));
+    strcmp((const char *)msg->string_values_default.value->data[0].value, ""));
   EXPECT_EQ(0,
-    strcmp((const char *)msg->string_values_default.data[1].value, "max value"));
+    strcmp((const char *)msg->string_values_default.value->data[1].value, "max value"));
   EXPECT_EQ(0,
-    strcmp((const char *)msg->string_values_default.data[2].value, "min value"));
+    strcmp((const char *)msg->string_values_default.value->data[2].value, "min value"));
 
-  // Sub-message array (ARRAY): data[i] is the sub-message directly
-  EXPECT_EQ(0, msg->basic_types_values.data[0].int32_value.value->data);
-  msg->basic_types_values.data[1].int32_value.value->data = 42;
-  EXPECT_EQ(0, msg->basic_types_values.data[0].int32_value.value->data);
-  EXPECT_EQ(42, msg->basic_types_values.data[1].int32_value.value->data);
-  EXPECT_EQ(0, msg->basic_types_values.data[2].int32_value.value->data);
+  // Sub-message array (ARRAY): access via value->data[i]
+  EXPECT_EQ(0, msg->basic_types_values.value->data[0].int32_value.value->data);
+  msg->basic_types_values.value->data[1].int32_value.value->data = 42;
+  EXPECT_EQ(0, msg->basic_types_values.value->data[0].int32_value.value->data);
+  EXPECT_EQ(42, msg->basic_types_values.value->data[1].int32_value.value->data);
+  EXPECT_EQ(0, msg->basic_types_values.value->data[2].int32_value.value->data);
 
   EXPECT_TRUE(EXP(Arrays__are_equal)(msg, msg));
   EXPECT_FALSE(EXP(Arrays__are_equal)(msg, NULL));
@@ -302,9 +302,9 @@ static int test_bounded_sequences(void)
   EXPECT_EQ(0u, msg->basic_types_values.size);
 
   // Scalar push_back (by value)
-  EXPECT_TRUE(EXP(BoundedSequences__int32_values_t__push_back)(
+  EXPECT_TRUE(EXP(BoundedSequences__int32_values__push_back)(
     &msg->int32_values, 10));
-  EXPECT_TRUE(EXP(BoundedSequences__int32_values_t__push_back)(
+  EXPECT_TRUE(EXP(BoundedSequences__int32_values__push_back)(
     &msg->int32_values, -5));
   EXPECT_EQ(2u, msg->int32_values.size);
   EXPECT_EQ(10, msg->int32_values.value[0]);
@@ -312,13 +312,13 @@ static int test_bounded_sequences(void)
 
   // String push_back (by pointer to initialized elem)
   {
-    EXP(BoundedSequences__string_values__elem_t) elem;
-    EXPECT_TRUE(EXP(BoundedSequences__string_values__elem_t__init)(&elem, NULL));
-    EXPECT_TRUE(EXP(BoundedSequences__string_values__elem_t__assign)(
+    rosidl_runtime_c__experimental__String elem;
+    EXPECT_TRUE(rosidl_runtime_c__experimental__String__init(&elem));
+    EXPECT_TRUE(rosidl_runtime_c__experimental__String__assign(
       &elem, "hello"));
-    EXPECT_TRUE(EXP(BoundedSequences__string_values_t__push_back)(
+    EXPECT_TRUE(EXP(BoundedSequences__string_values__push_back)(
       &msg->string_values, &elem));
-    EXP(BoundedSequences__string_values__elem_t__fini)(&elem);
+    rosidl_runtime_c__experimental__String__fini(&elem);
   }
   EXPECT_EQ(1u, msg->string_values.size);
   EXPECT_EQ(0,
@@ -327,9 +327,9 @@ static int test_bounded_sequences(void)
   // Sub-message push_back (by pointer)
   {
     EXP(BasicTypes) sub;
-    EXPECT_TRUE(EXP(BasicTypes__init)(&sub, NULL));
+    EXPECT_TRUE(EXP(BasicTypes__init)(&sub));
     sub.int32_value.value->data = 77;
-    EXPECT_TRUE(EXP(BoundedSequences__basic_types_values_t__push_back)(
+    EXPECT_TRUE(EXP(BoundedSequences__basic_types_values__push_back)(
       &msg->basic_types_values, &sub));
     EXP(BasicTypes__fini)(&sub);
   }
@@ -382,11 +382,11 @@ static int test_bounded_plain_sequences(void)
   EXPECT_EQ(0u, msg->uint64_values.size);
   EXPECT_EQ(0u, msg->basic_types_values.size);
 
-  EXPECT_TRUE(EXP(BoundedPlainSequences__int32_values_t__push_back)(
+  EXPECT_TRUE(EXP(BoundedPlainSequences__int32_values__push_back)(
     &msg->int32_values, 1));
-  EXPECT_TRUE(EXP(BoundedPlainSequences__int32_values_t__push_back)(
+  EXPECT_TRUE(EXP(BoundedPlainSequences__int32_values__push_back)(
     &msg->int32_values, 2));
-  EXPECT_TRUE(EXP(BoundedPlainSequences__int32_values_t__push_back)(
+  EXPECT_TRUE(EXP(BoundedPlainSequences__int32_values__push_back)(
     &msg->int32_values, 3));
   EXPECT_EQ(3u, msg->int32_values.size);
   EXPECT_EQ(1 + 2 + 3,
@@ -396,9 +396,9 @@ static int test_bounded_plain_sequences(void)
 
   {
     EXP(BasicTypes) sub;
-    EXPECT_TRUE(EXP(BasicTypes__init)(&sub, NULL));
+    EXPECT_TRUE(EXP(BasicTypes__init)(&sub));
     sub.uint16_value.value->data = 500u;
-    EXPECT_TRUE(EXP(BoundedPlainSequences__basic_types_values_t__push_back)(
+    EXPECT_TRUE(EXP(BoundedPlainSequences__basic_types_values__push_back)(
       &msg->basic_types_values, &sub));
     EXP(BasicTypes__fini)(&sub);
   }
@@ -430,35 +430,35 @@ static int test_unbounded_sequences(void)
   EXPECT_EQ(0u, msg->basic_types_values.size);
 
   // Scalar push/grow/read
-  EXPECT_TRUE(EXP(UnboundedSequences__int64_values_t__push_back)(
+  EXPECT_TRUE(EXP(UnboundedSequences__int64_values__push_back)(
     &msg->int64_values, 100));
-  EXPECT_TRUE(EXP(UnboundedSequences__int64_values_t__push_back)(
+  EXPECT_TRUE(EXP(UnboundedSequences__int64_values__push_back)(
     &msg->int64_values, 200));
-  EXPECT_TRUE(EXP(UnboundedSequences__int64_values_t__push_back)(
+  EXPECT_TRUE(EXP(UnboundedSequences__int64_values__push_back)(
     &msg->int64_values, 300));
-  EXPECT_TRUE(EXP(UnboundedSequences__int64_values_t__push_back)(
+  EXPECT_TRUE(EXP(UnboundedSequences__int64_values__push_back)(
     &msg->int64_values, 400));
   EXPECT_EQ(4u, msg->int64_values.size);
   EXPECT_EQ(300, msg->int64_values.value[2]);
 
   // String push_back
   {
-    EXP(UnboundedSequences__string_values__elem_t) e;
-    EXPECT_TRUE(EXP(UnboundedSequences__string_values__elem_t__init)(&e, NULL));
-    EXPECT_TRUE(EXP(UnboundedSequences__string_values__elem_t__assign)(
+    rosidl_runtime_c__experimental__String e;
+    EXPECT_TRUE(rosidl_runtime_c__experimental__String__init(&e));
+    EXPECT_TRUE(rosidl_runtime_c__experimental__String__assign(
       &e, "alpha"));
-    EXPECT_TRUE(EXP(UnboundedSequences__string_values_t__push_back)(
+    EXPECT_TRUE(EXP(UnboundedSequences__string_values__push_back)(
       &msg->string_values, &e));
-    EXP(UnboundedSequences__string_values__elem_t__fini)(&e);
+    rosidl_runtime_c__experimental__String__fini(&e);
   }
   {
-    EXP(UnboundedSequences__string_values__elem_t) e;
-    EXPECT_TRUE(EXP(UnboundedSequences__string_values__elem_t__init)(&e, NULL));
-    EXPECT_TRUE(EXP(UnboundedSequences__string_values__elem_t__assign)(
+    rosidl_runtime_c__experimental__String e;
+    EXPECT_TRUE(rosidl_runtime_c__experimental__String__init(&e));
+    EXPECT_TRUE(rosidl_runtime_c__experimental__String__assign(
       &e, "beta"));
-    EXPECT_TRUE(EXP(UnboundedSequences__string_values_t__push_back)(
+    EXPECT_TRUE(EXP(UnboundedSequences__string_values__push_back)(
       &msg->string_values, &e));
-    EXP(UnboundedSequences__string_values__elem_t__fini)(&e);
+    rosidl_runtime_c__experimental__String__fini(&e);
   }
   EXPECT_EQ(2u, msg->string_values.size);
   EXPECT_EQ(0,
@@ -469,9 +469,9 @@ static int test_unbounded_sequences(void)
   // Sub-message push_back
   {
     EXP(BasicTypes) sub;
-    EXPECT_TRUE(EXP(BasicTypes__init)(&sub, NULL));
+    EXPECT_TRUE(EXP(BasicTypes__init)(&sub));
     sub.float64_value.value->data = 3.14;
-    EXPECT_TRUE(EXP(UnboundedSequences__basic_types_values_t__push_back)(
+    EXPECT_TRUE(EXP(UnboundedSequences__basic_types_values__push_back)(
       &msg->basic_types_values, &sub));
     EXP(BasicTypes__fini)(&sub);
   }
@@ -519,12 +519,12 @@ static int test_multi_nested(void)
   EXPECT_NE(NULL, msg);
 
   // Array of Arrays (ARRAY of Arrays sub-messages)
-  EXPECT_EQ(0, msg->array_of_arrays.data[0].int32_values.value->data[0]);
-  msg->array_of_arrays.data[0].int32_values.value->data[1] = 55;
-  EXPECT_EQ(55, msg->array_of_arrays.data[0].int32_values.value->data[1]);
+  EXPECT_EQ(0, msg->array_of_arrays.value->data[0].int32_values.value->data[0]);
+  msg->array_of_arrays.value->data[0].int32_values.value->data[1] = 55;
+  EXPECT_EQ(55, msg->array_of_arrays.value->data[0].int32_values.value->data[1]);
   // Adjacent elements untouched
-  EXPECT_EQ(0, msg->array_of_arrays.data[0].int32_values.value->data[0]);
-  EXPECT_EQ(0, msg->array_of_arrays.data[1].int32_values.value->data[1]);
+  EXPECT_EQ(0, msg->array_of_arrays.value->data[0].int32_values.value->data[0]);
+  EXPECT_EQ(0, msg->array_of_arrays.value->data[1].int32_values.value->data[1]);
 
   // Sequences of sub-messages start empty
   EXPECT_EQ(0u, msg->bounded_sequence_of_arrays.size);
@@ -534,11 +534,11 @@ static int test_multi_nested(void)
   // Unbounded sequence of BoundedSequences: push + read
   {
     EXP(BoundedSequences) sub;
-    EXPECT_TRUE(EXP(BoundedSequences__init)(&sub, NULL));
-    EXPECT_TRUE(EXP(BoundedSequences__int32_values_t__push_back)(
+    EXPECT_TRUE(EXP(BoundedSequences__init)(&sub));
+    EXPECT_TRUE(EXP(BoundedSequences__int32_values__push_back)(
       &sub.int32_values, 9));
     EXPECT_TRUE(
-      EXP(MultiNested__unbounded_sequence_of_bounded_sequences_t__push_back)(
+      EXP(MultiNested__unbounded_sequence_of_bounded_sequences__push_back)(
         &msg->unbounded_sequence_of_bounded_sequences, &sub));
     EXP(BoundedSequences__fini)(&sub);
   }
@@ -596,18 +596,18 @@ static int test_wstrings(void)
 
   const char16_t hello[] = u"hello";
   EXPECT_TRUE(
-    EXP(WStrings__wstring_value_t__assign)(&msg->wstring_value, hello));
+    EXP(WStrings__wstring_value__assign)(&msg->wstring_value, hello));
   EXPECT_EQ(5u, msg->wstring_value.size);
   EXPECT_EQ(0, memcmp(msg->wstring_value.value, hello, 5 * sizeof(char16_t)));
 
   // Wstring array (ARRAY)
-  EXPECT_EQ(0u, msg->array_of_wstrings.data[0].size);
+  EXPECT_EQ(0u, msg->array_of_wstrings.value->data[0].size);
   const char16_t world[] = u"world";
-  EXPECT_TRUE(EXP(WStrings__array_of_wstrings__elem_t__assign)(
-    &msg->array_of_wstrings.data[1], world));
-  EXPECT_EQ(0u, msg->array_of_wstrings.data[0].size);
-  EXPECT_EQ(5u, msg->array_of_wstrings.data[1].size);
-  EXPECT_EQ(0u, msg->array_of_wstrings.data[2].size);
+  EXPECT_TRUE(rosidl_runtime_c__experimental__WString__assign(
+    &msg->array_of_wstrings.value->data[1], world));
+  EXPECT_EQ(0u, msg->array_of_wstrings.value->data[0].size);
+  EXPECT_EQ(5u, msg->array_of_wstrings.value->data[1].size);
+  EXPECT_EQ(0u, msg->array_of_wstrings.value->data[2].size);
 
   EXPECT_TRUE(EXP(WStrings__are_equal)(msg, msg));
   EXP(WStrings) * copy = EXP(WStrings__create)(NULL);

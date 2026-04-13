@@ -42,12 +42,12 @@ using rosidl_runtime_cpp::WString;
 // ===========================================================================
 
 TEST(test_experimental_constraints_string_constraint, default_size_is_zero) {
-  StringConstraint c{};
+  StringConstraint c {};
   EXPECT_EQ(0u, c.size);
 }
 
 TEST(test_experimental_constraints_string_constraint, equality_tracks_size) {
-  StringConstraint a{}, b{};
+  StringConstraint a {}, b {};
   EXPECT_EQ(a, b);
   a.size = 64u;
   EXPECT_NE(a, b);
@@ -60,12 +60,12 @@ TEST(test_experimental_constraints_string_constraint, equality_tracks_size) {
 // ===========================================================================
 
 TEST(test_experimental_constraints_seq_primary, default_size_is_zero) {
-  SequenceConstraint<int32_t> c{};
+  SequenceConstraint<int32_t> c {};
   EXPECT_EQ(0u, c.size);
 }
 
 TEST(test_experimental_constraints_seq_primary, equality_tracks_size) {
-  SequenceConstraint<int32_t> c1{}, c2{};
+  SequenceConstraint<int32_t> c1 {}, c2 {};
   EXPECT_EQ(c1, c2);
   c1.size = 10u;
   EXPECT_NE(c1, c2);
@@ -75,17 +75,17 @@ TEST(test_experimental_constraints_seq_primary, equality_tracks_size) {
 
 TEST(test_experimental_constraints_seq_primary, works_for_all_scalar_types) {
   // Compile-time check: primary template instantiates for every primitive.
-  (void)SequenceConstraint<bool>{};
-  (void)SequenceConstraint<uint8_t>{};
-  (void)SequenceConstraint<int8_t>{};
-  (void)SequenceConstraint<uint16_t>{};
-  (void)SequenceConstraint<int16_t>{};
-  (void)SequenceConstraint<uint32_t>{};
-  (void)SequenceConstraint<int32_t>{};
-  (void)SequenceConstraint<uint64_t>{};
-  (void)SequenceConstraint<int64_t>{};
-  (void)SequenceConstraint<float>{};
-  (void)SequenceConstraint<double>{};
+  (void)SequenceConstraint<bool> {};
+  (void)SequenceConstraint<uint8_t> {};
+  (void)SequenceConstraint<int8_t> {};
+  (void)SequenceConstraint<uint16_t> {};
+  (void)SequenceConstraint<int16_t> {};
+  (void)SequenceConstraint<uint32_t> {};
+  (void)SequenceConstraint<int32_t> {};
+  (void)SequenceConstraint<uint64_t> {};
+  (void)SequenceConstraint<int64_t> {};
+  (void)SequenceConstraint<float> {};
+  (void)SequenceConstraint<double> {};
 }
 
 // ===========================================================================
@@ -93,13 +93,13 @@ TEST(test_experimental_constraints_seq_primary, works_for_all_scalar_types) {
 // ===========================================================================
 
 TEST(test_experimental_constraints_seq_string, both_fields_default_to_zero) {
-  SequenceConstraint<String> c{};
+  SequenceConstraint<String> c {};
   EXPECT_EQ(0u, c.size);
   EXPECT_EQ(0u, c.element.size);
 }
 
 TEST(test_experimental_constraints_seq_string, fields_are_independently_mutable) {
-  SequenceConstraint<String> c{};
+  SequenceConstraint<String> c {};
   c.size = 5u;
   c.element.size = 128u;
   EXPECT_EQ(5u, c.size);
@@ -107,7 +107,7 @@ TEST(test_experimental_constraints_seq_string, fields_are_independently_mutable)
 }
 
 TEST(test_experimental_constraints_seq_string, equality_considers_both_fields) {
-  SequenceConstraint<String> c1{}, c2{};
+  SequenceConstraint<String> c1 {}, c2 {};
   EXPECT_EQ(c1, c2);
   c1.element.size = 64u;
   EXPECT_NE(c1, c2);
@@ -124,7 +124,7 @@ TEST(test_experimental_constraints_seq_string, equality_considers_both_fields) {
 // ===========================================================================
 
 TEST(test_experimental_constraints_seq_wstring, fields_can_be_set_and_read) {
-  SequenceConstraint<WString> c{};
+  SequenceConstraint<WString> c {};
   c.size = 3u;
   c.element.size = 32u;
   EXPECT_EQ(3u, c.size);
@@ -132,7 +132,7 @@ TEST(test_experimental_constraints_seq_wstring, fields_can_be_set_and_read) {
 }
 
 TEST(test_experimental_constraints_seq_wstring, equality_considers_both_fields) {
-  SequenceConstraint<WString> c1{}, c2{};
+  SequenceConstraint<WString> c1 {}, c2 {};
   EXPECT_EQ(c1, c2);
   c1.size = 2u;
   EXPECT_NE(c1, c2);
@@ -148,35 +148,35 @@ TEST(test_experimental_constraints_seq_wstring, equality_considers_both_fields) 
 
 // Empty: no data members → empty Constraints
 TEST(test_experimental_constraints_per_message, empty_constraints_is_empty) {
-  experimental::Empty::Constraints c1{}, c2{};
+  experimental::Empty::Constraints c1 {}, c2 {};
   EXPECT_EQ(c1, c2);
   // No mutation possible — there are no fields.
 }
 
 // BasicTypes / Defaults / Constants: all scalars → empty Constraints
 TEST(test_experimental_constraints_per_message, basic_types_constraints_is_empty) {
-  experimental::BasicTypes::Constraints c1{}, c2{};
+  experimental::BasicTypes::Constraints c1 {}, c2 {};
   EXPECT_EQ(c1, c2);
 }
 
 TEST(test_experimental_constraints_per_message, defaults_constraints_is_empty) {
-  experimental::Defaults::Constraints c1{}, c2{};
+  experimental::Defaults::Constraints c1 {}, c2 {};
   EXPECT_EQ(c1, c2);
 }
 
 TEST(test_experimental_constraints_per_message, constants_constraints_is_empty) {
-  experimental::Constants::Constraints c1{}, c2{};
+  experimental::Constants::Constraints c1 {}, c2 {};
   EXPECT_EQ(c1, c2);
 }
 
 // BoundedSequences / BoundedPlainSequences: all bounded → empty Constraints
 TEST(test_experimental_constraints_per_message, bounded_sequences_constraints_is_empty) {
-  experimental::BoundedSequences::Constraints c1{}, c2{};
+  experimental::BoundedSequences::Constraints c1 {}, c2 {};
   EXPECT_EQ(c1, c2);
 }
 
 TEST(test_experimental_constraints_per_message, bounded_plain_sequences_constraints_is_empty) {
-  experimental::BoundedPlainSequences::Constraints c1{}, c2{};
+  experimental::BoundedPlainSequences::Constraints c1 {}, c2 {};
   EXPECT_EQ(c1, c2);
 }
 
@@ -188,7 +188,7 @@ TEST(test_experimental_constraints_per_message, nested_has_sub_message_constrain
       experimental::BasicTypes::Constraints>,
     "Nested::Constraints::basic_types_value should be BasicTypes::Constraints");
 
-  experimental::Nested::Constraints c1{}, c2{};
+  experimental::Nested::Constraints c1 {}, c2 {};
   EXPECT_EQ(c1, c2);
   // BasicTypes has no variable members, so BasicTypes::Constraints has no fields;
   // the nested field is therefore also always equal.
@@ -198,7 +198,8 @@ TEST(test_experimental_constraints_per_message, nested_has_sub_message_constrain
 TEST(test_experimental_constraints_per_message, strings_has_string_constraint_fields) {
   // All five unbounded string members get a StringConstraint field.
   static_assert(
-    std::is_same_v<decltype(experimental::Strings::Constraints::string_value), StringConstraint>);
+    std::is_same_v<decltype(experimental::Strings::Constraints::string_value),
+    StringConstraint>);
   static_assert(
     std::is_same_v<decltype(experimental::Strings::Constraints::string_value_default1),
     StringConstraint>);
@@ -209,7 +210,7 @@ TEST(test_experimental_constraints_per_message, strings_has_string_constraint_fi
     true,  // always passes; real check is the static_assert above compiling
     "");
 
-  experimental::Strings::Constraints c1{}, c2{};
+  experimental::Strings::Constraints c1 {}, c2 {};
   EXPECT_EQ(c1, c2);
 
   c1.string_value.size = 256u;
@@ -229,7 +230,8 @@ TEST(test_experimental_constraints_per_message, strings_has_string_constraint_fi
 //              unbounded_sequence → SequenceConstraint<WString>
 TEST(test_experimental_constraints_per_message, wstrings_standalone_fields) {
   static_assert(
-    std::is_same_v<decltype(experimental::WStrings::Constraints::wstring_value), StringConstraint>);
+    std::is_same_v<decltype(experimental::WStrings::Constraints::wstring_value),
+    StringConstraint>);
   static_assert(
     std::is_same_v<decltype(experimental::WStrings::Constraints::wstring_value_default1),
     StringConstraint>);
@@ -246,7 +248,7 @@ TEST(test_experimental_constraints_per_message, wstrings_array_field) {
   static_assert(
     std::is_same_v<decltype(experimental::WStrings::Constraints::array_of_wstrings),
     StringConstraint>);
-  experimental::WStrings::Constraints c{};
+  experimental::WStrings::Constraints c {};
   c.array_of_wstrings.size = 64u;
   EXPECT_EQ(64u, c.array_of_wstrings.size);
 }
@@ -257,7 +259,7 @@ TEST(test_experimental_constraints_per_message, wstrings_unbounded_sequence_fiel
     std::is_same_v<
       decltype(experimental::WStrings::Constraints::unbounded_sequence_of_wstrings),
       SequenceConstraint<WString>>);
-  experimental::WStrings::Constraints c{};
+  experimental::WStrings::Constraints c {};
   c.unbounded_sequence_of_wstrings.size = 10u;
   c.unbounded_sequence_of_wstrings.element.size = 32u;
   EXPECT_EQ(10u, c.unbounded_sequence_of_wstrings.size);
@@ -265,7 +267,7 @@ TEST(test_experimental_constraints_per_message, wstrings_unbounded_sequence_fiel
 }
 
 TEST(test_experimental_constraints_per_message, wstrings_equality) {
-  experimental::WStrings::Constraints c1{}, c2{};
+  experimental::WStrings::Constraints c1 {}, c2 {};
   EXPECT_EQ(c1, c2);
   c1.wstring_value.size = 16u;
   EXPECT_NE(c1, c2);
@@ -280,12 +282,13 @@ TEST(test_experimental_constraints_per_message, wstrings_equality) {
 //             string[3] string_values_default → StringConstraint
 TEST(test_experimental_constraints_per_message, arrays_string_fields) {
   static_assert(
-    std::is_same_v<decltype(experimental::Arrays::Constraints::string_values), StringConstraint>);
+    std::is_same_v<decltype(experimental::Arrays::Constraints::string_values),
+    StringConstraint>);
   static_assert(
     std::is_same_v<decltype(experimental::Arrays::Constraints::string_values_default),
     StringConstraint>);
 
-  experimental::Arrays::Constraints c{};
+  experimental::Arrays::Constraints c {};
   c.string_values.size = 100u;
   EXPECT_EQ(100u, c.string_values.size);
 }
@@ -306,7 +309,7 @@ TEST(test_experimental_constraints_per_message, arrays_sub_message_fields) {
 }
 
 TEST(test_experimental_constraints_per_message, arrays_equality) {
-  experimental::Arrays::Constraints c1{}, c2{};
+  experimental::Arrays::Constraints c1 {}, c2 {};
   EXPECT_EQ(c1, c2);
   c1.string_values_default.size = 22u;
   EXPECT_NE(c1, c2);
@@ -333,7 +336,7 @@ TEST(test_experimental_constraints_per_message, unbounded_sequences_scalar_field
       decltype(experimental::UnboundedSequences::Constraints::float64_values),
       SequenceConstraint<double>>);
 
-  experimental::UnboundedSequences::Constraints c{};
+  experimental::UnboundedSequences::Constraints c {};
   c.int32_values.size = 50u;
   EXPECT_EQ(50u, c.int32_values.size);
 }
@@ -344,7 +347,7 @@ TEST(test_experimental_constraints_per_message, unbounded_sequences_string_field
       decltype(experimental::UnboundedSequences::Constraints::string_values),
       SequenceConstraint<String>>);
 
-  experimental::UnboundedSequences::Constraints c{};
+  experimental::UnboundedSequences::Constraints c {};
   c.string_values.size = 20u;
   c.string_values.element.size = 64u;
   EXPECT_EQ(20u, c.string_values.size);
@@ -365,13 +368,13 @@ TEST(test_experimental_constraints_per_message, unbounded_sequences_sub_message_
       decltype(experimental::UnboundedSequences::Constraints::constants_values),
       SequenceConstraint<experimental::Constants>>);
 
-  experimental::UnboundedSequences::Constraints c{};
+  experimental::UnboundedSequences::Constraints c {};
   c.basic_types_values.size = 8u;
   EXPECT_EQ(8u, c.basic_types_values.size);
 }
 
 TEST(test_experimental_constraints_per_message, unbounded_sequences_equality) {
-  experimental::UnboundedSequences::Constraints c1{}, c2{};
+  experimental::UnboundedSequences::Constraints c1 {}, c2 {};
   EXPECT_EQ(c1, c2);
   c1.string_values.element.size = 32u;
   EXPECT_NE(c1, c2);
@@ -421,7 +424,7 @@ TEST(test_experimental_constraints_per_message, multi_nested_unbounded_sequence_
 }
 
 TEST(test_experimental_constraints_per_message, multi_nested_deep_write_and_equality) {
-  experimental::MultiNested::Constraints c1{}, c2{};
+  experimental::MultiNested::Constraints c1 {}, c2 {};
   EXPECT_EQ(c1, c2);
 
   // Write through the nested chain:
@@ -445,7 +448,7 @@ TEST(test_experimental_constraints_per_message, multi_nested_deep_write_and_equa
 // ===========================================================================
 
 TEST(test_experimental_constraints_seq_per_message, basic_types_default_and_equality) {
-  SequenceConstraint<experimental::BasicTypes> c1{}, c2{};
+  SequenceConstraint<experimental::BasicTypes> c1 {}, c2 {};
   EXPECT_EQ(0u, c1.size);
   EXPECT_EQ(c1, c2);
   c1.size = 8u;
@@ -466,7 +469,7 @@ TEST(test_experimental_constraints_seq_per_message, strings_element_has_string_c
     std::is_same_v<
       decltype(SequenceConstraint<experimental::Strings>::element),
       experimental::Strings::Constraints>);
-  SequenceConstraint<experimental::Strings> c{};
+  SequenceConstraint<experimental::Strings> c {};
   c.size = 5u;
   c.element.string_value.size = 64u;
   EXPECT_EQ(5u, c.size);
@@ -479,7 +482,7 @@ TEST(test_experimental_constraints_seq_per_message,
     std::is_same_v<
       decltype(SequenceConstraint<experimental::MultiNested>::element),
       experimental::MultiNested::Constraints>);
-  SequenceConstraint<experimental::MultiNested> c{};
+  SequenceConstraint<experimental::MultiNested> c {};
   // Deep chain: element.array_of_unbounded_sequences.string_values.element.size
   c.element.array_of_unbounded_sequences.string_values.element.size = 32u;
   EXPECT_EQ(32u,

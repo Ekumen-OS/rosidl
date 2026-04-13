@@ -13,6 +13,7 @@ from rosidl_parser.definition import SERVICE_RESPONSE_MESSAGE_SUFFIX
 from rosidl_parser.definition import UnboundedSequence
 from rosidl_generator_c.experimental import BASIC_IDL_TYPES_TO_EXPERIMENTAL_C
 from rosidl_generator_c.experimental import experimental_constraint_field
+from rosidl_generator_c.experimental import experimental_constraints_are_equal_body
 from rosidl_generator_c.experimental import experimental_field_declare_macro
 from rosidl_generator_c.experimental import experimental_field_in_struct
 from rosidl_generator_c.experimental import experimental_field_typename
@@ -106,6 +107,21 @@ typedef struct @(message_typename)_s
 @#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 @#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+@# Array structure declaration for this message type
+/// Array structure declaration for @(message_typename).
+ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_STRUCTURE_DECLARE(@(message_typename))
+@#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+@#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+@# Sequence structure declarations for this message type
+/// Unbounded sequence structure declaration for @(message_typename).
+ROSIDL_RUNTIME_C__EXPERIMENTAL__SEQUENCE_DECLARE(@(message_typename)Sequence, @(message_typename))
+
+/// Bounded sequence structure declaration for @(message_typename).
+ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_SEQUENCE_DECLARE(@(message_typename)BoundedSequence, @(message_typename))
+@#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+@#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 @# Constraint types
 @# 1. Per-field SequenceConstraint typedef for each UnboundedSequence member.
 @# 2. Constraints struct: one field per member with a variable dimension.
@@ -154,20 +170,7 @@ static inline bool
   const @(message_typename)__Constraints * lhs,
   const @(message_typename)__Constraints * rhs)
 {
-@[if _constraint_fields]@
-  return
-@[for _i, (_ctype, _cname) in enumerate(_constraint_fields)]@
-@[if _i < len(_constraint_fields) - 1]@
-    @(_ctype)__are_equal(&lhs->@(_cname), &rhs->@(_cname)) &&
-@[else]@
-    @(_ctype)__are_equal(&lhs->@(_cname), &rhs->@(_cname));
-@[end if]@
-@[end for]@
-@[else]@
-  (void)lhs;
-  (void)rhs;
-  return true;
-@[end if]@
+  @(experimental_constraints_are_equal_body(_constraint_fields))
 }
 
 typedef struct @(message_typename)__SequenceConstraint_s
@@ -182,6 +185,6 @@ static inline bool
   const @(message_typename)__SequenceConstraint * rhs)
 {
   return lhs->size == rhs->size &&
-    @(message_typename)__Constraints__are_equal(&lhs->element, &rhs->element);
+      @(message_typename)__Constraints__are_equal(&lhs->element, &rhs->element);
 }
 @#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>

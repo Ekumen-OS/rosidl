@@ -79,7 +79,7 @@ bool
 @{
 lines = []
 for member in message.structure.members:
-    field_tn = experimental_field_typename(message_typename, member.name)
+    field_tn = experimental_field_typename(message_typename, member.name, member.type)
     type_ = member.type
 
     lines.append('// ' + member.name)
@@ -95,7 +95,11 @@ for member in message.structure.members:
                 value_to_c(type_, member.get_annotation_value('default')['value'])))
 
     elif isinstance(type_, (AbstractString, AbstractWString)):
-        lines.append('if (!{}__init_with_allocator(&msg->{}, allocator)) {{'.format(field_tn, member.name))
+        if type_.has_maximum_size():
+            lines.append('if (!{}__init_with_allocator(&msg->{}, {}U, allocator)) {{'.format(
+                field_tn, member.name, type_.maximum_size))
+        else:
+            lines.append('if (!{}__init_with_allocator(&msg->{}, allocator)) {{'.format(field_tn, member.name))
         lines.append('  {}__fini(msg);'.format(message_typename))
         lines.append('  return false;')
         lines.append('}')
@@ -130,7 +134,12 @@ for member in message.structure.members:
                     lines.append('msg->{}.value->data[{}] = {};'.format(
                         member.name, i, value_to_c(vt, dv)))
         else:
-            lines.append('if (!{}__init_with_allocator(&msg->{}, allocator)) {{'.format(field_tn, member.name))
+            # Arrays of bounded strings need element_bound parameter
+            if isinstance(vt, (AbstractString, AbstractWString)) and vt.has_maximum_size():
+                lines.append('if (!{}__init_with_allocator(&msg->{}, {}U, allocator)) {{'.format(
+                    field_tn, member.name, vt.maximum_size))
+            else:
+                lines.append('if (!{}__init_with_allocator(&msg->{}, allocator)) {{'.format(field_tn, member.name))
             lines.append('  {}__fini(msg);'.format(message_typename))
             lines.append('  return false;')
             lines.append('}')
@@ -139,7 +148,7 @@ for member in message.structure.members:
                 for i, dv in enumerate(literal_eval(
                         member.get_annotation_value('default')['value'])):
                     lines.append('{')
-                    lines.append('  bool success = {}__assign(&msg->{}.data[{}], {});'.format(
+                    lines.append('  bool success = {}__assign(&msg->{}.value->data[{}], {});'.format(
                         elem_type, member.name, i, value_to_c(vt, dv)))
                     lines.append('  if (!success) {')
                     lines.append('    {}__fini(msg);'.format(message_typename))
@@ -148,11 +157,28 @@ for member in message.structure.members:
                     lines.append('}')
 
     elif isinstance(type_, AbstractSequence):
-        lines.append('if (!{}__init_with_allocator(&msg->{}, allocator)) {{'.format(field_tn, member.name))
+        vt = type_.value_type
+        # Determine init parameters based on sequence and element bounds
+        if isinstance(type_, BoundedSequence):
+            if isinstance(vt, (AbstractString, AbstractWString)) and vt.has_maximum_size():
+                # Bounded sequence of bounded strings: sequence_bound, element_bound
+                lines.append('if (!{}__init_with_allocator(&msg->{}, {}U, {}U, allocator)) {{'.format(
+                    field_tn, member.name, type_.maximum_size, vt.maximum_size))
+            else:
+                # Bounded sequence of other types: just sequence_bound
+                lines.append('if (!{}__init_with_allocator(&msg->{}, {}U, allocator)) {{'.format(
+                    field_tn, member.name, type_.maximum_size))
+        else:  # UnboundedSequence
+            if isinstance(vt, (AbstractString, AbstractWString)) and vt.has_maximum_size():
+                # Unbounded sequence of bounded strings: element_bound
+                lines.append('if (!{}__init_with_allocator(&msg->{}, {}U, allocator)) {{'.format(
+                    field_tn, member.name, vt.maximum_size))
+            else:
+                # Unbounded sequence of other types: no bounds
+                lines.append('if (!{}__init_with_allocator(&msg->{}, allocator)) {{'.format(field_tn, member.name))
         lines.append('  {}__fini(msg);'.format(message_typename))
         lines.append('  return false;')
         lines.append('}')
-        vt = type_.value_type
         if member.has_annotation('default') and isinstance(vt, BasicType):
             default_vals = literal_eval(member.get_annotation_value('default')['value'])
             lines.append('{')
@@ -165,6 +191,24 @@ for member in message.structure.members:
             for i, dv in enumerate(default_vals):
                 lines.append('  msg->{}.value[{}] = {};'.format(
                     member.name, i, value_to_c(vt, dv)))
+            lines.append('}')
+        elif member.has_annotation('default') and isinstance(vt, (AbstractString, AbstractWString)):
+            default_vals = literal_eval(member.get_annotation_value('default')['value'])
+            lines.append('{')
+            lines.append('  bool success = {}__resize(&msg->{}, {}U);'.format(
+                field_tn, member.name, len(default_vals)))
+            lines.append('  if (!success) {')
+            lines.append('    {}__fini(msg);'.format(message_typename))
+            lines.append('    return false;')
+            lines.append('  }')
+            for i, dv in enumerate(default_vals):
+                lines.append('  success = rosidl_runtime_c__experimental__{}__assign(&msg->{}.value[{}], {});'.format(
+                    'WString' if isinstance(vt, AbstractWString) else 'String',
+                    member.name, i, value_to_c(vt, dv)))
+                lines.append('  if (!success) {')
+                lines.append('    {}__fini(msg);'.format(message_typename))
+                lines.append('    return false;')
+                lines.append('  }')
             lines.append('}')
 
     lines.append('')
@@ -195,7 +239,7 @@ bool
 @{
 lines = []
 for member in message.structure.members:
-    field_tn = experimental_field_typename(message_typename, member.name)
+    field_tn = experimental_field_typename(message_typename, member.name, member.type)
     type_ = member.type
 
     lines.append('// ' + member.name)
@@ -206,13 +250,26 @@ for member in message.structure.members:
         lines.append('  {}__fini(msg);'.format(message_typename))
         lines.append('  return false;')
         lines.append('}')
+        if member.has_annotation('default'):
+            dv = member.get_annotation_value('default')['value']
+            lines.append('msg->{}.value->data = {};'.format(member.name, value_to_c(type_, dv)))
 
     elif isinstance(type_, (AbstractString, AbstractWString)):
-        lines.append('if (!{}__init_from_region(&msg->{}, storage->members.{})) {{'.format(
-            field_tn, member.name, member.name))
+        if type_.has_maximum_size():
+            lines.append('if (!{}__init_from_region(&msg->{}, {}U, storage->members.{})) {{'.format(
+                field_tn, member.name, type_.maximum_size, member.name))
+        else:
+            lines.append('if (!{}__init_from_region(&msg->{}, storage->members.{})) {{'.format(
+                field_tn, member.name, member.name))
         lines.append('  {}__fini(msg);'.format(message_typename))
         lines.append('  return false;')
         lines.append('}')
+        if member.has_annotation('default'):
+            dv = member.get_annotation_value('default')['value']
+            lines.append('if (!{}__assign(&msg->{}, {})) {{'.format(field_tn, member.name, value_to_c(type_, dv)))
+            lines.append('  {}__fini(msg);'.format(message_typename))
+            lines.append('  return false;')
+            lines.append('}')
 
     elif isinstance(type_, NamespacedType):
         sub_tn = idl_structure_type_to_experimental_c_typename(type_)
@@ -230,8 +287,21 @@ for member in message.structure.members:
             lines.append('  {}__fini(msg);'.format(message_typename))
             lines.append('  return false;')
             lines.append('}')
+        elif isinstance(vt, (AbstractString, AbstractWString)) and vt.has_maximum_size():
+            # Array of bounded strings: pass element_bound to array init
+            lines.append('if (!{}__init_from_region(&msg->{}, {}U, storage->members.{})) {{'.format(
+                field_tn, member.name, vt.maximum_size, member.name))
+            lines.append('  {}__fini(msg);'.format(message_typename))
+            lines.append('  return false;')
+            lines.append('}')
         else:
             # ARRAY: per-element external storage.
+            # First initialize the array wrapper itself
+            lines.append('if (!{}__init(&msg->{})) {{'.format(field_tn, member.name))
+            lines.append('  {}__fini(msg);'.format(message_typename))
+            lines.append('  return false;')
+            lines.append('}')
+            # Then initialize each element with external storage
             # String/WString elements expose __init_from_region(elem, region).
             # NamespacedType elements expose __init_from_storage(elem, storage).
             lines.append('for (size_t i = 0U; i < {}U; ++i) {{'.format(type_.size))
@@ -242,8 +312,12 @@ for member in message.structure.members:
                 lines.append('      &storage->members.{}[i])) {{'.format(member.name))
             else:
                 elem_type = experimental_element_c_type(message_typename, member.name, vt)
-                lines.append('  if (!{}__init_from_region(&msg->{}.value->data[i],'.format(
-                    elem_type, member.name))
+                if isinstance(vt, (AbstractString, AbstractWString)) and vt.has_maximum_size():
+                    lines.append('  if (!{}__init_from_region(&msg->{}.value->data[i], {}U,'.format(
+                        elem_type, member.name, vt.maximum_size))
+                else:
+                    lines.append('  if (!{}__init_from_region(&msg->{}.value->data[i],'.format(
+                        elem_type, member.name))
                 lines.append('      storage->members.{}[i])) {{'.format(member.name))
             lines.append('    {}__fini(msg);'.format(message_typename))
             lines.append('    return false;')
@@ -253,15 +327,32 @@ for member in message.structure.members:
     elif isinstance(type_, AbstractSequence):
         vt = type_.value_type
         if isinstance(vt, BasicType):
-            # Primitive sequence: just use the region
-            lines.append('if (!{}__init_from_region(&msg->{}, storage->members.{})) {{'.format(
-                field_tn, member.name, member.name))
+            # Primitive sequence: pass bounds if bounded
+            if isinstance(type_, BoundedSequence):
+                lines.append('if (!{}__init_from_region(&msg->{}, {}U, storage->members.{})) {{'.format(
+                    field_tn, member.name, type_.maximum_size, member.name))
+            else:
+                lines.append('if (!{}__init_from_region(&msg->{}, storage->members.{})) {{'.format(
+                    field_tn, member.name, member.name))
             lines.append('  {}__fini(msg);'.format(message_typename))
             lines.append('  return false;')
             lines.append('}')
         else:
             # Complex element sequence: use region + element storage pool
+            # Pass bounds based on sequence and element types
             lines.append('if (!{}__init_region_storage(&msg->{},'.format(field_tn, member.name))
+            if isinstance(type_, BoundedSequence):
+                if isinstance(vt, (AbstractString, AbstractWString)) and vt.has_maximum_size():
+                    # Bounded sequence of bounded strings: sequence_bound, element_bound
+                    lines.append('    {}U, {}U,'.format(type_.maximum_size, vt.maximum_size))
+                else:
+                    # Bounded sequence of other complex types: just sequence_bound
+                    lines.append('    {}U,'.format(type_.maximum_size))
+            else:  # UnboundedSequence
+                if isinstance(vt, (AbstractString, AbstractWString)) and vt.has_maximum_size():
+                    # Unbounded sequence of bounded strings: element_bound
+                    lines.append('    {}U,'.format(vt.maximum_size))
+                # else: no bounds for unbounded sequence of unbounded elements
             lines.append('    storage->members.{}.region,'.format(member.name))
             lines.append('    storage->members.{}.element_storage_pool,'.format(member.name))
             lines.append('    storage->members.{}.element_storage_pool_size)) {{'.format(member.name))
@@ -289,7 +380,7 @@ void
 @{
 lines = []
 for member in message.structure.members:
-    field_tn = experimental_field_typename(message_typename, member.name)
+    field_tn = experimental_field_typename(message_typename, member.name, member.type)
     type_ = member.type
 
     lines.append('// ' + member.name)
@@ -353,7 +444,7 @@ bool
   }
 @[for member in message.structure.members]@
 @{
-field_tn = experimental_field_typename(message_typename, member.name)
+field_tn = experimental_field_typename(message_typename, member.name, member.type)
 type_ = member.type
 }@
   // @(member.name)
@@ -392,7 +483,7 @@ bool
   }
 @[for member in message.structure.members]@
 @{
-field_tn = experimental_field_typename(message_typename, member.name)
+field_tn = experimental_field_typename(message_typename, member.name, member.type)
 type_ = member.type
 }@
   // @(member.name)
@@ -415,4 +506,15 @@ type_ = member.type
 @[end for]@
   return true;
 }
+@#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+@#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+@# Array structure definition for this message type
+ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_STRUCTURE_DEFINE(@(message_typename));
+@#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+@#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+@# Sequence structure definitions for this message type
+ROSIDL_RUNTIME_C__EXPERIMENTAL__SEQUENCE_DEFINE(@(message_typename)Sequence, @(message_typename));
+ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_SEQUENCE_DEFINE(@(message_typename)BoundedSequence, @(message_typename));
 @#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>

@@ -21,11 +21,6 @@ extern "C"
 {
 #include "rcutils/allocator.h"
 #include "rosidl_runtime_c/experimental/string.h"
-
-ROSIDL_RUNTIME_C__EXPERIMENTAL__BASIC_BOUNDED_STRING(
-  rosidl_runtime_c__experimental__BoundedString5, char, 5U);
-ROSIDL_RUNTIME_C__EXPERIMENTAL__BASIC_BOUNDED_STRING(
-  rosidl_runtime_c__experimental__BoundedWString5, char16_t, 5U);
 }  // extern "C"
 
 // =============================================================================
@@ -35,55 +30,57 @@ ROSIDL_RUNTIME_C__EXPERIMENTAL__BASIC_BOUNDED_STRING(
 template<typename T>
 struct StringWrapper;
 
-#define DEFINE_STRING_WRAPPER(STR_T, BOUNDED_T) \
-  template<> struct StringWrapper<STR_T> { \
+#define DEFINE_STRING_WRAPPER(STR_T, BOUNDED_T, BOUND) \
+  template<> \
+  struct StringWrapper<STR_T> { \
     using bounded_type = BOUNDED_T; \
+    static constexpr size_t bound = BOUND; \
     static bool init(STR_T * s, const rcutils_allocator_t * a) \
-    { return STR_T ## __init_with_allocator(s, a); } \
+    {return STR_T ## __init_with_allocator(s, a);} \
     static bool init_from_region(STR_T * s, rosidl_memory_region_t r) \
-    { return STR_T ## __init_from_region(s, r); } \
+    {return STR_T ## __init_from_region(s, r);} \
     static void fini(STR_T * s) \
-    { STR_T ## __fini(s); } \
+    {STR_T ## __fini(s);} \
     static bool assignn(STR_T * s, const auto * v, size_t n) \
-    { return STR_T ## __assignn(s, v, n); } \
+    {return STR_T ## __assignn(s, v, n);} \
     static bool assign(STR_T * s, const auto * v) \
-    { return STR_T ## __assign(s, v); } \
+    {return STR_T ## __assign(s, v);} \
     static bool appendn(STR_T * s, const auto * v, size_t n) \
-    { return STR_T ## __appendn(s, v, n); } \
+    {return STR_T ## __appendn(s, v, n);} \
     static bool resize(STR_T * s, size_t n) \
-    { return STR_T ## __resize(s, n); } \
+    {return STR_T ## __resize(s, n);} \
     static bool are_equal(const STR_T * l, const STR_T * r) \
-    { return STR_T ## __are_equal(l, r); } \
+    {return STR_T ## __are_equal(l, r);} \
     static bool copy(const STR_T * in, STR_T * out) \
-    { return STR_T ## __copy(in, out); } \
+    {return STR_T ## __copy(in, out);} \
     static bool bounded_init(BOUNDED_T * s, const rcutils_allocator_t * a) \
-    { return BOUNDED_T ## __init_with_allocator(s, a); } \
+    {return BOUNDED_T ## __init_with_allocator(s, BOUND, a);} \
     static bool bounded_init_from_region(BOUNDED_T * s, rosidl_memory_region_t r) \
-    { return BOUNDED_T ## __init_from_region(s, r); } \
+    {return BOUNDED_T ## __init_from_region(s, BOUND, r);} \
     static void bounded_fini(BOUNDED_T * s) \
-    { BOUNDED_T ## __fini(s); } \
+    {BOUNDED_T ## __fini(s);} \
     static bool bounded_assignn(BOUNDED_T * s, const auto * v, size_t n) \
-    { return BOUNDED_T ## __assignn(s, v, n); } \
+    {return BOUNDED_T ## __assignn(s, v, n);} \
     static bool bounded_assign(BOUNDED_T * s, const auto * v) \
-    { return BOUNDED_T ## __assign(s, v); } \
+    {return BOUNDED_T ## __assign(s, v);} \
     static bool bounded_appendn(BOUNDED_T * s, const auto * v, size_t n) \
-    { return BOUNDED_T ## __appendn(s, v, n); } \
+    {return BOUNDED_T ## __appendn(s, v, n);} \
     static bool bounded_resize(BOUNDED_T * s, size_t n) \
-    { return BOUNDED_T ## __resize(s, n); } \
+    {return BOUNDED_T ## __resize(s, n);} \
     static bool bounded_reserve(BOUNDED_T * s, size_t n) \
-    { return BOUNDED_T ## __reserve(s, n); } \
+    {return BOUNDED_T ## __reserve(s, n);} \
     static bool bounded_copy(const BOUNDED_T * in, BOUNDED_T * out) \
-    { return BOUNDED_T ## __copy(in, out); } \
+    {return BOUNDED_T ## __copy(in, out);} \
     static bool bounded_are_equal(const BOUNDED_T * l, const BOUNDED_T * r) \
-    { return BOUNDED_T ## __are_equal(l, r); } \
+    {return BOUNDED_T ## __are_equal(l, r);} \
   };
 
 DEFINE_STRING_WRAPPER(
   rosidl_runtime_c__experimental__String,
-  rosidl_runtime_c__experimental__BoundedString5)
+  rosidl_runtime_c__experimental__BoundedString, 5U)
 DEFINE_STRING_WRAPPER(
   rosidl_runtime_c__experimental__WString,
-  rosidl_runtime_c__experimental__BoundedWString5)
+  rosidl_runtime_c__experimental__BoundedWString, 5U)
 
 // =============================================================================
 // StringTestTraits<T> — per-type test data consumed by assertion bodies.
@@ -97,10 +94,10 @@ struct StringTestTraits<rosidl_runtime_c__experimental__String>
 {
   using string_type = rosidl_runtime_c__experimental__String;
   using char_type = char;
-  static const char * hello() { return "hello"; }
-  static const char * world() { return " world"; }
-  static const char * abcde() { return "abcde"; }
-  static const char * abcdef() { return "abcdef"; }
+  static const char * hello() {return "hello";}
+  static const char * world() {return " world";}
+  static const char * abcde() {return "abcde";}
+  static const char * abcdef() {return "abcdef";}
   static constexpr size_t hello_len = 5U;
   static constexpr size_t world_len = 6U;
   static constexpr size_t abcde_len = 5U;
@@ -112,10 +109,10 @@ struct StringTestTraits<rosidl_runtime_c__experimental__WString>
 {
   using string_type = rosidl_runtime_c__experimental__WString;
   using char_type = char16_t;
-  static const char16_t * hello() { return u"hello"; }
-  static const char16_t * world() { return u" world"; }
-  static const char16_t * abcde() { return u"abcde"; }
-  static const char16_t * abcdef() { return u"abcdef"; }
+  static const char16_t * hello() {return u"hello";}
+  static const char16_t * world() {return u" world";}
+  static const char16_t * abcde() {return u"abcde";}
+  static const char16_t * abcdef() {return u"abcdef";}
   static constexpr size_t hello_len = 5U;
   static constexpr size_t world_len = 6U;
   static constexpr size_t abcde_len = 5U;
@@ -198,7 +195,7 @@ TYPED_TEST(StringTest, external_region_enforces_fixed_capacity)
   rosidl_memory_region_t region{{storage, 0}, sizeof(storage)};
   ASSERT_TRUE(String::init_from_region(&this->str, region));
   ASSERT_TRUE(String::assignn(&this->str, Traits::abcde(), Traits::abcde_len));
-  EXPECT_FALSE(String::assignn(&this->str, Traits::abcdef(), Traits::abcdef_len));
+  EXPECT_FALSE(String::appendn(&this->str, Traits::abcdef(), Traits::abcdef_len));
 }
 
 TYPED_TEST(StringTest, bounded_upper_bound_is_enforced)

@@ -98,6 +98,25 @@ extern "C"
   ROSIDL_RUNTIME_C__EXPERIMENTAL__SCALAR_DECLARE(STRUCT_NAME, VALUE_TYPE); \
   ROSIDL_RUNTIME_C__EXPERIMENTAL__SCALAR_DEFINE(STRUCT_NAME, VALUE_TYPE)
 
+/// @brief Create a type alias for a scalar type with function forwarding.
+/// Generates a typedef and static inline forwarding functions for all scalar operations.
+#define ROSIDL_RUNTIME_C__EXPERIMENTAL__SCALAR_ALIAS(ALIAS_NAME, BASE_TYPE) \
+  typedef BASE_TYPE ALIAS_NAME; \
+  static inline bool ALIAS_NAME ## __init(ALIAS_NAME * _scalar) \
+  { \
+    return BASE_TYPE ## __init(_scalar); \
+  } \
+  static inline bool ALIAS_NAME ## __init_from_memory( \
+    ALIAS_NAME * _scalar, \
+    rosidl_memory_t memory) \
+  { \
+    return BASE_TYPE ## __init_from_memory(_scalar, memory); \
+  } \
+  static inline void ALIAS_NAME ## __fini(ALIAS_NAME * _scalar) \
+  { \
+    BASE_TYPE ## __fini(_scalar); \
+  }
+
 // Scalar types for all primitive ROSIDL C types.
 ROSIDL_RUNTIME_C__EXPERIMENTAL__SCALAR_DECLARE(rosidl_runtime_c__experimental__Float, float);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__SCALAR_DECLARE(rosidl_runtime_c__experimental__Double, double);

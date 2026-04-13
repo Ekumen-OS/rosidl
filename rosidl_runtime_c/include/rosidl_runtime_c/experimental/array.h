@@ -34,9 +34,13 @@ extern "C"
 /// @brief Experimental C11 fixed-size array wrapper macros.
 
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__CONCAT(x, y) x ## y
-#define ROSIDL_RUNTIME_C__EXPERIMENTAL__DISPATCH(name, count) ROSIDL_RUNTIME_C__EXPERIMENTAL__CONCAT(name, count)
-#define ROSIDL_RUNTIME_C__EXPERIMENTAL__GET_COUNT(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, COUNT, ...) COUNT
-#define ROSIDL_RUNTIME_C__EXPERIMENTAL__COUNT(...) ROSIDL_RUNTIME_C__EXPERIMENTAL__GET_COUNT(__VA_ARGS__, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1)
+#define ROSIDL_RUNTIME_C__EXPERIMENTAL__DISPATCH(name, count) \
+  ROSIDL_RUNTIME_C__EXPERIMENTAL__CONCAT(name, count)
+#define ROSIDL_RUNTIME_C__EXPERIMENTAL__GET_COUNT( \
+    _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, COUNT, ...) COUNT
+#define ROSIDL_RUNTIME_C__EXPERIMENTAL__COUNT(...) \
+  ROSIDL_RUNTIME_C__EXPERIMENTAL__GET_COUNT( \
+    __VA_ARGS__, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1)
 
 /// @brief Declare a size-1 primitive array model type and function signatures.
 /// With a single argument, STRUCT_NAME defaults to ELEMENT_TYPE ## Array.
@@ -46,9 +50,11 @@ extern "C"
     ROSIDL_RUNTIME_C__EXPERIMENTAL__COUNT(__VA_ARGS__))(__VA_ARGS__)
 
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_STRUCTURE_DECLARE_1(ELEMENT_TYPE) \
-  ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_STRUCTURE_DECLARE_2(ELEMENT_TYPE ## Array, ELEMENT_TYPE)
+  ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_STRUCTURE_DECLARE_2(ELEMENT_TYPE ## Array, \
+    ELEMENT_TYPE)
 
-#define ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_STRUCTURE_DECLARE_2(STRUCT_NAME, ELEMENT_TYPE) \
+#define ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_STRUCTURE_DECLARE_2(STRUCT_NAME, \
+    ELEMENT_TYPE) \
   typedef struct STRUCT_NAME ## _s \
   { \
     struct { \
@@ -84,9 +90,11 @@ extern "C"
     ROSIDL_RUNTIME_C__EXPERIMENTAL__COUNT(__VA_ARGS__))(__VA_ARGS__)
 
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_STRUCTURE_DEFINE_1(ELEMENT_TYPE) \
-  ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_STRUCTURE_DEFINE_2(ELEMENT_TYPE ## Array, ELEMENT_TYPE)
+  ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_STRUCTURE_DEFINE_2(ELEMENT_TYPE ## Array, \
+    ELEMENT_TYPE)
 
-#define ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_STRUCTURE_DEFINE_2(STRUCT_NAME, ELEMENT_TYPE) \
+#define ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_STRUCTURE_DEFINE_2(STRUCT_NAME, \
+    ELEMENT_TYPE) \
   bool STRUCT_NAME ## __init(STRUCT_NAME * array, size_t size) \
   { \
     (void)size; \
@@ -321,97 +329,93 @@ extern "C"
 /// @brief Route array operation for primitive models, else fallback to ELEMENT_TYPE operation.
 #ifndef __cplusplus
 
-#define ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_0(TYPE, CASE_EXPRESSION) \
-  _Generic(((TYPE)0), \
-    CASE_EXPRESSION, \
-    default: void)
-
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_1(TYPE, CASE_EXPRESSION, ...) \
   _Generic(((TYPE)0), \
     CASE_EXPRESSION, \
-    default: ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_0(TYPE, __VA_ARGS__))
+      default: (void)0)
 
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_2(TYPE, CASE_EXPRESSION, ...) \
   _Generic(((TYPE)0), \
     CASE_EXPRESSION, \
-    default: ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_1(TYPE, __VA_ARGS__))
+      default: ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_1(TYPE, __VA_ARGS__))
 
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_3(TYPE, CASE_EXPRESSION, ...) \
   _Generic(((TYPE)0), \
     CASE_EXPRESSION, \
-    default: ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_2(TYPE, __VA_ARGS__))
+      default: ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_2(TYPE, __VA_ARGS__))
 
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_4(TYPE, CASE_EXPRESSION, ...) \
-  _Generic((TYPE)0, \
+  _Generic(((TYPE)0), \
     CASE_EXPRESSION, \
-    default: ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_3(TYPE, __VA_ARGS__))
+      default: ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_3(TYPE, __VA_ARGS__))
 
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_5(TYPE, CASE_EXPRESSION, ...) \
-  _Generic((TYPE)0, \
+  _Generic(((TYPE)0), \
     CASE_EXPRESSION, \
-    default: ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_4(TYPE, __VA_ARGS__))
+      default: ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_4(TYPE, __VA_ARGS__))
 
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_6(TYPE, CASE_EXPRESSION, ...) \
-  _Generic((TYPE)0, \
+  _Generic(((TYPE)0), \
     CASE_EXPRESSION, \
-    default: ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_5(TYPE, __VA_ARGS__))
+      default: ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_5(TYPE, __VA_ARGS__))
 
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_7(TYPE, CASE_EXPRESSION, ...) \
-  _Generic((TYPE)0, \
+  _Generic(((TYPE)0), \
     CASE_EXPRESSION, \
-    default: ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_6(TYPE, __VA_ARGS__))
+      default: ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_6(TYPE, __VA_ARGS__))
 
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_8(TYPE, CASE_EXPRESSION, ...) \
-  _Generic((TYPE)0, \
+  _Generic(((TYPE)0), \
     CASE_EXPRESSION, \
-    default: ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_7(TYPE, __VA_ARGS__))
+      default: ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_7(TYPE, __VA_ARGS__))
 
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_9(TYPE, CASE_EXPRESSION, ...) \
-  _Generic((TYPE)0, \
+  _Generic(((TYPE)0), \
     CASE_EXPRESSION, \
-    default: ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_8(TYPE, __VA_ARGS__))
+      default: ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_8(TYPE, __VA_ARGS__))
 
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_10(TYPE, CASE_EXPRESSION, ...) \
-  _Generic((TYPE)0, \
+  _Generic(((TYPE)0), \
     CASE_EXPRESSION, \
-    default: ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_9(TYPE, __VA_ARGS__))
+      default: ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_9(TYPE, __VA_ARGS__))
 
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_11(TYPE, CASE_EXPRESSION, ...) \
-  _Generic((TYPE)0, \
+  _Generic(((TYPE)0), \
     CASE_EXPRESSION, \
-    default: ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_10(TYPE, __VA_ARGS__))
+      default: ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_10(TYPE, __VA_ARGS__))
 
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_11(TYPE, CASE_EXPRESSION, ...) \
-  _Generic((TYPE)0, \
+  _Generic(((TYPE)0), \
     CASE_EXPRESSION, \
-    default: ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_10(TYPE, __VA_ARGS__))
+      default: ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_10(TYPE, __VA_ARGS__))
 
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_12(TYPE, CASE_EXPRESSION, ...) \
-  _Generic((TYPE)0, \
+  _Generic(((TYPE)0), \
     CASE_EXPRESSION, \
-    default: ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_11(TYPE, __VA_ARGS__))
+      default: ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_11(TYPE, __VA_ARGS__))
 
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_13(TYPE, CASE_EXPRESSION, ...) \
-  _Generic((TYPE)0, \
+  _Generic(((TYPE)0), \
     CASE_EXPRESSION, \
-    default: ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_12(TYPE, __VA_ARGS__))
+      default: ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_12(TYPE, __VA_ARGS__))
 
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_14(TYPE, CASE_EXPRESSION, ...) \
-  _Generic((TYPE)0, \
+  _Generic(((TYPE)0), \
     CASE_EXPRESSION, \
-    default: ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_13(TYPE, __VA_ARGS__))
+      default: ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_13(TYPE, __VA_ARGS__))
 
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_15(TYPE, CASE_EXPRESSION, ...) \
-  _Generic((TYPE)0, \
+  _Generic(((TYPE)0), \
     CASE_EXPRESSION, \
-    default: ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_14(TYPE, __VA_ARGS__))
+      default: ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_14(TYPE, __VA_ARGS__))
 
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH(TYPE, ...) \
   ROSIDL_RUNTIME_C__EXPERIMENTAL__DISPATCH( \
     ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH_, \
     ROSIDL_RUNTIME_C__EXPERIMENTAL__COUNT(__VA_ARGS__))(TYPE, __VA_ARGS__)
 
-#define ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_DISPATCH_1(ELEMENT_TYPE, OPERATION, ARRAY_PTR, ...) \
+#define ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_DISPATCH_1( \
+    ELEMENT_TYPE, OPERATION, ARRAY_PTR, ...) \
   ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH( \
     ELEMENT_TYPE, \
     float: rosidl_runtime_c__experimental__FloatArray__ ## OPERATION( \
@@ -443,7 +447,8 @@ extern "C"
     int64_t: rosidl_runtime_c__experimental__Int64Array__ ## OPERATION( \
       (rosidl_runtime_c__experimental__Int64Array *)(ARRAY_PTR), __VA_ARGS__))
 
-#define ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_DISPATCH_2(ELEMENT_TYPE, OPERATION, LHS_ARRAY_PTR, RHS_ARRAY_PTR, ...) \
+#define ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_DISPATCH_2( \
+    ELEMENT_TYPE, OPERATION, LHS_ARRAY_PTR, RHS_ARRAY_PTR, ...) \
   ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH( \
     ELEMENT_TYPE, \
     float: rosidl_runtime_c__experimental__FloatArray__ ## OPERATION( \
@@ -491,7 +496,8 @@ extern "C"
 
 #else
 /* *INDENT-OFF* */
-#define ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_DISPATCH_1(ELEMENT_TYPE, OPERATION, ARRAY_PTR, ...) \
+#define ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_DISPATCH_1( \
+    ELEMENT_TYPE, OPERATION, ARRAY_PTR, ...) \
   [&] { \
     if constexpr(std::is_same_v<float, ELEMENT_TYPE>) { \
       return rosidl_runtime_c__experimental__FloatArray__ ## OPERATION( \
@@ -538,7 +544,8 @@ extern "C"
     } \
   }()
 
-#define ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_DISPATCH_2(ELEMENT_TYPE, OPERATION, LHS_ARRAY_PTR, RHS_ARRAY_PTR, ...) \
+#define ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_DISPATCH_2( \
+    ELEMENT_TYPE, OPERATION, LHS_ARRAY_PTR, RHS_ARRAY_PTR, ...) \
   [&] { \
     if constexpr(std::is_same_v<float, ELEMENT_TYPE>) { \
       return rosidl_runtime_c__experimental__FloatArray__ ## OPERATION( \
@@ -625,7 +632,8 @@ extern "C"
   } STRUCT_NAME; \
   static inline bool STRUCT_NAME ## __init(STRUCT_NAME * array) \
   { \
-    return ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_DISPATCH_1(ELEMENT_TYPE, init, array, SIZE); \
+    return ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_DISPATCH_1( \
+      ELEMENT_TYPE, init, array, SIZE); \
   } \
   static inline bool STRUCT_NAME ## __init_from_region( \
     STRUCT_NAME * array, \
@@ -648,12 +656,14 @@ extern "C"
   static inline bool STRUCT_NAME ## __are_equal( \
     const STRUCT_NAME * lhs, const STRUCT_NAME * rhs) \
   { \
-    return ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_DISPATCH_2(ELEMENT_TYPE, are_equal, lhs, rhs, SIZE); \
+    return ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_DISPATCH_2( \
+      ELEMENT_TYPE, are_equal, lhs, rhs, SIZE); \
   } \
   static inline bool STRUCT_NAME ## __copy( \
     const STRUCT_NAME * input, STRUCT_NAME * output) \
   { \
-    return ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_DISPATCH_2(ELEMENT_TYPE, copy, input, output, SIZE); \
+    return ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_DISPATCH_2( \
+      ELEMENT_TYPE, copy, input, output, SIZE); \
   }
 
 /// @brief Convenience macro declaring and defining a primitive array in one place.
@@ -765,6 +775,162 @@ ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_STRUCTURE_DECLARE(
   rosidl_runtime_c__experimental__String);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_STRUCTURE_DECLARE(
   rosidl_runtime_c__experimental__WString);
+
+/// @brief Declare a fixed-size array of bounded elements.
+/// This macro creates an array type where each element requires a bound parameter
+/// during initialization. Used for arrays of BoundedString, BoundedWString,
+/// or other bounded types.
+#define ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_ARRAY_DECLARE( \
+    STRUCT_NAME, ELEMENT_TYPE, SIZE) \
+  typedef struct STRUCT_NAME ## _s \
+  { \
+    struct { \
+      ELEMENT_TYPE data[SIZE]; \
+    } * value; \
+    struct \
+    { \
+      rosidl_runtime_c__experimental__storage_kind_t kind; \
+      union \
+      { \
+        rosidl_memory_region_t region; \
+        struct \
+        { \
+          ELEMENT_TYPE data[SIZE]; \
+        } local; \
+      } storage; \
+    } _impl; \
+  } STRUCT_NAME; \
+  bool STRUCT_NAME ## __init(STRUCT_NAME * array, size_t element_bound); \
+  bool STRUCT_NAME ## __init_with_allocator( \
+    STRUCT_NAME * array, \
+    size_t element_bound, \
+    const rcutils_allocator_t * allocator); \
+  bool STRUCT_NAME ## __init_from_region( \
+    STRUCT_NAME * array, \
+    size_t element_bound, \
+    rosidl_memory_region_t region); \
+  void STRUCT_NAME ## __fini(STRUCT_NAME * array); \
+  bool STRUCT_NAME ## __are_equal( \
+    const STRUCT_NAME * lhs, const STRUCT_NAME * rhs); \
+  bool STRUCT_NAME ## __copy( \
+    const STRUCT_NAME * input, STRUCT_NAME * output);
+
+/// @brief Define functions for a fixed-size array of bounded elements.
+/// This macro provides implementations for the functions declared by
+/// ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_ARRAY_DECLARE.
+#define ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_ARRAY_DEFINE( \
+    STRUCT_NAME, ELEMENT_TYPE, SIZE) \
+  bool STRUCT_NAME ## __init(STRUCT_NAME * array, size_t element_bound) \
+  { \
+    if (array == NULL) { \
+      return false; \
+    } \
+    array->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__LOCAL; \
+    array->value = (void *)&array->_impl.storage.local; \
+    for (size_t _i = 0U; _i < (SIZE); ++_i) { \
+      if (!ELEMENT_TYPE ## __init(&array->value->data[_i], element_bound)) { \
+        for (size_t _j = 0U; _j < _i; ++_j) { \
+          ELEMENT_TYPE ## __fini(&array->value->data[_j]); \
+        } \
+        return false; \
+      } \
+    } \
+    return true; \
+  } \
+  bool STRUCT_NAME ## __init_with_allocator( \
+    STRUCT_NAME * array, \
+    size_t element_bound, \
+    const rcutils_allocator_t * allocator) \
+  { \
+    if (array == NULL) { \
+      return false; \
+    } \
+    array->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__LOCAL; \
+    array->value = (void *)&array->_impl.storage.local; \
+    for (size_t _i = 0U; _i < (SIZE); ++_i) { \
+      if (!ELEMENT_TYPE ## __init_with_allocator(&array->value->data[_i], element_bound, \
+        allocator)) { \
+        for (size_t _j = 0U; _j < _i; ++_j) { \
+          ELEMENT_TYPE ## __fini(&array->value->data[_j]); \
+        } \
+        return false; \
+      } \
+    } \
+    return true; \
+  } \
+  bool STRUCT_NAME ## __init_from_region( \
+    STRUCT_NAME * array, \
+    size_t element_bound, \
+    rosidl_memory_region_t region) \
+  { \
+    if (array == NULL || region.location.address == NULL) { \
+      return false; \
+    } \
+    if ((SIZE) > (SIZE_MAX / sizeof(ELEMENT_TYPE))) { \
+      return false; \
+    } \
+    if (region.size < ((SIZE) *sizeof(ELEMENT_TYPE))) { \
+      return false; \
+    } \
+    array->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__EXTERNAL; \
+    array->_impl.storage.region = region; \
+    array->value = (void *)region.location.address; \
+    for (size_t _i = 0U; _i < (SIZE); ++_i) { \
+      if (!ELEMENT_TYPE ## __init(&array->value->data[_i], element_bound)) { \
+        for (size_t _j = 0U; _j < _i; ++_j) { \
+          ELEMENT_TYPE ## __fini(&array->value->data[_j]); \
+        } \
+        return false; \
+      } \
+    } \
+    return true; \
+  } \
+  void STRUCT_NAME ## __fini(STRUCT_NAME * array) \
+  { \
+    if (array == NULL) { \
+      return; \
+    } \
+    for (size_t _i = 0U; _i < (SIZE); ++_i) { \
+      ELEMENT_TYPE ## __fini(&array->value->data[_i]); \
+    } \
+    if (array->_impl.kind == ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__LOCAL) { \
+      array->value = (void *)&array->_impl.storage.local; \
+      return; \
+    } \
+    array->value = NULL; \
+  } \
+  bool STRUCT_NAME ## __are_equal( \
+    const STRUCT_NAME * lhs, const STRUCT_NAME * rhs) \
+  { \
+    if (lhs == NULL || rhs == NULL) { \
+      return false; \
+    } \
+    if (lhs->value == NULL || rhs->value == NULL) { \
+      return lhs->value == rhs->value; \
+    } \
+    for (size_t _i = 0U; _i < (SIZE); ++_i) { \
+      if (!ELEMENT_TYPE ## __are_equal(&lhs->value->data[_i], &rhs->value->data[_i])) { \
+        return false; \
+      } \
+    } \
+    return true; \
+  } \
+  bool STRUCT_NAME ## __copy( \
+    const STRUCT_NAME * input, STRUCT_NAME * output) \
+  { \
+    if (input == NULL || output == NULL) { \
+      return false; \
+    } \
+    if (input->value == NULL || output->value == NULL) { \
+      return false; \
+    } \
+    for (size_t _i = 0U; _i < (SIZE); ++_i) { \
+      if (!ELEMENT_TYPE ## __copy(&input->value->data[_i], &output->value->data[_i])) { \
+        return false; \
+      } \
+    } \
+    return true; \
+  }
 
 #ifdef __cplusplus
 }
