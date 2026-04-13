@@ -37,7 +37,7 @@
 #include "rosidl_generator_tests/msg/experimental/unbounded_sequences.h"
 #include "rosidl_generator_tests/msg/experimental/w_strings.h"
 
-#include "test_macros.h"
+#include "./test_macros.h"
 
 // Convenience macro for zeroed stack initialization
 #define ZERO(var) memset(&(var), 0, sizeof(var))

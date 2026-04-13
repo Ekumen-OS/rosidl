@@ -40,7 +40,7 @@
 #include "rosidl_generator_tests/msg/experimental/unbounded_sequences.h"
 #include "rosidl_generator_tests/msg/experimental/w_strings.h"
 
-#include "test_macros.h"
+#include "./test_macros.h"
 
 // ---------------------------------------------------------------------------
 // Empty

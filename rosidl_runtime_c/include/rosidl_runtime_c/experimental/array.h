@@ -180,7 +180,7 @@ extern "C"
     ROSIDL_RUNTIME_C__EXPERIMENTAL__COUNT(__VA_ARGS__))(__VA_ARGS__)
 
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_STRUCTURE_DECLARE_1(ELEMENT_TYPE) \
-  ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_STRUCTURE_DECLARE_2(ELEMENT_TYPE ## Array, ELEMENT_TYPE)
+  ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_STRUCTURE_DECLARE_2(ELEMENT_TYPE ## __Array, ELEMENT_TYPE)
 
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_STRUCTURE_DECLARE_2(STRUCT_NAME, ELEMENT_TYPE) \
   typedef struct STRUCT_NAME ## _s \
@@ -220,7 +220,7 @@ extern "C"
     ROSIDL_RUNTIME_C__EXPERIMENTAL__COUNT(__VA_ARGS__))(__VA_ARGS__)
 
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_STRUCTURE_DEFINE_1(ELEMENT_TYPE) \
-  ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_STRUCTURE_DEFINE_2(ELEMENT_TYPE ## Array, ELEMENT_TYPE)
+  ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_STRUCTURE_DEFINE_2(ELEMENT_TYPE ## __Array, ELEMENT_TYPE)
 
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_STRUCTURE_DEFINE_2(STRUCT_NAME, ELEMENT_TYPE) \
   bool STRUCT_NAME ## __init_with_allocator( \
@@ -418,81 +418,81 @@ extern "C"
     ELEMENT_TYPE, OPERATION, ARRAY_PTR, ...) \
   ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH( \
     ELEMENT_TYPE, \
-    float: rosidl_runtime_c__experimental__FloatArray__ ## OPERATION( \
-      (rosidl_runtime_c__experimental__FloatArray *)(ARRAY_PTR), __VA_ARGS__), \
-    double: rosidl_runtime_c__experimental__DoubleArray__ ## OPERATION( \
-      (rosidl_runtime_c__experimental__DoubleArray *)(ARRAY_PTR), __VA_ARGS__), \
-    long double: rosidl_runtime_c__experimental__LongDoubleArray__ ## OPERATION( \
-      (rosidl_runtime_c__experimental__LongDoubleArray *)(ARRAY_PTR), __VA_ARGS__), \
-    char: rosidl_runtime_c__experimental__CharArray__ ## OPERATION( \
-      (rosidl_runtime_c__experimental__CharArray *)(ARRAY_PTR), __VA_ARGS__), \
-    char16_t: rosidl_runtime_c__experimental__WCharArray__ ## OPERATION( \
-      (rosidl_runtime_c__experimental__WCharArray *)(ARRAY_PTR), __VA_ARGS__), \
-    bool: rosidl_runtime_c__experimental__BooleanArray__ ## OPERATION( \
-      (rosidl_runtime_c__experimental__BooleanArray *)(ARRAY_PTR), __VA_ARGS__), \
-    uint8_t: rosidl_runtime_c__experimental__UInt8Array__ ## OPERATION( \
-      (rosidl_runtime_c__experimental__UInt8Array *)(ARRAY_PTR), __VA_ARGS__), \
-    int8_t: rosidl_runtime_c__experimental__Int8Array__ ## OPERATION( \
-      (rosidl_runtime_c__experimental__Int8Array *)(ARRAY_PTR), __VA_ARGS__), \
-    uint16_t: rosidl_runtime_c__experimental__UInt16Array__ ## OPERATION( \
-      (rosidl_runtime_c__experimental__UInt16Array *)(ARRAY_PTR), __VA_ARGS__), \
-    int16_t: rosidl_runtime_c__experimental__Int16Array__ ## OPERATION( \
-      (rosidl_runtime_c__experimental__Int16Array *)(ARRAY_PTR), __VA_ARGS__), \
-    uint32_t: rosidl_runtime_c__experimental__UInt32Array__ ## OPERATION( \
-      (rosidl_runtime_c__experimental__UInt32Array *)(ARRAY_PTR), __VA_ARGS__), \
-    int32_t: rosidl_runtime_c__experimental__Int32Array__ ## OPERATION( \
-      (rosidl_runtime_c__experimental__Int32Array *)(ARRAY_PTR), __VA_ARGS__), \
-    uint64_t: rosidl_runtime_c__experimental__UInt64Array__ ## OPERATION( \
-      (rosidl_runtime_c__experimental__UInt64Array *)(ARRAY_PTR), __VA_ARGS__), \
-    int64_t: rosidl_runtime_c__experimental__Int64Array__ ## OPERATION( \
-      (rosidl_runtime_c__experimental__Int64Array *)(ARRAY_PTR), __VA_ARGS__))
+    float: rosidl_runtime_c__experimental__Float__Array__ ## OPERATION( \
+      (rosidl_runtime_c__experimental__Float__Array *)(ARRAY_PTR), __VA_ARGS__), \
+    double: rosidl_runtime_c__experimental__Double__Array__ ## OPERATION( \
+      (rosidl_runtime_c__experimental__Double__Array *)(ARRAY_PTR), __VA_ARGS__), \
+    long double: rosidl_runtime_c__experimental__LongDouble__Array__ ## OPERATION( \
+      (rosidl_runtime_c__experimental__LongDouble__Array *)(ARRAY_PTR), __VA_ARGS__), \
+    char: rosidl_runtime_c__experimental__Char__Array__ ## OPERATION( \
+      (rosidl_runtime_c__experimental__Char__Array *)(ARRAY_PTR), __VA_ARGS__), \
+    char16_t: rosidl_runtime_c__experimental__WChar__Array__ ## OPERATION( \
+      (rosidl_runtime_c__experimental__WChar__Array *)(ARRAY_PTR), __VA_ARGS__), \
+    bool: rosidl_runtime_c__experimental__Boolean__Array__ ## OPERATION( \
+      (rosidl_runtime_c__experimental__Boolean__Array *)(ARRAY_PTR), __VA_ARGS__), \
+    uint8_t: rosidl_runtime_c__experimental__UInt8__Array__ ## OPERATION( \
+      (rosidl_runtime_c__experimental__UInt8__Array *)(ARRAY_PTR), __VA_ARGS__), \
+    int8_t: rosidl_runtime_c__experimental__Int8__Array__ ## OPERATION( \
+      (rosidl_runtime_c__experimental__Int8__Array *)(ARRAY_PTR), __VA_ARGS__), \
+    uint16_t: rosidl_runtime_c__experimental__UInt16__Array__ ## OPERATION( \
+      (rosidl_runtime_c__experimental__UInt16__Array *)(ARRAY_PTR), __VA_ARGS__), \
+    int16_t: rosidl_runtime_c__experimental__Int16__Array__ ## OPERATION( \
+      (rosidl_runtime_c__experimental__Int16__Array *)(ARRAY_PTR), __VA_ARGS__), \
+    uint32_t: rosidl_runtime_c__experimental__UInt32__Array__ ## OPERATION( \
+      (rosidl_runtime_c__experimental__UInt32__Array *)(ARRAY_PTR), __VA_ARGS__), \
+    int32_t: rosidl_runtime_c__experimental__Int32__Array__ ## OPERATION( \
+      (rosidl_runtime_c__experimental__Int32__Array *)(ARRAY_PTR), __VA_ARGS__), \
+    uint64_t: rosidl_runtime_c__experimental__UInt64__Array__ ## OPERATION( \
+      (rosidl_runtime_c__experimental__UInt64__Array *)(ARRAY_PTR), __VA_ARGS__), \
+    int64_t: rosidl_runtime_c__experimental__Int64__Array__ ## OPERATION( \
+      (rosidl_runtime_c__experimental__Int64__Array *)(ARRAY_PTR), __VA_ARGS__))
 
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_DISPATCH_2( \
     ELEMENT_TYPE, OPERATION, LHS_ARRAY_PTR, RHS_ARRAY_PTR, ...) \
   ROSIDL_RUNTIME_C__EXPERIMENTAL__TYPE_SWITCH( \
     ELEMENT_TYPE, \
-    float: rosidl_runtime_c__experimental__FloatArray__ ## OPERATION( \
-      (rosidl_runtime_c__experimental__FloatArray *)(LHS_ARRAY_PTR), \
-      (rosidl_runtime_c__experimental__FloatArray *)(RHS_ARRAY_PTR), __VA_ARGS__), \
-    double: rosidl_runtime_c__experimental__DoubleArray__ ## OPERATION( \
-      (rosidl_runtime_c__experimental__DoubleArray *)(LHS_ARRAY_PTR), \
-      (rosidl_runtime_c__experimental__DoubleArray *)(RHS_ARRAY_PTR), __VA_ARGS__), \
-    long double: rosidl_runtime_c__experimental__LongDoubleArray__ ## OPERATION( \
-      (rosidl_runtime_c__experimental__LongDoubleArray *)(LHS_ARRAY_PTR), \
-      (rosidl_runtime_c__experimental__LongDoubleArray *)(RHS_ARRAY_PTR), __VA_ARGS__), \
-    char: rosidl_runtime_c__experimental__CharArray__ ## OPERATION( \
-      (rosidl_runtime_c__experimental__CharArray *)(LHS_ARRAY_PTR), \
-      (rosidl_runtime_c__experimental__CharArray *)(RHS_ARRAY_PTR), __VA_ARGS__), \
-    char16_t: rosidl_runtime_c__experimental__WCharArray__ ## OPERATION( \
-      (rosidl_runtime_c__experimental__WCharArray *)(LHS_ARRAY_PTR), \
-      (rosidl_runtime_c__experimental__WCharArray *)(RHS_ARRAY_PTR), __VA_ARGS__), \
-    bool: rosidl_runtime_c__experimental__BooleanArray__ ## OPERATION( \
-      (rosidl_runtime_c__experimental__BooleanArray *)(LHS_ARRAY_PTR), \
-      (rosidl_runtime_c__experimental__BooleanArray *)(RHS_ARRAY_PTR), __VA_ARGS__), \
-    uint8_t: rosidl_runtime_c__experimental__UInt8Array__ ## OPERATION( \
-      (rosidl_runtime_c__experimental__UInt8Array *)(LHS_ARRAY_PTR), \
-      (rosidl_runtime_c__experimental__UInt8Array *)(RHS_ARRAY_PTR), __VA_ARGS__), \
-    int8_t: rosidl_runtime_c__experimental__Int8Array__ ## OPERATION( \
-      (rosidl_runtime_c__experimental__Int8Array *)(LHS_ARRAY_PTR), \
-      (rosidl_runtime_c__experimental__Int8Array *)(RHS_ARRAY_PTR), __VA_ARGS__), \
-    uint16_t: rosidl_runtime_c__experimental__UInt16Array__ ## OPERATION( \
-      (rosidl_runtime_c__experimental__UInt16Array *)(LHS_ARRAY_PTR), \
-      (rosidl_runtime_c__experimental__UInt16Array *)(RHS_ARRAY_PTR), __VA_ARGS__), \
-    int16_t: rosidl_runtime_c__experimental__Int16Array__ ## OPERATION( \
-      (rosidl_runtime_c__experimental__Int16Array *)(LHS_ARRAY_PTR), \
-      (rosidl_runtime_c__experimental__Int16Array *)(RHS_ARRAY_PTR), __VA_ARGS__), \
-    uint32_t: rosidl_runtime_c__experimental__UInt32Array__ ## OPERATION( \
-      (rosidl_runtime_c__experimental__UInt32Array *)(LHS_ARRAY_PTR), \
-      (rosidl_runtime_c__experimental__UInt32Array *)(RHS_ARRAY_PTR), __VA_ARGS__), \
-    int32_t: rosidl_runtime_c__experimental__Int32Array__ ## OPERATION( \
-      (rosidl_runtime_c__experimental__Int32Array *)(LHS_ARRAY_PTR), \
-      (rosidl_runtime_c__experimental__Int32Array *)(RHS_ARRAY_PTR), __VA_ARGS__), \
-    uint64_t: rosidl_runtime_c__experimental__UInt64Array__ ## OPERATION( \
-      (rosidl_runtime_c__experimental__UInt64Array *)(LHS_ARRAY_PTR), \
-      (rosidl_runtime_c__experimental__UInt64Array *)(RHS_ARRAY_PTR), __VA_ARGS__), \
-    int64_t: rosidl_runtime_c__experimental__Int64Array__ ## OPERATION( \
-      (rosidl_runtime_c__experimental__Int64Array *)(LHS_ARRAY_PTR), \
-      (rosidl_runtime_c__experimental__Int64Array *)(RHS_ARRAY_PTR), __VA_ARGS__))
+    float: rosidl_runtime_c__experimental__Float__Array__ ## OPERATION( \
+      (rosidl_runtime_c__experimental__Float__Array *)(LHS_ARRAY_PTR), \
+      (rosidl_runtime_c__experimental__Float__Array *)(RHS_ARRAY_PTR), __VA_ARGS__), \
+    double: rosidl_runtime_c__experimental__Double__Array__ ## OPERATION( \
+      (rosidl_runtime_c__experimental__Double__Array *)(LHS_ARRAY_PTR), \
+      (rosidl_runtime_c__experimental__Double__Array *)(RHS_ARRAY_PTR), __VA_ARGS__), \
+    long double: rosidl_runtime_c__experimental__LongDouble__Array__ ## OPERATION( \
+      (rosidl_runtime_c__experimental__LongDouble__Array *)(LHS_ARRAY_PTR), \
+      (rosidl_runtime_c__experimental__LongDouble__Array *)(RHS_ARRAY_PTR), __VA_ARGS__), \
+    char: rosidl_runtime_c__experimental__Char__Array__ ## OPERATION( \
+      (rosidl_runtime_c__experimental__Char__Array *)(LHS_ARRAY_PTR), \
+      (rosidl_runtime_c__experimental__Char__Array *)(RHS_ARRAY_PTR), __VA_ARGS__), \
+    char16_t: rosidl_runtime_c__experimental__WChar__Array__ ## OPERATION( \
+      (rosidl_runtime_c__experimental__WChar__Array *)(LHS_ARRAY_PTR), \
+      (rosidl_runtime_c__experimental__WChar__Array *)(RHS_ARRAY_PTR), __VA_ARGS__), \
+    bool: rosidl_runtime_c__experimental__Boolean__Array__ ## OPERATION( \
+      (rosidl_runtime_c__experimental__Boolean__Array *)(LHS_ARRAY_PTR), \
+      (rosidl_runtime_c__experimental__Boolean__Array *)(RHS_ARRAY_PTR), __VA_ARGS__), \
+    uint8_t: rosidl_runtime_c__experimental__UInt8__Array__ ## OPERATION( \
+      (rosidl_runtime_c__experimental__UInt8__Array *)(LHS_ARRAY_PTR), \
+      (rosidl_runtime_c__experimental__UInt8__Array *)(RHS_ARRAY_PTR), __VA_ARGS__), \
+    int8_t: rosidl_runtime_c__experimental__Int8__Array__ ## OPERATION( \
+      (rosidl_runtime_c__experimental__Int8__Array *)(LHS_ARRAY_PTR), \
+      (rosidl_runtime_c__experimental__Int8__Array *)(RHS_ARRAY_PTR), __VA_ARGS__), \
+    uint16_t: rosidl_runtime_c__experimental__UInt16__Array__ ## OPERATION( \
+      (rosidl_runtime_c__experimental__UInt16__Array *)(LHS_ARRAY_PTR), \
+      (rosidl_runtime_c__experimental__UInt16__Array *)(RHS_ARRAY_PTR), __VA_ARGS__), \
+    int16_t: rosidl_runtime_c__experimental__Int16__Array__ ## OPERATION( \
+      (rosidl_runtime_c__experimental__Int16__Array *)(LHS_ARRAY_PTR), \
+      (rosidl_runtime_c__experimental__Int16__Array *)(RHS_ARRAY_PTR), __VA_ARGS__), \
+    uint32_t: rosidl_runtime_c__experimental__UInt32__Array__ ## OPERATION( \
+      (rosidl_runtime_c__experimental__UInt32__Array *)(LHS_ARRAY_PTR), \
+      (rosidl_runtime_c__experimental__UInt32__Array *)(RHS_ARRAY_PTR), __VA_ARGS__), \
+    int32_t: rosidl_runtime_c__experimental__Int32__Array__ ## OPERATION( \
+      (rosidl_runtime_c__experimental__Int32__Array *)(LHS_ARRAY_PTR), \
+      (rosidl_runtime_c__experimental__Int32__Array *)(RHS_ARRAY_PTR), __VA_ARGS__), \
+    uint64_t: rosidl_runtime_c__experimental__UInt64__Array__ ## OPERATION( \
+      (rosidl_runtime_c__experimental__UInt64__Array *)(LHS_ARRAY_PTR), \
+      (rosidl_runtime_c__experimental__UInt64__Array *)(RHS_ARRAY_PTR), __VA_ARGS__), \
+    int64_t: rosidl_runtime_c__experimental__Int64__Array__ ## OPERATION( \
+      (rosidl_runtime_c__experimental__Int64__Array *)(LHS_ARRAY_PTR), \
+      (rosidl_runtime_c__experimental__Int64__Array *)(RHS_ARRAY_PTR), __VA_ARGS__))
 
 #else
 /* *INDENT-OFF* */
@@ -500,47 +500,47 @@ extern "C"
     ELEMENT_TYPE, OPERATION, ARRAY_PTR, ...) \
   [&] { \
     if constexpr(std::is_same_v<float, ELEMENT_TYPE>) { \
-      return rosidl_runtime_c__experimental__FloatArray__ ## OPERATION( \
-        (rosidl_runtime_c__experimental__FloatArray *)(ARRAY_PTR), __VA_ARGS__); \
+      return rosidl_runtime_c__experimental__Float__Array__ ## OPERATION( \
+        (rosidl_runtime_c__experimental__Float__Array *)(ARRAY_PTR), __VA_ARGS__); \
     } else if constexpr(std::is_same_v<double, ELEMENT_TYPE>) { \
-      return rosidl_runtime_c__experimental__DoubleArray__ ## OPERATION( \
-        (rosidl_runtime_c__experimental__DoubleArray *)(ARRAY_PTR), __VA_ARGS__); \
+      return rosidl_runtime_c__experimental__Double__Array__ ## OPERATION( \
+        (rosidl_runtime_c__experimental__Double__Array *)(ARRAY_PTR), __VA_ARGS__); \
     } else if constexpr(std::is_same_v<long double, ELEMENT_TYPE>) { \
-      return rosidl_runtime_c__experimental__LongDoubleArray__ ## OPERATION( \
-        (rosidl_runtime_c__experimental__LongDoubleArray *)(ARRAY_PTR), __VA_ARGS__); \
+      return rosidl_runtime_c__experimental__LongDouble__Array__ ## OPERATION( \
+        (rosidl_runtime_c__experimental__LongDouble__Array *)(ARRAY_PTR), __VA_ARGS__); \
     } else if constexpr(std::is_same_v<char, ELEMENT_TYPE>) { \
-      return rosidl_runtime_c__experimental__CharArray__ ## OPERATION( \
-        (rosidl_runtime_c__experimental__CharArray *)(ARRAY_PTR), __VA_ARGS__); \
+      return rosidl_runtime_c__experimental__Char__Array__ ## OPERATION( \
+        (rosidl_runtime_c__experimental__Char__Array *)(ARRAY_PTR), __VA_ARGS__); \
     } else if constexpr(std::is_same_v<char16_t, ELEMENT_TYPE>) { \
-      return rosidl_runtime_c__experimental__WCharArray__ ## OPERATION( \
-        (rosidl_runtime_c__experimental__WCharArray *)(ARRAY_PTR), __VA_ARGS__); \
+      return rosidl_runtime_c__experimental__WChar__Array__ ## OPERATION( \
+        (rosidl_runtime_c__experimental__WChar__Array *)(ARRAY_PTR), __VA_ARGS__); \
     } else if constexpr(std::is_same_v<bool, ELEMENT_TYPE>) { \
-      return rosidl_runtime_c__experimental__BooleanArray__ ## OPERATION( \
-        (rosidl_runtime_c__experimental__BooleanArray *)(ARRAY_PTR), __VA_ARGS__); \
+      return rosidl_runtime_c__experimental__Boolean__Array__ ## OPERATION( \
+        (rosidl_runtime_c__experimental__Boolean__Array *)(ARRAY_PTR), __VA_ARGS__); \
     } else if constexpr(std::is_same_v<uint8_t, ELEMENT_TYPE>) { \
-      return rosidl_runtime_c__experimental__UInt8Array__ ## OPERATION( \
-        (rosidl_runtime_c__experimental__UInt8Array *)(ARRAY_PTR), __VA_ARGS__); \
+      return rosidl_runtime_c__experimental__UInt8__Array__ ## OPERATION( \
+        (rosidl_runtime_c__experimental__UInt8__Array *)(ARRAY_PTR), __VA_ARGS__); \
     } else if constexpr(std::is_same_v<int8_t, ELEMENT_TYPE>) { \
-      return rosidl_runtime_c__experimental__Int8Array__ ## OPERATION( \
-        (rosidl_runtime_c__experimental__Int8Array *)(ARRAY_PTR), __VA_ARGS__); \
+      return rosidl_runtime_c__experimental__Int8__Array__ ## OPERATION( \
+        (rosidl_runtime_c__experimental__Int8__Array *)(ARRAY_PTR), __VA_ARGS__); \
     } else if constexpr(std::is_same_v<uint16_t, ELEMENT_TYPE>) { \
-      return rosidl_runtime_c__experimental__UInt16Array__ ## OPERATION( \
-        (rosidl_runtime_c__experimental__UInt16Array *)(ARRAY_PTR), __VA_ARGS__); \
+      return rosidl_runtime_c__experimental__UInt16__Array__ ## OPERATION( \
+        (rosidl_runtime_c__experimental__UInt16__Array *)(ARRAY_PTR), __VA_ARGS__); \
     } else if constexpr(std::is_same_v<int16_t, ELEMENT_TYPE>) { \
-      return rosidl_runtime_c__experimental__Int16Array__ ## OPERATION( \
-        (rosidl_runtime_c__experimental__Int16Array *)(ARRAY_PTR), __VA_ARGS__); \
+      return rosidl_runtime_c__experimental__Int16__Array__ ## OPERATION( \
+        (rosidl_runtime_c__experimental__Int16__Array *)(ARRAY_PTR), __VA_ARGS__); \
     } else if constexpr(std::is_same_v<uint32_t, ELEMENT_TYPE>) { \
-      return rosidl_runtime_c__experimental__UInt32Array__ ## OPERATION( \
-        (rosidl_runtime_c__experimental__UInt32Array *)(ARRAY_PTR), __VA_ARGS__); \
+      return rosidl_runtime_c__experimental__UInt32__Array__ ## OPERATION( \
+        (rosidl_runtime_c__experimental__UInt32__Array *)(ARRAY_PTR), __VA_ARGS__); \
     } else if constexpr(std::is_same_v<int32_t, ELEMENT_TYPE>) { \
-      return rosidl_runtime_c__experimental__Int32Array__ ## OPERATION( \
-        (rosidl_runtime_c__experimental__Int32Array *)(ARRAY_PTR), __VA_ARGS__); \
+      return rosidl_runtime_c__experimental__Int32__Array__ ## OPERATION( \
+        (rosidl_runtime_c__experimental__Int32__Array *)(ARRAY_PTR), __VA_ARGS__); \
     } else if constexpr(std::is_same_v<uint64_t, ELEMENT_TYPE>) { \
-      return rosidl_runtime_c__experimental__UInt64Array__ ## OPERATION( \
-        (rosidl_runtime_c__experimental__UInt64Array *)(ARRAY_PTR), __VA_ARGS__); \
+      return rosidl_runtime_c__experimental__UInt64__Array__ ## OPERATION( \
+        (rosidl_runtime_c__experimental__UInt64__Array *)(ARRAY_PTR), __VA_ARGS__); \
     } else if constexpr(std::is_same_v<int64_t, ELEMENT_TYPE>) { \
-      return rosidl_runtime_c__experimental__Int64Array__ ## OPERATION( \
-        (rosidl_runtime_c__experimental__Int64Array *)(ARRAY_PTR), __VA_ARGS__); \
+      return rosidl_runtime_c__experimental__Int64__Array__ ## OPERATION( \
+        (rosidl_runtime_c__experimental__Int64__Array *)(ARRAY_PTR), __VA_ARGS__); \
     } \
   }()
 
@@ -548,61 +548,61 @@ extern "C"
     ELEMENT_TYPE, OPERATION, LHS_ARRAY_PTR, RHS_ARRAY_PTR, ...) \
   [&] { \
     if constexpr(std::is_same_v<float, ELEMENT_TYPE>) { \
-      return rosidl_runtime_c__experimental__FloatArray__ ## OPERATION( \
-        (rosidl_runtime_c__experimental__FloatArray *)(LHS_ARRAY_PTR), \
-        (rosidl_runtime_c__experimental__FloatArray *)(RHS_ARRAY_PTR), __VA_ARGS__); \
+      return rosidl_runtime_c__experimental__Float__Array__ ## OPERATION( \
+        (rosidl_runtime_c__experimental__Float__Array *)(LHS_ARRAY_PTR), \
+        (rosidl_runtime_c__experimental__Float__Array *)(RHS_ARRAY_PTR), __VA_ARGS__); \
     } else if constexpr(std::is_same_v<double, ELEMENT_TYPE>) { \
-      return rosidl_runtime_c__experimental__DoubleArray__ ## OPERATION( \
-        (rosidl_runtime_c__experimental__DoubleArray *)(LHS_ARRAY_PTR), \
-        (rosidl_runtime_c__experimental__DoubleArray *)(RHS_ARRAY_PTR), __VA_ARGS__); \
+      return rosidl_runtime_c__experimental__Double__Array__ ## OPERATION( \
+        (rosidl_runtime_c__experimental__Double__Array *)(LHS_ARRAY_PTR), \
+        (rosidl_runtime_c__experimental__Double__Array *)(RHS_ARRAY_PTR), __VA_ARGS__); \
     } else if constexpr(std::is_same_v<long double, ELEMENT_TYPE>) { \
-      return rosidl_runtime_c__experimental__LongDoubleArray__ ## OPERATION( \
-        (rosidl_runtime_c__experimental__LongDoubleArray *)(LHS_ARRAY_PTR), \
-        (rosidl_runtime_c__experimental__LongDoubleArray *)(RHS_ARRAY_PTR), __VA_ARGS__); \
+      return rosidl_runtime_c__experimental__LongDouble__Array__ ## OPERATION( \
+        (rosidl_runtime_c__experimental__LongDouble__Array *)(LHS_ARRAY_PTR), \
+        (rosidl_runtime_c__experimental__LongDouble__Array *)(RHS_ARRAY_PTR), __VA_ARGS__); \
     } else if constexpr(std::is_same_v<char, ELEMENT_TYPE>) { \
-      return rosidl_runtime_c__experimental__CharArray__ ## OPERATION( \
-        (rosidl_runtime_c__experimental__CharArray *)(LHS_ARRAY_PTR), \
-        (rosidl_runtime_c__experimental__CharArray *)(RHS_ARRAY_PTR), __VA_ARGS__); \
+      return rosidl_runtime_c__experimental__Char__Array__ ## OPERATION( \
+        (rosidl_runtime_c__experimental__Char__Array *)(LHS_ARRAY_PTR), \
+        (rosidl_runtime_c__experimental__Char__Array *)(RHS_ARRAY_PTR), __VA_ARGS__); \
     } else if constexpr(std::is_same_v<char16_t, ELEMENT_TYPE>) { \
-      return rosidl_runtime_c__experimental__WCharArray__ ## OPERATION( \
-        (rosidl_runtime_c__experimental__WCharArray *)(LHS_ARRAY_PTR), \
-        (rosidl_runtime_c__experimental__WCharArray *)(RHS_ARRAY_PTR), __VA_ARGS__); \
+      return rosidl_runtime_c__experimental__WChar__Array__ ## OPERATION( \
+        (rosidl_runtime_c__experimental__WChar__Array *)(LHS_ARRAY_PTR), \
+        (rosidl_runtime_c__experimental__WChar__Array *)(RHS_ARRAY_PTR), __VA_ARGS__); \
     } else if constexpr(std::is_same_v<bool, ELEMENT_TYPE>) { \
-      return rosidl_runtime_c__experimental__BooleanArray__ ## OPERATION( \
-        (rosidl_runtime_c__experimental__BooleanArray *)(LHS_ARRAY_PTR), \
-        (rosidl_runtime_c__experimental__BooleanArray *)(RHS_ARRAY_PTR), __VA_ARGS__); \
+      return rosidl_runtime_c__experimental__Boolean__Array__ ## OPERATION( \
+        (rosidl_runtime_c__experimental__Boolean__Array *)(LHS_ARRAY_PTR), \
+        (rosidl_runtime_c__experimental__Boolean__Array *)(RHS_ARRAY_PTR), __VA_ARGS__); \
     } else if constexpr(std::is_same_v<uint8_t, ELEMENT_TYPE>) { \
-      return rosidl_runtime_c__experimental__UInt8Array__ ## OPERATION( \
-        (rosidl_runtime_c__experimental__UInt8Array *)(LHS_ARRAY_PTR), \
-        (rosidl_runtime_c__experimental__UInt8Array *)(RHS_ARRAY_PTR), __VA_ARGS__); \
+      return rosidl_runtime_c__experimental__UInt8__Array__ ## OPERATION( \
+        (rosidl_runtime_c__experimental__UInt8__Array *)(LHS_ARRAY_PTR), \
+        (rosidl_runtime_c__experimental__UInt8__Array *)(RHS_ARRAY_PTR), __VA_ARGS__); \
     } else if constexpr(std::is_same_v<int8_t, ELEMENT_TYPE>) { \
-      return rosidl_runtime_c__experimental__Int8Array__ ## OPERATION( \
-        (rosidl_runtime_c__experimental__Int8Array *)(LHS_ARRAY_PTR), \
-        (rosidl_runtime_c__experimental__Int8Array *)(RHS_ARRAY_PTR), __VA_ARGS__); \
+      return rosidl_runtime_c__experimental__Int8__Array__ ## OPERATION( \
+        (rosidl_runtime_c__experimental__Int8__Array *)(LHS_ARRAY_PTR), \
+        (rosidl_runtime_c__experimental__Int8__Array *)(RHS_ARRAY_PTR), __VA_ARGS__); \
     } else if constexpr(std::is_same_v<uint16_t, ELEMENT_TYPE>) { \
-      return rosidl_runtime_c__experimental__UInt16Array__ ## OPERATION( \
-        (rosidl_runtime_c__experimental__UInt16Array *)(LHS_ARRAY_PTR), \
-        (rosidl_runtime_c__experimental__UInt16Array *)(RHS_ARRAY_PTR), __VA_ARGS__); \
+      return rosidl_runtime_c__experimental__UInt16__Array__ ## OPERATION( \
+        (rosidl_runtime_c__experimental__UInt16__Array *)(LHS_ARRAY_PTR), \
+        (rosidl_runtime_c__experimental__UInt16__Array *)(RHS_ARRAY_PTR), __VA_ARGS__); \
     } else if constexpr(std::is_same_v<int16_t, ELEMENT_TYPE>) { \
-      return rosidl_runtime_c__experimental__Int16Array__ ## OPERATION( \
-        (rosidl_runtime_c__experimental__Int16Array *)(LHS_ARRAY_PTR), \
-        (rosidl_runtime_c__experimental__Int16Array *)(RHS_ARRAY_PTR), __VA_ARGS__); \
+      return rosidl_runtime_c__experimental__Int16__Array__ ## OPERATION( \
+        (rosidl_runtime_c__experimental__Int16__Array *)(LHS_ARRAY_PTR), \
+        (rosidl_runtime_c__experimental__Int16__Array *)(RHS_ARRAY_PTR), __VA_ARGS__); \
     } else if constexpr(std::is_same_v<uint32_t, ELEMENT_TYPE>) { \
-      return rosidl_runtime_c__experimental__UInt32Array__ ## OPERATION( \
-        (rosidl_runtime_c__experimental__UInt32Array *)(LHS_ARRAY_PTR), \
-        (rosidl_runtime_c__experimental__UInt32Array *)(RHS_ARRAY_PTR), __VA_ARGS__); \
+      return rosidl_runtime_c__experimental__UInt32__Array__ ## OPERATION( \
+        (rosidl_runtime_c__experimental__UInt32__Array *)(LHS_ARRAY_PTR), \
+        (rosidl_runtime_c__experimental__UInt32__Array *)(RHS_ARRAY_PTR), __VA_ARGS__); \
     } else if constexpr(std::is_same_v<int32_t, ELEMENT_TYPE>) { \
-      return rosidl_runtime_c__experimental__Int32Array__ ## OPERATION( \
-        (rosidl_runtime_c__experimental__Int32Array *)(LHS_ARRAY_PTR), \
-        (rosidl_runtime_c__experimental__Int32Array *)(RHS_ARRAY_PTR), __VA_ARGS__); \
+      return rosidl_runtime_c__experimental__Int32__Array__ ## OPERATION( \
+        (rosidl_runtime_c__experimental__Int32__Array *)(LHS_ARRAY_PTR), \
+        (rosidl_runtime_c__experimental__Int32__Array *)(RHS_ARRAY_PTR), __VA_ARGS__); \
     } else if constexpr(std::is_same_v<uint64_t, ELEMENT_TYPE>) { \
-      return rosidl_runtime_c__experimental__UInt64Array__ ## OPERATION( \
-        (rosidl_runtime_c__experimental__UInt64Array *)(LHS_ARRAY_PTR), \
-        (rosidl_runtime_c__experimental__UInt64Array *)(RHS_ARRAY_PTR), __VA_ARGS__); \
+      return rosidl_runtime_c__experimental__UInt64__Array__ ## OPERATION( \
+        (rosidl_runtime_c__experimental__UInt64__Array *)(LHS_ARRAY_PTR), \
+        (rosidl_runtime_c__experimental__UInt64__Array *)(RHS_ARRAY_PTR), __VA_ARGS__); \
     } else if constexpr(std::is_same_v<int64_t, ELEMENT_TYPE>) { \
-      return rosidl_runtime_c__experimental__Int64Array__ ## OPERATION( \
-        (rosidl_runtime_c__experimental__Int64Array *)(LHS_ARRAY_PTR), \
-        (rosidl_runtime_c__experimental__Int64Array *)(RHS_ARRAY_PTR), __VA_ARGS__); \
+      return rosidl_runtime_c__experimental__Int64__Array__ ## OPERATION( \
+        (rosidl_runtime_c__experimental__Int64__Array *)(LHS_ARRAY_PTR), \
+        (rosidl_runtime_c__experimental__Int64__Array *)(RHS_ARRAY_PTR), __VA_ARGS__); \
     } \
   }()
 
@@ -675,7 +675,7 @@ extern "C"
 /// Requires ELEMENT_TYPE ## Array to be declared with ARRAY_STRUCTURE_DECLARE,
 /// following the ELEMENT_TYPE ## Array naming convention.
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_DISPATCH(ELEMENT_TYPE, OPERATION, ARRAY_PTR, ...) \
-  ELEMENT_TYPE ## Array__ ## OPERATION((ELEMENT_TYPE ## Array *)(ARRAY_PTR), __VA_ARGS__)
+  ELEMENT_TYPE ## __Array__ ## OPERATION((ELEMENT_TYPE ## __Array *)(ARRAY_PTR), __VA_ARGS__)
 
 /// @brief Declare a fixed-size typed array of objects, dispatching to
 /// ELEMENT_TYPE ## Array structure operations.
@@ -726,16 +726,16 @@ extern "C"
   static inline bool STRUCT_NAME ## __are_equal( \
     const STRUCT_NAME * lhs, const STRUCT_NAME * rhs) \
   { \
-    return ELEMENT_TYPE ## Array__are_equal( \
-      (const ELEMENT_TYPE ## Array *)(lhs), \
-      (const ELEMENT_TYPE ## Array *)(rhs), (SIZE)); \
+    return ELEMENT_TYPE ## __Array__are_equal( \
+      (const ELEMENT_TYPE ## __Array *)(lhs), \
+      (const ELEMENT_TYPE ## __Array *)(rhs), (SIZE)); \
   } \
   static inline bool STRUCT_NAME ## __copy( \
     const STRUCT_NAME * input, STRUCT_NAME * output) \
   { \
-    return ELEMENT_TYPE ## Array__copy( \
-      (const ELEMENT_TYPE ## Array *)(input), \
-      (ELEMENT_TYPE ## Array *)(output), (SIZE)); \
+    return ELEMENT_TYPE ## __Array__copy( \
+      (const ELEMENT_TYPE ## __Array *)(input), \
+      (ELEMENT_TYPE ## __Array *)(output), (SIZE)); \
   }
 
 /// @brief Convenience macro declaring and defining an array in one place.
@@ -743,33 +743,33 @@ extern "C"
   ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_DECLARE(STRUCT_NAME, ELEMENT_TYPE, SIZE)
 
 ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_STRUCTURE_DECLARE(
-  rosidl_runtime_c__experimental__FloatArray, float);
+  rosidl_runtime_c__experimental__Float__Array, float);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_STRUCTURE_DECLARE(
-  rosidl_runtime_c__experimental__DoubleArray, double);
+  rosidl_runtime_c__experimental__Double__Array, double);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_STRUCTURE_DECLARE(
-  rosidl_runtime_c__experimental__LongDoubleArray, long double);
+  rosidl_runtime_c__experimental__LongDouble__Array, long double);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_STRUCTURE_DECLARE(
-  rosidl_runtime_c__experimental__CharArray, char);
+  rosidl_runtime_c__experimental__Char__Array, char);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_STRUCTURE_DECLARE(
-  rosidl_runtime_c__experimental__WCharArray, char16_t);
+  rosidl_runtime_c__experimental__WChar__Array, char16_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_STRUCTURE_DECLARE(
-  rosidl_runtime_c__experimental__BooleanArray, bool);
+  rosidl_runtime_c__experimental__Boolean__Array, bool);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_STRUCTURE_DECLARE(
-  rosidl_runtime_c__experimental__UInt8Array, uint8_t);
+  rosidl_runtime_c__experimental__UInt8__Array, uint8_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_STRUCTURE_DECLARE(
-  rosidl_runtime_c__experimental__Int8Array, int8_t);
+  rosidl_runtime_c__experimental__Int8__Array, int8_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_STRUCTURE_DECLARE(
-  rosidl_runtime_c__experimental__UInt16Array, uint16_t);
+  rosidl_runtime_c__experimental__UInt16__Array, uint16_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_STRUCTURE_DECLARE(
-  rosidl_runtime_c__experimental__Int16Array, int16_t);
+  rosidl_runtime_c__experimental__Int16__Array, int16_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_STRUCTURE_DECLARE(
-  rosidl_runtime_c__experimental__UInt32Array, uint32_t);
+  rosidl_runtime_c__experimental__UInt32__Array, uint32_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_STRUCTURE_DECLARE(
-  rosidl_runtime_c__experimental__Int32Array, int32_t);
+  rosidl_runtime_c__experimental__Int32__Array, int32_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_STRUCTURE_DECLARE(
-  rosidl_runtime_c__experimental__UInt64Array, uint64_t);
+  rosidl_runtime_c__experimental__UInt64__Array, uint64_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_STRUCTURE_DECLARE(
-  rosidl_runtime_c__experimental__Int64Array, int64_t);
+  rosidl_runtime_c__experimental__Int64__Array, int64_t);
 
 ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_STRUCTURE_DECLARE(
   rosidl_runtime_c__experimental__String);

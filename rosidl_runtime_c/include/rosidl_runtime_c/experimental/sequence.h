@@ -159,7 +159,8 @@ extern "C"
     size_t upper_bound, \
     rosidl_memory_region_t region) \
   { \
-    if (_sequence == NULL || region.location.address == NULL) { \
+    if (_sequence == NULL || region.location.address == NULL) \
+    { \
       return false; \
     } \
     _sequence->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__EXTERNAL; \
@@ -713,8 +714,7 @@ extern "C"
 /// slot, then copies existing elements; it does NOT use realloc (which would
 /// invalidate per-element internal pointers such as those in String / sub-message
 /// fields).
-#define ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_SEQUENCE_DEFINE( \
-    STRUCT_NAME, ELEMENT_TYPE) \
+#define ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_SEQUENCE_DEFINE(STRUCT_NAME, ELEMENT_TYPE) \
   bool STRUCT_NAME ## __init_with_allocator( \
     STRUCT_NAME * _sequence, \
     size_t upper_bound, \

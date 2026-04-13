@@ -59,7 +59,6 @@ TEMPLATE(
 }@
 
 @[end for]@
-@
 @#######################################################################
 @# Handle service
 @#######################################################################
@@ -67,23 +66,23 @@ TEMPLATE(
 from rosidl_parser.definition import Service
 }@
 @[for service in content.get_elements_of_type(Service)]@
-
 @{
 TEMPLATE(
     'msg__experimental_struct.h.em',
     package_name=package_name, interface_path=interface_path,
-    message=service.request_message, include_directives=include_directives)
+    message=service.request_message, include_directives=include_directives,
+    is_service_or_action_member=True)
 }@
 
 @{
 TEMPLATE(
     'msg__experimental_struct.h.em',
     package_name=package_name, interface_path=interface_path,
-    message=service.response_message, include_directives=include_directives)
+    message=service.response_message, include_directives=include_directives,
+    is_service_or_action_member=True)
 }@
 
 @[end for]@
-@
 @#######################################################################
 @# Handle action
 @#######################################################################
@@ -91,54 +90,60 @@ TEMPLATE(
 from rosidl_parser.definition import Action
 }@
 @[for action in content.get_elements_of_type(Action)]@
-
 @{
 TEMPLATE(
     'msg__experimental_struct.h.em',
     package_name=package_name, interface_path=interface_path,
-    message=action.goal, include_directives=include_directives)
+    message=action.goal, include_directives=include_directives,
+    is_service_or_action_member=True)
 }@
 
 @{
 TEMPLATE(
     'msg__experimental_struct.h.em',
     package_name=package_name, interface_path=interface_path,
-    message=action.result, include_directives=include_directives)
+    message=action.result, include_directives=include_directives,
+    is_service_or_action_member=True)
 }@
 
 @{
 TEMPLATE(
     'msg__experimental_struct.h.em',
     package_name=package_name, interface_path=interface_path,
-    message=action.feedback, include_directives=include_directives)
+    message=action.feedback, include_directives=include_directives,
+    is_service_or_action_member=True)
 }@
 
 @{
 TEMPLATE(
     'msg__experimental_struct.h.em',
     package_name=package_name, interface_path=interface_path,
-    message=action.send_goal_service.request_message, include_directives=include_directives)
+    message=action.send_goal_service.request_message, include_directives=include_directives,
+    is_service_or_action_member=True)
 }@
 
 @{
 TEMPLATE(
     'msg__experimental_struct.h.em',
     package_name=package_name, interface_path=interface_path,
-    message=action.send_goal_service.response_message, include_directives=include_directives)
+    message=action.send_goal_service.response_message, include_directives=include_directives,
+    is_service_or_action_member=True)
 }@
 
 @{
 TEMPLATE(
     'msg__experimental_struct.h.em',
     package_name=package_name, interface_path=interface_path,
-    message=action.get_result_service.request_message, include_directives=include_directives)
+    message=action.get_result_service.request_message, include_directives=include_directives,
+    is_service_or_action_member=True)
 }@
 
 @{
 TEMPLATE(
     'msg__experimental_struct.h.em',
     package_name=package_name, interface_path=interface_path,
-    message=action.get_result_service.response_message, include_directives=include_directives)
+    message=action.get_result_service.response_message, include_directives=include_directives,
+    is_service_or_action_member=True)
 }@
 
 @{

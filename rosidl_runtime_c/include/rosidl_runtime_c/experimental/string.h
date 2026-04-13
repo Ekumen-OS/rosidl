@@ -219,6 +219,7 @@ extern "C"
 /// Generates a typedef and static inline forwarding functions including upper_bound parameter.
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_STRING_ALIAS(ALIAS_NAME, BASE_TYPE, CHAR_TYPE) \
   typedef BASE_TYPE ALIAS_NAME; \
+  typedef BASE_TYPE ## __ExternalStorage ALIAS_NAME ## __ExternalStorage; \
   static inline bool ALIAS_NAME ## __init(ALIAS_NAME * _string, size_t upper_bound) \
   { \
     return BASE_TYPE ## __init(_string, upper_bound); \

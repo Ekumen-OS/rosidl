@@ -25,13 +25,12 @@ include_base = '/'.join(include_parts)
 #include "rosidl_runtime_c/experimental/storage.h"
 
 #include "@(include_base)__functions.h"
-
 @#######################################################################
 @# Handle message
 @#######################################################################
 @{
 from rosidl_parser.definition import Message
-include_directives = set()
+include_directives = {"{}__functions.h".format(include_base)}
 }@
 @[for message in content.get_elements_of_type(Message)]@
 @{
@@ -40,9 +39,7 @@ TEMPLATE(
     package_name=package_name, interface_path=interface_path,
     message=message, include_directives=include_directives)
 }@
-
 @[end for]@
-@
 @#######################################################################
 @# Handle service
 @#######################################################################
@@ -55,18 +52,18 @@ from rosidl_parser.definition import Service
 TEMPLATE(
     'msg__experimental_functions.c.em',
     package_name=package_name, interface_path=interface_path,
-    message=service.request_message, include_directives=include_directives)
+    message=service.request_message, include_directives=include_directives,
+    is_service_or_action_member=True)
 }@
 
 @{
 TEMPLATE(
     'msg__experimental_functions.c.em',
     package_name=package_name, interface_path=interface_path,
-    message=service.response_message, include_directives=include_directives)
+    message=service.response_message, include_directives=include_directives,
+    is_service_or_action_member=True)
 }@
-
 @[end for]@
-@
 @#######################################################################
 @# Handle action
 @#######################################################################
@@ -79,49 +76,56 @@ from rosidl_parser.definition import Action
 TEMPLATE(
     'msg__experimental_functions.c.em',
     package_name=package_name, interface_path=interface_path,
-    message=action.goal, include_directives=include_directives)
+    message=action.goal, include_directives=include_directives,
+    is_service_or_action_member=True)
 }@
 
 @{
 TEMPLATE(
     'msg__experimental_functions.c.em',
     package_name=package_name, interface_path=interface_path,
-    message=action.result, include_directives=include_directives)
+    message=action.result, include_directives=include_directives,
+    is_service_or_action_member=True)
 }@
 
 @{
 TEMPLATE(
     'msg__experimental_functions.c.em',
     package_name=package_name, interface_path=interface_path,
-    message=action.feedback, include_directives=include_directives)
+    message=action.feedback, include_directives=include_directives,
+    is_service_or_action_member=True)
 }@
 
 @{
 TEMPLATE(
     'msg__experimental_functions.c.em',
     package_name=package_name, interface_path=interface_path,
-    message=action.send_goal_service.request_message, include_directives=include_directives)
+    message=action.send_goal_service.request_message, include_directives=include_directives,
+    is_service_or_action_member=True)
 }@
 
 @{
 TEMPLATE(
     'msg__experimental_functions.c.em',
     package_name=package_name, interface_path=interface_path,
-    message=action.send_goal_service.response_message, include_directives=include_directives)
+    message=action.send_goal_service.response_message, include_directives=include_directives,
+    is_service_or_action_member=True)
 }@
 
 @{
 TEMPLATE(
     'msg__experimental_functions.c.em',
     package_name=package_name, interface_path=interface_path,
-    message=action.get_result_service.request_message, include_directives=include_directives)
+    message=action.get_result_service.request_message, include_directives=include_directives,
+    is_service_or_action_member=True)
 }@
 
 @{
 TEMPLATE(
     'msg__experimental_functions.c.em',
     package_name=package_name, interface_path=interface_path,
-    message=action.get_result_service.response_message, include_directives=include_directives)
+    message=action.get_result_service.response_message, include_directives=include_directives,
+    is_service_or_action_member=True)
 }@
 
 @{
@@ -130,5 +134,4 @@ TEMPLATE(
     package_name=package_name, interface_path=interface_path,
     message=action.feedback_message, include_directives=include_directives)
 }@
-
 @[end for]@

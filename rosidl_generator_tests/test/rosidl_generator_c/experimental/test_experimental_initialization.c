@@ -29,7 +29,7 @@
 #include "rosidl_generator_tests/msg/experimental/strings.h"
 #include "rosidl_generator_tests/msg/experimental/arrays.h"
 
-#include "test_macros.h"
+#include "./test_macros.h"
 
 // ---------------------------------------------------------------------------
 // Helpers

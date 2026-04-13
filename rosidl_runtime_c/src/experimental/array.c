@@ -15,33 +15,33 @@
 #include "rosidl_runtime_c/experimental/array.h"
 
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_STRUCTURE_DEFINE(
-  rosidl_runtime_c__experimental__FloatArray, float);
+  rosidl_runtime_c__experimental__Float__Array, float);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_STRUCTURE_DEFINE(
-  rosidl_runtime_c__experimental__DoubleArray, double);
+  rosidl_runtime_c__experimental__Double__Array, double);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_STRUCTURE_DEFINE(
-  rosidl_runtime_c__experimental__LongDoubleArray, long double);
+  rosidl_runtime_c__experimental__LongDouble__Array, long double);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_STRUCTURE_DEFINE(
-  rosidl_runtime_c__experimental__CharArray, char);
+  rosidl_runtime_c__experimental__Char__Array, char);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_STRUCTURE_DEFINE(
-  rosidl_runtime_c__experimental__WCharArray, char16_t);
+  rosidl_runtime_c__experimental__WChar__Array, char16_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_STRUCTURE_DEFINE(
-  rosidl_runtime_c__experimental__BooleanArray, bool);
+  rosidl_runtime_c__experimental__Boolean__Array, bool);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_STRUCTURE_DEFINE(
-  rosidl_runtime_c__experimental__UInt8Array, uint8_t);
+  rosidl_runtime_c__experimental__UInt8__Array, uint8_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_STRUCTURE_DEFINE(
-  rosidl_runtime_c__experimental__Int8Array, int8_t);
+  rosidl_runtime_c__experimental__Int8__Array, int8_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_STRUCTURE_DEFINE(
-  rosidl_runtime_c__experimental__UInt16Array, uint16_t);
+  rosidl_runtime_c__experimental__UInt16__Array, uint16_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_STRUCTURE_DEFINE(
-  rosidl_runtime_c__experimental__Int16Array, int16_t);
+  rosidl_runtime_c__experimental__Int16__Array, int16_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_STRUCTURE_DEFINE(
-  rosidl_runtime_c__experimental__UInt32Array, uint32_t);
+  rosidl_runtime_c__experimental__UInt32__Array, uint32_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_STRUCTURE_DEFINE(
-  rosidl_runtime_c__experimental__Int32Array, int32_t);
+  rosidl_runtime_c__experimental__Int32__Array, int32_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_STRUCTURE_DEFINE(
-  rosidl_runtime_c__experimental__UInt64Array, uint64_t);
+  rosidl_runtime_c__experimental__UInt64__Array, uint64_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_STRUCTURE_DEFINE(
-  rosidl_runtime_c__experimental__Int64Array, int64_t);
+  rosidl_runtime_c__experimental__Int64__Array, int64_t);
 
 ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_STRUCTURE_DEFINE(
   rosidl_runtime_c__experimental__String);

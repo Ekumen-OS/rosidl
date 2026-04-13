@@ -29,84 +29,84 @@ from rosidl_pycommon import convert_camel_case_to_lower_case_underscore
 # 'wchar' maps to 'char16_t' (matching rosidl_runtime_c__experimental__WChar),
 # unlike the regular C generator ('signed char' / 'uint16_t').
 BASIC_IDL_TYPES_TO_EXPERIMENTAL_C = {
-    'float': 'float',
-    'double': 'double',
-    'long double': 'long double',
-    'char': 'char',
-    'wchar': 'char16_t',
-    'boolean': 'bool',
-    'octet': 'uint8_t',
-    'uint8': 'uint8_t',
-    'int8': 'int8_t',
-    'uint16': 'uint16_t',
-    'int16': 'int16_t',
-    'uint32': 'uint32_t',
-    'int32': 'int32_t',
-    'uint64': 'uint64_t',
-    'int64': 'int64_t',
+    "float": "float",
+    "double": "double",
+    "long double": "long double",
+    "char": "char",
+    "wchar": "char16_t",
+    "boolean": "bool",
+    "octet": "uint8_t",
+    "uint8": "uint8_t",
+    "int8": "int8_t",
+    "uint16": "uint16_t",
+    "int16": "int16_t",
+    "uint32": "uint32_t",
+    "int32": "int32_t",
+    "uint64": "uint64_t",
+    "int64": "int64_t",
 }
 
 # Mapping from IDL basic type names to pre-declared scalar type names in
 # rosidl_runtime_c/experimental/scalar.h.  These types are always available, so
 # scalar fields can use them directly without per-field redeclaration.
 BASIC_IDL_TYPES_TO_EXPERIMENTAL_C_SCALAR = {
-    'float': 'rosidl_runtime_c__experimental__Float',
-    'double': 'rosidl_runtime_c__experimental__Double',
-    'long double': 'rosidl_runtime_c__experimental__LongDouble',
-    'char': 'rosidl_runtime_c__experimental__Char',
-    'wchar': 'rosidl_runtime_c__experimental__WChar',
-    'boolean': 'rosidl_runtime_c__experimental__Boolean',
-    'octet': 'rosidl_runtime_c__experimental__UInt8',
-    'uint8': 'rosidl_runtime_c__experimental__UInt8',
-    'int8': 'rosidl_runtime_c__experimental__Int8',
-    'uint16': 'rosidl_runtime_c__experimental__UInt16',
-    'int16': 'rosidl_runtime_c__experimental__Int16',
-    'uint32': 'rosidl_runtime_c__experimental__UInt32',
-    'int32': 'rosidl_runtime_c__experimental__Int32',
-    'uint64': 'rosidl_runtime_c__experimental__UInt64',
-    'int64': 'rosidl_runtime_c__experimental__Int64',
+    "float": "rosidl_runtime_c__experimental__Float",
+    "double": "rosidl_runtime_c__experimental__Double",
+    "long double": "rosidl_runtime_c__experimental__LongDouble",
+    "char": "rosidl_runtime_c__experimental__Char",
+    "wchar": "rosidl_runtime_c__experimental__WChar",
+    "boolean": "rosidl_runtime_c__experimental__Boolean",
+    "octet": "rosidl_runtime_c__experimental__UInt8",
+    "uint8": "rosidl_runtime_c__experimental__UInt8",
+    "int8": "rosidl_runtime_c__experimental__Int8",
+    "uint16": "rosidl_runtime_c__experimental__UInt16",
+    "int16": "rosidl_runtime_c__experimental__Int16",
+    "uint32": "rosidl_runtime_c__experimental__UInt32",
+    "int32": "rosidl_runtime_c__experimental__Int32",
+    "uint64": "rosidl_runtime_c__experimental__UInt64",
+    "int64": "rosidl_runtime_c__experimental__Int64",
 }
 
 # Mapping from IDL basic type names to pre-declared primitive sequence type names in
 # rosidl_runtime_c/experimental/sequence.h.  These types are always available, so
 # fields of type sequence<primitive> can use them directly without per-field redeclaration.
 BASIC_IDL_TYPES_TO_EXPERIMENTAL_C_SEQUENCE = {
-    'float': 'rosidl_runtime_c__experimental__FloatSequence',
-    'double': 'rosidl_runtime_c__experimental__DoubleSequence',
-    'long double': 'rosidl_runtime_c__experimental__LongDoubleSequence',
-    'char': 'rosidl_runtime_c__experimental__CharSequence',
-    'wchar': 'rosidl_runtime_c__experimental__WCharSequence',
-    'boolean': 'rosidl_runtime_c__experimental__BooleanSequence',
-    'octet': 'rosidl_runtime_c__experimental__UInt8Sequence',
-    'uint8': 'rosidl_runtime_c__experimental__UInt8Sequence',
-    'int8': 'rosidl_runtime_c__experimental__Int8Sequence',
-    'uint16': 'rosidl_runtime_c__experimental__UInt16Sequence',
-    'int16': 'rosidl_runtime_c__experimental__Int16Sequence',
-    'uint32': 'rosidl_runtime_c__experimental__UInt32Sequence',
-    'int32': 'rosidl_runtime_c__experimental__Int32Sequence',
-    'uint64': 'rosidl_runtime_c__experimental__UInt64Sequence',
-    'int64': 'rosidl_runtime_c__experimental__Int64Sequence',
+    "float": "rosidl_runtime_c__experimental__FloatSequence",
+    "double": "rosidl_runtime_c__experimental__DoubleSequence",
+    "long double": "rosidl_runtime_c__experimental__LongDoubleSequence",
+    "char": "rosidl_runtime_c__experimental__CharSequence",
+    "wchar": "rosidl_runtime_c__experimental__WCharSequence",
+    "boolean": "rosidl_runtime_c__experimental__BooleanSequence",
+    "octet": "rosidl_runtime_c__experimental__UInt8Sequence",
+    "uint8": "rosidl_runtime_c__experimental__UInt8Sequence",
+    "int8": "rosidl_runtime_c__experimental__Int8Sequence",
+    "uint16": "rosidl_runtime_c__experimental__UInt16Sequence",
+    "int16": "rosidl_runtime_c__experimental__Int16Sequence",
+    "uint32": "rosidl_runtime_c__experimental__UInt32Sequence",
+    "int32": "rosidl_runtime_c__experimental__Int32Sequence",
+    "uint64": "rosidl_runtime_c__experimental__UInt64Sequence",
+    "int64": "rosidl_runtime_c__experimental__Int64Sequence",
 }
 
 # Mapping from IDL basic type names to pre-declared primitive array type names in
 # rosidl_runtime_c/experimental/array.h.  These types are always available for creating
 # fixed-size array aliases.
 BASIC_IDL_TYPES_TO_EXPERIMENTAL_C_ARRAY = {
-    'float': 'rosidl_runtime_c__experimental__FloatArray',
-    'double': 'rosidl_runtime_c__experimental__DoubleArray',
-    'long double': 'rosidl_runtime_c__experimental__LongDoubleArray',
-    'char': 'rosidl_runtime_c__experimental__CharArray',
-    'wchar': 'rosidl_runtime_c__experimental__WCharArray',
-    'boolean': 'rosidl_runtime_c__experimental__BooleanArray',
-    'octet': 'rosidl_runtime_c__experimental__UInt8Array',
-    'uint8': 'rosidl_runtime_c__experimental__UInt8Array',
-    'int8': 'rosidl_runtime_c__experimental__Int8Array',
-    'uint16': 'rosidl_runtime_c__experimental__UInt16Array',
-    'int16': 'rosidl_runtime_c__experimental__Int16Array',
-    'uint32': 'rosidl_runtime_c__experimental__UInt32Array',
-    'int32': 'rosidl_runtime_c__experimental__Int32Array',
-    'uint64': 'rosidl_runtime_c__experimental__UInt64Array',
-    'int64': 'rosidl_runtime_c__experimental__Int64Array',
+    "float": "rosidl_runtime_c__experimental__FloatArray",
+    "double": "rosidl_runtime_c__experimental__DoubleArray",
+    "long double": "rosidl_runtime_c__experimental__LongDoubleArray",
+    "char": "rosidl_runtime_c__experimental__CharArray",
+    "wchar": "rosidl_runtime_c__experimental__WCharArray",
+    "boolean": "rosidl_runtime_c__experimental__BooleanArray",
+    "octet": "rosidl_runtime_c__experimental__UInt8Array",
+    "uint8": "rosidl_runtime_c__experimental__UInt8Array",
+    "int8": "rosidl_runtime_c__experimental__Int8Array",
+    "uint16": "rosidl_runtime_c__experimental__UInt16Array",
+    "int16": "rosidl_runtime_c__experimental__Int16Array",
+    "uint32": "rosidl_runtime_c__experimental__UInt32Array",
+    "int32": "rosidl_runtime_c__experimental__Int32Array",
+    "uint64": "rosidl_runtime_c__experimental__UInt64Array",
+    "int64": "rosidl_runtime_c__experimental__Int64Array",
 }
 
 
@@ -116,11 +116,13 @@ def idl_structure_type_to_experimental_c_typename(namespaced_type):
     Inserts 'experimental' between the namespaces and the type name.
     Example: std_msgs::msg::String  ->  std_msgs__msg__experimental__String
     """
-    parts = list(namespaced_type.namespaces) + ['experimental', namespaced_type.name]
-    return '__'.join(parts)
+    parts = list(namespaced_type.namespaces) + ["experimental", namespaced_type.name]
+    return "__".join(parts)
 
 
-def idl_structure_type_to_experimental_c_include_prefix(namespaced_type, subdirectory=None):
+def idl_structure_type_to_experimental_c_include_prefix(
+    namespaced_type, subdirectory=None
+):
     """Return the include path prefix for an experimental C message type.
 
     Example: std_msgs::msg::String, 'detail'  ->  std_msgs/msg/experimental/detail/string
@@ -130,21 +132,30 @@ def idl_structure_type_to_experimental_c_include_prefix(namespaced_type, subdire
         for x in namespaced_type.namespaced_name()
     ]
     # Insert 'experimental' before the last component (type name)
-    parts[-1:-1] = ['experimental']
+    parts[-1:-1] = ["experimental"]
     if subdirectory is not None:
         parts[-1:-1] = [subdirectory]
-    include_prefix = '/'.join(parts)
+    include_prefix = "/".join(parts)
     # Strip service / action suffixes (same as the regular C generator)
     # Note: convert_camel_case_to_lower_case_underscore converts SendGoal -> send_goal (single _)
-    for suffix in ('__request', '__response', '__goal', '__result',
-                   '__feedback', '__send_goal', '__get_result'):
+    for suffix in (
+        "__request",
+        "__response",
+        "__goal",
+        "__result",
+        "__feedback",
+        "__send_goal",
+        "__get_result",
+    ):
         if include_prefix.endswith(suffix):
-            include_prefix = include_prefix[:-len(suffix)]
+            include_prefix = include_prefix[: -len(suffix)]
             break
     return include_prefix
 
 
-def experimental_field_typename(message_experimental_typename, member_name, member_type=None):
+def experimental_field_typename(
+    message_experimental_typename, member_name, member_type=None
+):
     """Return the per-field typedef name for a message member.
 
     Always returns the per-field typedef name. The experimental_field_declare_macro
@@ -153,7 +164,7 @@ def experimental_field_typename(message_experimental_typename, member_name, memb
     Example: pkg__msg__experimental__Msg, foo, BasicType('float')  ->  pkg__msg__experimental__Msg__foo
     Example: pkg__msg__experimental__Msg, bar, NamespacedType(...)  ->  pkg__msg__experimental__Msg__bar
     """
-    return '{}__{}'.format(message_experimental_typename, member_name)
+    return "{}__{}".format(message_experimental_typename, member_name)
 
 
 def experimental_element_c_type(message_experimental_typename, member_name, vt):
@@ -166,15 +177,15 @@ def experimental_element_c_type(message_experimental_typename, member_name, vt):
     field_tn = experimental_field_typename(message_experimental_typename, member_name)
     if isinstance(vt, AbstractString):
         if vt.has_maximum_size():
-            return '{}_elem'.format(field_tn)
-        return 'rosidl_runtime_c__experimental__String'
+            return "{}_elem".format(field_tn)
+        return "rosidl_runtime_c__experimental__String"
     if isinstance(vt, AbstractWString):
         if vt.has_maximum_size():
-            return '{}_elem'.format(field_tn)
-        return 'rosidl_runtime_c__experimental__WString'
+            return "{}_elem".format(field_tn)
+        return "rosidl_runtime_c__experimental__WString"
     if isinstance(vt, NamespacedType):
         return idl_structure_type_to_experimental_c_typename(vt)
-    assert False, 'Unexpected element type: ' + str(vt)
+    assert False, "Unexpected element type: " + str(vt)
 
 
 def experimental_field_declare_macro(message_typename, member):
@@ -215,22 +226,27 @@ def experimental_field_declare_macro(message_typename, member):
 
     if isinstance(type_, BasicType):
         scalar_type = BASIC_IDL_TYPES_TO_EXPERIMENTAL_C_SCALAR[type_.typename]
-        return 'ROSIDL_RUNTIME_C__EXPERIMENTAL__SCALAR_ALIAS({}, {})'.format(
-            field_tn, scalar_type)
+        return "ROSIDL_RUNTIME_C__EXPERIMENTAL__SCALAR_ALIAS({}, {})".format(
+            field_tn, scalar_type
+        )
 
     if isinstance(type_, AbstractString):
         if type_.has_maximum_size():
-            return 'ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_STRING_ALIAS({}, rosidl_runtime_c__experimental__BoundedString, char)'.format(
-                field_tn)
-        return 'ROSIDL_RUNTIME_C__EXPERIMENTAL__STRING_ALIAS({}, rosidl_runtime_c__experimental__String, char)'.format(
-            field_tn)
+            return "ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_STRING_ALIAS({}, rosidl_runtime_c__experimental__BoundedString, char)".format(
+                field_tn
+            )
+        return "ROSIDL_RUNTIME_C__EXPERIMENTAL__STRING_ALIAS({}, rosidl_runtime_c__experimental__String, char)".format(
+            field_tn
+        )
 
     if isinstance(type_, AbstractWString):
         if type_.has_maximum_size():
-            return 'ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_STRING_ALIAS({}, rosidl_runtime_c__experimental__BoundedWString, char16_t)'.format(
-                field_tn)
-        return 'ROSIDL_RUNTIME_C__EXPERIMENTAL__STRING_ALIAS({}, rosidl_runtime_c__experimental__WString, char16_t)'.format(
-            field_tn)
+            return "ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_STRING_ALIAS({}, rosidl_runtime_c__experimental__BoundedWString, char16_t)".format(
+                field_tn
+            )
+        return "ROSIDL_RUNTIME_C__EXPERIMENTAL__STRING_ALIAS({}, rosidl_runtime_c__experimental__WString, char16_t)".format(
+            field_tn
+        )
 
     if isinstance(type_, NamespacedType):
         return None  # sub-message type used directly in the struct
@@ -239,107 +255,146 @@ def experimental_field_declare_macro(message_typename, member):
         vt = type_.value_type
         if isinstance(vt, BasicType):
             c_type = BASIC_IDL_TYPES_TO_EXPERIMENTAL_C[vt.typename]
-            return 'ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_DECLARE({}, {}, {}U)'.format(
-                field_tn, c_type, type_.size)
-        # Complex element array: optional elem typedef, then ARRAY_DECLARE
+            return "ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_ARRAY_DECLARE({}, {}, {}U)".format(
+                field_tn, c_type, type_.size
+            )
+        # Complex element array: optional elem typedef, then appropriate ARRAY_DECLARE macro
         lines = []
         if isinstance(vt, AbstractString):
             if vt.has_maximum_size():
-                elem_tn = '{}_elem'.format(field_tn)
+                elem_tn = "{}_elem".format(field_tn)
                 lines.append(
-                    'ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_STRING_ALIAS'
-                    '({}, rosidl_runtime_c__experimental__BoundedString)'.format(elem_tn))
+                    "ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_STRING_ALIAS"
+                    "({}, rosidl_runtime_c__experimental__BoundedString, char)".format(
+                        elem_tn
+                    )
+                )
+                # Use BOUNDED_ELEMENT_ARRAY_DECLARE for bounded strings
+                lines.append(
+                    "ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_ARRAY_DECLARE({}, {}, {}U)".format(
+                        field_tn, elem_tn, type_.size
+                    )
+                )
+                return "\n".join(lines)
             else:
-                elem_tn = 'rosidl_runtime_c__experimental__String'
+                elem_tn = "rosidl_runtime_c__experimental__String"
         elif isinstance(vt, AbstractWString):
             if vt.has_maximum_size():
-                elem_tn = '{}_elem'.format(field_tn)
+                elem_tn = "{}_elem".format(field_tn)
                 lines.append(
-                    'ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_STRING_ALIAS'
-                    '({}, rosidl_runtime_c__experimental__BoundedWString)'.format(elem_tn))
+                    "ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_STRING_ALIAS"
+                    "({}, rosidl_runtime_c__experimental__BoundedWString, char16_t)".format(
+                        elem_tn
+                    )
+                )
+                # Use BOUNDED_ELEMENT_ARRAY_DECLARE for bounded wstrings
+                lines.append(
+                    "ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_ARRAY_DECLARE({}, {}, {}U)".format(
+                        field_tn, elem_tn, type_.size
+                    )
+                )
+                return "\n".join(lines)
             else:
-                elem_tn = 'rosidl_runtime_c__experimental__WString'
+                elem_tn = "rosidl_runtime_c__experimental__WString"
         else:
             # NamespacedType
             elem_tn = idl_structure_type_to_experimental_c_typename(vt)
         lines.append(
-            'ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_DECLARE({}, {}, {}U)'.format(
-                field_tn, elem_tn, type_.size))
-        return '\n'.join(lines)
+            "ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_DECLARE({}, {}, {}U)".format(
+                field_tn, elem_tn, type_.size
+            )
+        )
+        return "\n".join(lines)
 
     if isinstance(type_, BoundedSequence):
         vt = type_.value_type
         if isinstance(vt, BasicType):
             seq_type = BASIC_IDL_TYPES_TO_EXPERIMENTAL_C_SEQUENCE[vt.typename]
             # Use bounded sequence type alias
-            bounded_seq_type = seq_type.replace('Sequence', 'BoundedSequence')
+            bounded_seq_type = seq_type.replace("Sequence", "BoundedSequence")
             value_type = BASIC_IDL_TYPES_TO_EXPERIMENTAL_C[vt.typename]
-            return 'ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_BOUNDED_SEQUENCE_ALIAS({}, {}, {})'.format(
-                field_tn, bounded_seq_type, value_type)
+            return "ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_BOUNDED_SEQUENCE_ALIAS({}, {}, {})".format(
+                field_tn, bounded_seq_type, value_type
+            )
         elem_c = experimental_element_c_type(message_typename, member.name, vt)
         lines = []
         if isinstance(vt, AbstractString) and vt.has_maximum_size():
             lines.append(
-                'ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_STRING_ALIAS'
-                '({}, rosidl_runtime_c__experimental__BoundedString, char)'.format(elem_c))
+                "ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_STRING_ALIAS"
+                "({}, rosidl_runtime_c__experimental__BoundedString, char)".format(
+                    elem_c
+                )
+            )
         elif isinstance(vt, AbstractWString) and vt.has_maximum_size():
             lines.append(
-                'ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_STRING_ALIAS'
-                '({}, rosidl_runtime_c__experimental__BoundedWString, char16_t)'.format(elem_c))
+                "ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_STRING_ALIAS"
+                "({}, rosidl_runtime_c__experimental__BoundedWString, char16_t)".format(
+                    elem_c
+                )
+            )
         # For bounded sequence of strings - need appropriate sequence declare
         if isinstance(vt, (AbstractString, AbstractWString)):
             if vt.has_maximum_size():
                 # Bounded sequence of bounded strings - use bounded-element macro
                 lines.append(
-                    'ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_BOUNDED_SEQUENCE_DECLARE'
-                    '({}, {})'.format(field_tn, elem_c))
+                    "ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_BOUNDED_SEQUENCE_DECLARE"
+                    "({}, {})".format(field_tn, elem_c)
+                )
             else:
                 # Bounded sequence of unbounded strings - use regular bounded sequence macro
                 lines.append(
-                    'ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_SEQUENCE_DECLARE'
-                    '({}, {})'.format(field_tn, elem_c))
+                    "ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_SEQUENCE_DECLARE"
+                    "({}, {})".format(field_tn, elem_c)
+                )
         else:
             # bounded sequence of sub-messages - alias to predefined BoundedSequence
             sub_tn = idl_structure_type_to_experimental_c_typename(vt)
             lines.append(
-                'ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_SEQUENCE_DECLARE'
-                '({}, {})'.format(field_tn, sub_tn))
-        return '\n'.join(lines)
+                "ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_SEQUENCE_DECLARE"
+                "({}, {})".format(field_tn, sub_tn)
+            )
+        return "\n".join(lines)
 
     if isinstance(type_, UnboundedSequence):
         vt = type_.value_type
         if isinstance(vt, BasicType):
             seq_type = BASIC_IDL_TYPES_TO_EXPERIMENTAL_C_SEQUENCE[vt.typename]
             value_type = BASIC_IDL_TYPES_TO_EXPERIMENTAL_C[vt.typename]
-            return 'ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_SEQUENCE_ALIAS({}, {}, {})'.format(
-                field_tn, seq_type, value_type)
+            return "ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_SEQUENCE_ALIAS({}, {}, {})".format(
+                field_tn, seq_type, value_type
+            )
         if isinstance(vt, AbstractString) and not vt.has_maximum_size():
-            return 'ROSIDL_RUNTIME_C__EXPERIMENTAL__SEQUENCE_ALIAS({}, rosidl_runtime_c__experimental__StringSequence, rosidl_runtime_c__experimental__String)'.format(
-                field_tn)
+            return "ROSIDL_RUNTIME_C__EXPERIMENTAL__SEQUENCE_ALIAS({}, rosidl_runtime_c__experimental__StringSequence, rosidl_runtime_c__experimental__String)".format(
+                field_tn
+            )
         if isinstance(vt, AbstractWString) and not vt.has_maximum_size():
-            return 'ROSIDL_RUNTIME_C__EXPERIMENTAL__SEQUENCE_ALIAS({}, rosidl_runtime_c__experimental__WStringSequence, rosidl_runtime_c__experimental__WString)'.format(
-                field_tn)
+            return "ROSIDL_RUNTIME_C__EXPERIMENTAL__SEQUENCE_ALIAS({}, rosidl_runtime_c__experimental__WStringSequence, rosidl_runtime_c__experimental__WString)".format(
+                field_tn
+            )
         if isinstance(vt, NamespacedType):
             # Use alias to the message type's predefined sequence
             sub_tn = idl_structure_type_to_experimental_c_typename(vt)
-            return 'ROSIDL_RUNTIME_C__EXPERIMENTAL__SEQUENCE_ALIAS({}, {}Sequence, {})'.format(
-                field_tn, sub_tn, sub_tn)
+            return "ROSIDL_RUNTIME_C__EXPERIMENTAL__SEQUENCE_ALIAS({}, {}__Sequence, {})".format(
+                field_tn, sub_tn, sub_tn
+            )
         # Only bounded strings reach here: sequence<string<N>> or sequence<wstring<N>>
         elem_c = experimental_element_c_type(message_typename, member.name, vt)
         if isinstance(vt, AbstractString):
             return (
-                'ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_STRING_ALIAS'
-                '({}, rosidl_runtime_c__experimental__BoundedString, char)\n'
-                'ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_SEQUENCE_DECLARE'
-                '({}, {})'.format(elem_c, field_tn, elem_c))
+                "ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_STRING_ALIAS"
+                "({}, rosidl_runtime_c__experimental__BoundedString, char)\n"
+                "ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_SEQUENCE_DECLARE"
+                "({}, {})".format(elem_c, field_tn, elem_c)
+            )
         else:  # AbstractWString
             return (
-                'ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_STRING_ALIAS'
-                '({}, rosidl_runtime_c__experimental__BoundedWString, char16_t)\n'
-                'ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_SEQUENCE_DECLARE'
-                '({}, {})'.format(elem_c, field_tn, elem_c))
+                "ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_STRING_ALIAS"
+                "({}, rosidl_runtime_c__experimental__BoundedWString, char16_t)\n"
+                "ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_SEQUENCE_DECLARE"
+                "({}, {})".format(elem_c, field_tn, elem_c)
+            )
 
-    assert False, 'Unhandled member type: ' + str(type_)
+    assert False, "Unhandled member type: " + str(type_)
 
 
 def experimental_field_define_macro(message_typename, member):
@@ -375,7 +430,18 @@ def experimental_field_define_macro(message_typename, member):
         vt = type_.value_type
         if isinstance(vt, BasicType):
             return None  # PRIMITIVE_ARRAY_DECLARE emits static-inline definitions
-        # Complex-element arrays use static-inline definitions, no DEFINE needed
+        # Arrays of bounded strings need BOUNDED_ELEMENT_ARRAY_DEFINE
+        if isinstance(vt, AbstractString) and vt.has_maximum_size():
+            elem_tn = "{}_elem".format(field_tn)
+            return "ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_ARRAY_DEFINE({}, {}, {}U)".format(
+                field_tn, elem_tn, type_.size
+            )
+        if isinstance(vt, AbstractWString) and vt.has_maximum_size():
+            elem_tn = "{}_elem".format(field_tn)
+            return "ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_ARRAY_DEFINE({}, {}, {}U)".format(
+                field_tn, elem_tn, type_.size
+            )
+        # Other complex-element arrays use static-inline definitions, no DEFINE needed
         return None
 
     if isinstance(type_, BoundedSequence):
@@ -387,17 +453,20 @@ def experimental_field_define_macro(message_typename, member):
             if vt.has_maximum_size():
                 # Bounded sequence of bounded strings - need BOUNDED_ELEMENT macro
                 elem_c = experimental_element_c_type(message_typename, member.name, vt)
-                return 'ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_BOUNDED_SEQUENCE_DEFINE({}, {})'.format(
-                    field_tn, elem_c)
+                return "ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_BOUNDED_SEQUENCE_DEFINE({}, {})".format(
+                    field_tn, elem_c
+                )
             else:
                 # Bounded sequence of unbounded strings - use regular BOUNDED_SEQUENCE macro
                 elem_c = experimental_element_c_type(message_typename, member.name, vt)
-                return 'ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_SEQUENCE_DEFINE({}, {})'.format(
-                    field_tn, elem_c)
+                return "ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_SEQUENCE_DEFINE({}, {})".format(
+                    field_tn, elem_c
+                )
         # Bounded sequence of sub-messages
         sub_tn = idl_structure_type_to_experimental_c_typename(vt)
-        return 'ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_SEQUENCE_DEFINE({}, {})'.format(
-            field_tn, sub_tn)
+        return "ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_SEQUENCE_DEFINE({}, {})".format(
+            field_tn, sub_tn
+        )
 
     if isinstance(type_, UnboundedSequence):
         vt = type_.value_type
@@ -412,10 +481,11 @@ def experimental_field_define_macro(message_typename, member):
         # Only bounded strings reach here: sequence<string<N>> or sequence<wstring<N>>
         # Need DEFINE for bounded-element sequence
         elem_c = experimental_element_c_type(message_typename, member.name, vt)
-        return 'ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_SEQUENCE_DEFINE({}, {})'.format(
-            field_tn, elem_c)
+        return "ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_SEQUENCE_DEFINE({}, {})".format(
+            field_tn, elem_c
+        )
 
-    assert False, 'Unhandled member type: ' + str(type_)
+    assert False, "Unhandled member type: " + str(type_)
 
 
 def experimental_field_in_struct(message_experimental_typename, member):
@@ -423,19 +493,23 @@ def experimental_field_in_struct(message_experimental_typename, member):
     type_ = member.type
     if isinstance(type_, BasicType):
         scalar_typename = BASIC_IDL_TYPES_TO_EXPERIMENTAL_C_SCALAR[type_.typename]
-        return '{} {}'.format(scalar_typename, member.name)
+        return "{} {}".format(scalar_typename, member.name)
     if isinstance(type_, NamespacedType):
         sub_typename = idl_structure_type_to_experimental_c_typename(type_)
-        return '{} {}'.format(sub_typename, member.name)
+        return "{} {}".format(sub_typename, member.name)
     if isinstance(type_, AbstractString) and not type_.has_maximum_size():
-        return 'rosidl_runtime_c__experimental__String {}'.format(member.name)
+        return "rosidl_runtime_c__experimental__String {}".format(member.name)
     if isinstance(type_, AbstractWString) and not type_.has_maximum_size():
-        return 'rosidl_runtime_c__experimental__WString {}'.format(member.name)
+        return "rosidl_runtime_c__experimental__WString {}".format(member.name)
     if isinstance(type_, UnboundedSequence) and isinstance(type_.value_type, BasicType):
-        seq_typename = BASIC_IDL_TYPES_TO_EXPERIMENTAL_C_SEQUENCE[type_.value_type.typename]
-        return '{} {}'.format(seq_typename, member.name)
-    field_typename = experimental_field_typename(message_experimental_typename, member.name)
-    return '{} {}'.format(field_typename, member.name)
+        seq_typename = BASIC_IDL_TYPES_TO_EXPERIMENTAL_C_SEQUENCE[
+            type_.value_type.typename
+        ]
+        return "{} {}".format(seq_typename, member.name)
+    field_typename = experimental_field_typename(
+        message_experimental_typename, member.name
+    )
+    return "{} {}".format(field_typename, member.name)
 
 
 def experimental_field_needs_allocator(member_type):
@@ -455,7 +529,10 @@ def experimental_constraint_field(msg_tn, member):
       - NamespacedType (sub-message)              → {sub_tn}__Constraints
       - Array of unbounded string/wstring         → StringConstraint (shared cap)
       - Array of NamespacedType                   → {sub_tn}__Constraints
-      - UnboundedSequence<any>                    → {field_tn}__SequenceConstraint
+      - UnboundedSequence<basic/bounded>          → SequenceConstraint
+      - UnboundedSequence<string>                 → StringSequenceConstraint
+      - UnboundedSequence<wstring>                → WStringSequenceConstraint
+      - UnboundedSequence<SubMessage>             → {sub_tn}__SequenceConstraint
       - BasicType, bounded string, BoundedSequence → None (fully fixed)
     """
     type_ = member.type
@@ -467,11 +544,11 @@ def experimental_constraint_field(msg_tn, member):
     if isinstance(type_, (AbstractString, AbstractWString)):
         if type_.has_maximum_size():
             return None
-        return ('rosidl_runtime_c__experimental__StringConstraint', name)
+        return ("rosidl_runtime_c__experimental__StringConstraint", name)
 
     if isinstance(type_, NamespacedType):
         sub_tn = idl_structure_type_to_experimental_c_typename(type_)
-        return ('{}__Constraints'.format(sub_tn), name)
+        return ("{}__Constraints".format(sub_tn), name)
 
     if isinstance(type_, Array):
         vt = type_.value_type
@@ -480,18 +557,40 @@ def experimental_constraint_field(msg_tn, member):
         if isinstance(vt, (AbstractString, AbstractWString)):
             if vt.has_maximum_size():
                 return None
-            return ('rosidl_runtime_c__experimental__StringConstraint', name)
+            return ("rosidl_runtime_c__experimental__StringConstraint", name)
         if isinstance(vt, NamespacedType):
             sub_tn = idl_structure_type_to_experimental_c_typename(vt)
-            return ('{}__Constraints'.format(sub_tn), name)
+            return ("{}__Constraints".format(sub_tn), name)
         return None
 
     if isinstance(type_, BoundedSequence):
         return None  # fully bounded — no runtime constraint
 
     if isinstance(type_, UnboundedSequence):
-        field_tn = experimental_field_typename(msg_tn, name)
-        return ('{}__SequenceConstraint'.format(field_tn), name)
+        vt = type_.value_type
+
+        # Basic types or bounded strings -> use generic SequenceConstraint
+        if isinstance(vt, BasicType):
+            return ("rosidl_runtime_c__experimental__SequenceConstraint", name)
+
+        # Bounded string/wstring -> use generic SequenceConstraint
+        if isinstance(vt, (AbstractString, AbstractWString)) and vt.has_maximum_size():
+            return ("rosidl_runtime_c__experimental__SequenceConstraint", name)
+
+        # Unbounded string -> use StringSequenceConstraint
+        if isinstance(vt, AbstractString) and not vt.has_maximum_size():
+            return ("rosidl_runtime_c__experimental__StringSequenceConstraint", name)
+
+        # Unbounded wstring -> use WStringSequenceConstraint
+        if isinstance(vt, AbstractWString) and not vt.has_maximum_size():
+            return ("rosidl_runtime_c__experimental__WStringSequenceConstraint", name)
+
+        # Sub-message -> use SubMessage__SequenceConstraint
+        if isinstance(vt, NamespacedType):
+            sub_tn = idl_structure_type_to_experimental_c_typename(vt)
+            return ("{}__SequenceConstraint".format(sub_tn), name)
+
+        return None
 
     return None
 
@@ -506,64 +605,27 @@ def experimental_constraints_are_equal_body(constraint_fields):
         String containing the function body
     """
     if not constraint_fields:
-        return '(void)lhs;\n  (void)rhs;\n  return true;'
+        return "(void)lhs;\n  (void)rhs;\n  return true;"
 
     # Build list of comparison expressions
     comparisons = [
-        '{}__are_equal(&lhs->{}, &rhs->{})'.format(ctype, cname, cname)
+        "{}__are_equal(&lhs->{}, &rhs->{})".format(ctype, cname, cname)
         for ctype, cname in constraint_fields
     ]
 
     # Join with && and proper line breaks
     if len(comparisons) == 1:
-        return 'return {};'.format(comparisons[0])
+        return "return {};".format(comparisons[0])
 
     # Multi-line with proper formatting
-    lines = ['return']
+    lines = ["return"]
     for i, comp in enumerate(comparisons):
         if i < len(comparisons) - 1:
-            lines.append('  {} &&'.format(comp))
+            lines.append("    {} &&".format(comp))
         else:
-            lines.append('  {};'.format(comp))
+            lines.append("    {};".format(comp))
 
-    return '\n  '.join(lines)
-
-
-def experimental_sequence_constraint_struct(msg_tn, member):
-    """Return (text, type_name, element_cmp_expr) for the per-field
-    SequenceConstraint typedef of an UnboundedSequence member, or None.
-
-    element_cmp_expr is the boolean C expression for comparing the element
-    field, or None when the SequenceConstraint has no element field.
-    """
-    type_ = member.type
-    if not isinstance(type_, UnboundedSequence):
-        return None
-
-    field_tn = experimental_field_typename(msg_tn, member.name)
-    struct_tn = '{}__SequenceConstraint'.format(field_tn)
-    vt = type_.value_type
-
-    element_type = None
-    if isinstance(vt, (AbstractString, AbstractWString)) and not vt.has_maximum_size():
-        element_type = 'rosidl_runtime_c__experimental__StringConstraint'
-    elif isinstance(vt, NamespacedType):
-        sub_tn = idl_structure_type_to_experimental_c_typename(vt)
-        element_type = '{}__Constraints'.format(sub_tn)
-    # BasicType or bounded string/wstring: no element constraint
-
-    lines = ['typedef struct {}__s'.format(struct_tn), '{', '  size_t size;']
-    if element_type is not None:
-        lines.append('  {} element;'.format(element_type))
-    lines.append('}} {};'.format(struct_tn))
-    text = '\n'.join(lines)
-
-    element_cmp = None
-    if element_type is not None:
-        element_cmp = (
-            '{}__are_equal(&lhs->element, &rhs->element)'.format(element_type))
-
-    return (text, struct_tn, element_cmp)
+    return "\n".join(lines)
 
 
 def experimental_storage_field_declaration(member_name, member_type):
@@ -577,37 +639,37 @@ def experimental_storage_field_declaration(member_name, member_type):
     """
     type_ = member_type
     if isinstance(type_, BasicType):
-        return 'rosidl_memory_t {}'.format(member_name)
+        return "rosidl_memory_t {}".format(member_name)
     if isinstance(type_, (AbstractString, AbstractWString)):
-        return 'rosidl_memory_region_t {}'.format(member_name)
+        return "rosidl_memory_region_t {}".format(member_name)
     if isinstance(type_, NamespacedType):
         sub_tn = idl_structure_type_to_experimental_c_typename(type_)
-        return '{}__ExternalStorage {}'.format(sub_tn, member_name)
+        return "{}__ExternalStorage {}".format(sub_tn, member_name)
     if isinstance(type_, Array):
         vt = type_.value_type
         if isinstance(vt, BasicType):
-            return 'rosidl_memory_region_t {}'.format(member_name)
+            return "rosidl_memory_region_t {}".format(member_name)
         if isinstance(vt, (AbstractString, AbstractWString)):
-            return 'rosidl_memory_region_t {}[{}U]'.format(member_name, type_.size)
+            return "rosidl_memory_region_t {}[{}U]".format(member_name, type_.size)
         if isinstance(vt, NamespacedType):
             sub_tn = idl_structure_type_to_experimental_c_typename(vt)
-            return '{}__ExternalStorage {}[{}U]'.format(sub_tn, member_name, type_.size)
+            return "{}__ExternalStorage {}[{}U]".format(sub_tn, member_name, type_.size)
     if isinstance(type_, AbstractSequence):
         vt = type_.value_type
         if isinstance(vt, BasicType):
             # Primitive sequence: just the backing buffer region
-            return 'rosidl_memory_region_t {}'.format(member_name)
+            return "rosidl_memory_region_t {}".format(member_name)
         # Complex element sequence: need both sequence region and element storage pool
         lines = []
-        lines.append('struct')
-        lines.append('{')
-        lines.append('  rosidl_memory_region_t region;')
+        lines.append("struct")
+        lines.append("{")
+        lines.append("  rosidl_memory_region_t region;")
         if isinstance(vt, (AbstractString, AbstractWString)):
-            lines.append('  rosidl_memory_region_t * element_storage_pool;')
+            lines.append("  rosidl_memory_region_t * element_storage_pool;")
         elif isinstance(vt, NamespacedType):
             sub_tn = idl_structure_type_to_experimental_c_typename(vt)
-            lines.append('  {}__ExternalStorage * element_storage_pool;'.format(sub_tn))
-        lines.append('  size_t element_storage_pool_size;')
-        lines.append('}} {}'.format(member_name))
-        return '\n    '.join(lines)
-    assert False, 'Unhandled type: ' + str(type_)
+            lines.append("  {}__ExternalStorage * element_storage_pool;".format(sub_tn))
+        lines.append("  size_t element_storage_pool_size;")
+        lines.append("}} {}".format(member_name))
+        return "\n    ".join(lines)
+    assert False, "Unhandled type: " + str(type_)

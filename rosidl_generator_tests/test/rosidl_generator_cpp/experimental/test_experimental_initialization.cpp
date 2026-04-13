@@ -310,10 +310,10 @@ TEST(test_experimental_initialization_storage_ctor, defaults_storage_ctor_all_wi
   s.members.int64_value.assign(&i64v);
   s.members.uint64_value.assign(&u64v);
   experimental::Defaults msg {s, rosidl_runtime_cpp::MessageInitialization::ALL};
-  EXPECT_TRUE(msg.bool_value);           // true
-  EXPECT_EQ(50u, msg.byte_value);        // 50
-  EXPECT_EQ(-30000, msg.int32_value);    // -30000
-  EXPECT_EQ(50000000u, msg.uint64_value); // 50000000
+  EXPECT_TRUE(msg.bool_value);
+  EXPECT_EQ(50u, msg.byte_value);
+  EXPECT_EQ(-30000, msg.int32_value);
+  EXPECT_EQ(50000000u, msg.uint64_value);
 }
 
 TEST(test_experimental_initialization_storage_ctor, strings_storage_ctor_all_with_full_backing) {

@@ -45,6 +45,64 @@ rosidl_runtime_c__experimental__StringConstraint__are_equal(
   return lhs->size == rhs->size;
 }
 
+/// @brief Constraints for an unbounded sequence with no element constraints.
+///
+/// Used for sequence<basic_type> or sequence<bounded_string>.
+/// Carries only the maximum sequence size; elements have no runtime constraints.
+typedef struct rosidl_runtime_c__experimental__SequenceConstraint_s
+{
+  /// Maximum sequence size (0 = no limit imposed at this layer).
+  size_t size;
+} rosidl_runtime_c__experimental__SequenceConstraint;
+
+static inline bool
+rosidl_runtime_c__experimental__SequenceConstraint__are_equal(
+  const rosidl_runtime_c__experimental__SequenceConstraint * lhs,
+  const rosidl_runtime_c__experimental__SequenceConstraint * rhs)
+{
+  return lhs->size == rhs->size;
+}
+
+/// @brief Constraints for sequence<string> (unbounded strings).
+///
+/// Carries both the maximum sequence size and per-element string constraints.
+typedef struct rosidl_runtime_c__experimental__StringSequenceConstraint_s
+{
+  /// Maximum sequence size (0 = no limit imposed at this layer).
+  size_t size;
+  /// Constraints for each string element in the sequence.
+  rosidl_runtime_c__experimental__StringConstraint element;
+} rosidl_runtime_c__experimental__StringSequenceConstraint;
+
+static inline bool
+rosidl_runtime_c__experimental__StringSequenceConstraint__are_equal(
+  const rosidl_runtime_c__experimental__StringSequenceConstraint * lhs,
+  const rosidl_runtime_c__experimental__StringSequenceConstraint * rhs)
+{
+  return lhs->size == rhs->size &&
+         rosidl_runtime_c__experimental__StringConstraint__are_equal(&lhs->element, &rhs->element);
+}
+
+/// @brief Constraints for sequence<wstring> (unbounded wide strings).
+///
+/// Carries both the maximum sequence size and per-element string constraints.
+typedef struct rosidl_runtime_c__experimental__WStringSequenceConstraint_s
+{
+  /// Maximum sequence size (0 = no limit imposed at this layer).
+  size_t size;
+  /// Constraints for each wstring element in the sequence.
+  rosidl_runtime_c__experimental__StringConstraint element;
+} rosidl_runtime_c__experimental__WStringSequenceConstraint;
+
+static inline bool
+rosidl_runtime_c__experimental__WStringSequenceConstraint__are_equal(
+  const rosidl_runtime_c__experimental__WStringSequenceConstraint * lhs,
+  const rosidl_runtime_c__experimental__WStringSequenceConstraint * rhs)
+{
+  return lhs->size == rhs->size &&
+         rosidl_runtime_c__experimental__StringConstraint__are_equal(&lhs->element, &rhs->element);
+}
+
 #ifdef __cplusplus
 }
 #endif

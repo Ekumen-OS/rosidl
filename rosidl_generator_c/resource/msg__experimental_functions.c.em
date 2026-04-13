@@ -5,10 +5,15 @@ from rosidl_parser.definition import AbstractNestedType
 from rosidl_parser.definition import AbstractSequence
 from rosidl_parser.definition import AbstractString
 from rosidl_parser.definition import AbstractWString
+from rosidl_parser.definition import ACTION_FEEDBACK_SUFFIX
+from rosidl_parser.definition import ACTION_GOAL_SUFFIX
+from rosidl_parser.definition import ACTION_RESULT_SUFFIX
 from rosidl_parser.definition import Array
 from rosidl_parser.definition import BasicType
 from rosidl_parser.definition import BoundedSequence
 from rosidl_parser.definition import NamespacedType
+from rosidl_parser.definition import SERVICE_REQUEST_MESSAGE_SUFFIX
+from rosidl_parser.definition import SERVICE_RESPONSE_MESSAGE_SUFFIX
 from rosidl_generator_c import interface_path_to_string
 from rosidl_generator_c import value_to_c
 from rosidl_generator_c.experimental import BASIC_IDL_TYPES_TO_EXPERIMENTAL_C
@@ -21,9 +26,16 @@ from rosidl_generator_c.experimental import idl_structure_type_to_experimental_c
 
 message_typename = idl_structure_type_to_experimental_c_typename(
     message.structure.namespaced_type)
+
+# Check if this is a service or action internal message type
+is_service_or_action_type = (
+    message.structure.namespaced_type.name.endswith(SERVICE_REQUEST_MESSAGE_SUFFIX) or
+    message.structure.namespaced_type.name.endswith(SERVICE_RESPONSE_MESSAGE_SUFFIX) or
+    message.structure.namespaced_type.name.endswith(ACTION_GOAL_SUFFIX) or
+    message.structure.namespaced_type.name.endswith(ACTION_RESULT_SUFFIX) or
+    message.structure.namespaced_type.name.endswith(ACTION_FEEDBACK_SUFFIX)
+)
 }@
-@
-@#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 @# Include directives for NamespacedType member functions
 @{
 from collections import OrderedDict
@@ -53,20 +65,20 @@ for member in message.structure.members:
 #include "@(header_file)"
 @[    end for]@
 @[end if]@
-@#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
-@#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-@# DEFINE macros for all per-field types (one macro call per member)
 @{
+define_macros = [] 
 for member in message.structure.members:
     macro_call = experimental_field_define_macro(message_typename, member)
     if macro_call:
-        print(macro_call)
-        print('')
+        define_macros.append(macro_call)
 }@
-@#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+@[if define_macros]@
 
-@#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+@[  for macro in define_macros]@
+@(macro)
+@[  end for]@
+
+@[end if]@
 @# __init / __init_with_allocator
 bool
 @(message_typename)__init_with_allocator(
@@ -214,7 +226,10 @@ for member in message.structure.members:
     lines.append('')
 
 for line in lines:
-    print('  ' + line)
+    if line:
+        print('  ' + line)
+    else:
+        print('')
 }@
   return true;
 }
@@ -224,9 +239,7 @@ bool
 {
   return @(message_typename)__init_with_allocator(msg, NULL);
 }
-@#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-@#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 @# __init_from_storage
 bool
 @(message_typename)__init_from_storage(
@@ -287,17 +300,14 @@ for member in message.structure.members:
             lines.append('  {}__fini(msg);'.format(message_typename))
             lines.append('  return false;')
             lines.append('}')
-        elif isinstance(vt, (AbstractString, AbstractWString)) and vt.has_maximum_size():
-            # Array of bounded strings: pass element_bound to array init
-            lines.append('if (!{}__init_from_region(&msg->{}, {}U, storage->members.{})) {{'.format(
-                field_tn, member.name, vt.maximum_size, member.name))
-            lines.append('  {}__fini(msg);'.format(message_typename))
-            lines.append('  return false;')
-            lines.append('}')
         else:
             # ARRAY: per-element external storage.
             # First initialize the array wrapper itself
-            lines.append('if (!{}__init(&msg->{})) {{'.format(field_tn, member.name))
+            if isinstance(vt, (AbstractString, AbstractWString)) and vt.has_maximum_size():
+                # Bounded element array needs element_bound parameter
+                lines.append('if (!{}__init(&msg->{}, {}U)) {{'.format(field_tn, member.name, vt.maximum_size))
+            else:
+                lines.append('if (!{}__init(&msg->{})) {{'.format(field_tn, member.name))
             lines.append('  {}__fini(msg);'.format(message_typename))
             lines.append('  return false;')
             lines.append('}')
@@ -309,7 +319,7 @@ for member in message.structure.members:
                 sub_tn = idl_structure_type_to_experimental_c_typename(vt)
                 lines.append('  if (!{}__init_from_storage(&msg->{}.value->data[i],'.format(
                     sub_tn, member.name))
-                lines.append('      &storage->members.{}[i])) {{'.format(member.name))
+                lines.append('                             &storage->members.{}[i]))'.format(member.name))
             else:
                 elem_type = experimental_element_c_type(message_typename, member.name, vt)
                 if isinstance(vt, (AbstractString, AbstractWString)) and vt.has_maximum_size():
@@ -318,7 +328,8 @@ for member in message.structure.members:
                 else:
                     lines.append('  if (!{}__init_from_region(&msg->{}.value->data[i],'.format(
                         elem_type, member.name))
-                lines.append('      storage->members.{}[i])) {{'.format(member.name))
+                lines.append('                            storage->members.{}[i]))'.format(member.name))
+            lines.append('  {')
             lines.append('    {}__fini(msg);'.format(message_typename))
             lines.append('    return false;')
             lines.append('  }')
@@ -355,7 +366,8 @@ for member in message.structure.members:
                 # else: no bounds for unbounded sequence of unbounded elements
             lines.append('    storage->members.{}.region,'.format(member.name))
             lines.append('    storage->members.{}.element_storage_pool,'.format(member.name))
-            lines.append('    storage->members.{}.element_storage_pool_size)) {{'.format(member.name))
+            lines.append('    storage->members.{}.element_storage_pool_size))'.format(member.name))
+            lines.append('{')
             lines.append('  {}__fini(msg);'.format(message_typename))
             lines.append('  return false;')
             lines.append('}')
@@ -363,13 +375,14 @@ for member in message.structure.members:
     lines.append('')
 
 for line in lines:
-    print('  ' + line)
+    if line:
+        print('  ' + line)
+    else:
+        print('')
 }@
   return true;
 }
-@#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-@#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 @# __fini
 void
 @(message_typename)__fini(@(message_typename) * msg)
@@ -398,12 +411,14 @@ for member in message.structure.members:
     lines.append('')
 
 for line in lines:
-    print('  ' + line)
+    if line:
+        print('  ' + line)
+    else:
+        print('')
 }@
+  return;
 }
-@#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-@#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 @# __create / __destroy
 @(message_typename) *
 @(message_typename)__create()
@@ -430,9 +445,7 @@ void
   rcutils_allocator_t alloc = rcutils_get_default_allocator();
   alloc.deallocate(msg, alloc.state);
 }
-@#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-@#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 @# __are_equal
 bool
 @(message_typename)__are_equal(
@@ -469,9 +482,7 @@ type_ = member.type
 @[end for]@
   return true;
 }
-@#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-@#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 @# __copy
 bool
 @(message_typename)__copy(
@@ -506,15 +517,11 @@ type_ = member.type
 @[end for]@
   return true;
 }
-@#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+@[if not is_service_or_action_type]@
 
-@#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-@# Array structure definition for this message type
-ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_STRUCTURE_DEFINE(@(message_typename));
-@#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_STRUCTURE_DEFINE(@(message_typename)__Array, @(message_typename))
 
-@#<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-@# Sequence structure definitions for this message type
-ROSIDL_RUNTIME_C__EXPERIMENTAL__SEQUENCE_DEFINE(@(message_typename)Sequence, @(message_typename));
-ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_SEQUENCE_DEFINE(@(message_typename)BoundedSequence, @(message_typename));
-@#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+ROSIDL_RUNTIME_C__EXPERIMENTAL__SEQUENCE_DEFINE(@(message_typename)__Sequence, @(message_typename))
+
+ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_SEQUENCE_DEFINE(@(message_typename)__BoundedSequence, @(message_typename))
+@[end if]@
