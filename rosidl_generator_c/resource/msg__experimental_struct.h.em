@@ -183,6 +183,13 @@ typedef struct @(message_typename)_s
 @[for member in message.structure.members]@
   @(experimental_field_in_struct(message_typename, member));
 @[end for]@
+
+  /// External storage copy (embedded for lifetime management).
+  /// Only valid if _has_external_storage is true.
+  @(message_typename)__ExternalStorage _external_storage;
+
+  /// Flag indicating whether _external_storage contains valid data.
+  bool _has_external_storage;
 } @(message_typename);
 @[if not is_service_or_action_type]@
 

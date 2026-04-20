@@ -8,10 +8,30 @@ message_typename = idl_structure_type_to_experimental_c_typename(
 }@
 // Experimental message functions for @(interface_path_to_string(interface_path)) in @(package_name).
 
+/// Initialization options for @(interface_path_to_string(interface_path)) experimental message.
+/**
+ * Options struct for controlling message initialization behavior.
+ */
+typedef struct @(message_typename)__InitOptions_s
+{
+  /// Initialization mode (default: ALL).
+  rosidl_runtime_c__experimental__message_initialization_t init_mode;
+  
+  /// Optional allocator (NULL to use default allocator).
+  const rcutils_allocator_t * allocator;
+  
+  /// Optional external storage (NULL for heap allocation).
+  /// If provided, the storage is copied into the message's embedded _external_storage.
+  const @(message_typename)__ExternalStorage * external_storage;
+  
+  /// Reserved for future expansion (must be NULL).
+  void * reserved[4];
+} @(message_typename)__InitOptions;
+
 /// Initialize @(interface_path_to_string(interface_path)) experimental message.
 /**
  * All fields are set to their default zero-initialized state using the
- * default allocator.
+ * default allocator and initialization mode ALL.
  * If called twice without an intervening @(message_typename)__fini()
  * the previously allocated memory will be leaked.
  * \param[in,out] msg The previously allocated message pointer.
@@ -21,36 +41,35 @@ ROSIDL_GENERATOR_C_PUBLIC_@(package_name)
 bool
 @(message_typename)__init(@(message_typename) * msg);
 
-/// Initialize @(interface_path_to_string(interface_path)) experimental message with allocator.
+/// Initialize @(interface_path_to_string(interface_path)) experimental message with options.
 /**
- * All fields are set to their default zero-initialized state using the
- * provided allocator (or the default allocator when NULL).
+ * Fields are initialized according to the provided options.
+ * If options is NULL, behaves identically to @(message_typename)__init().
  * If called twice without an intervening @(message_typename)__fini()
  * the previously allocated memory will be leaked.
  * \param[in,out] msg The previously allocated message pointer.
- * \param[in] allocator Allocator for managed field storage; NULL for default.
+ * \param[in] options Initialization options; NULL for defaults.
  * \return true if initialization was successful, otherwise false.
  */
 ROSIDL_GENERATOR_C_PUBLIC_@(package_name)
 bool
-@(message_typename)__init_with_allocator(
+@(message_typename)__init_with_options(
   @(message_typename) * msg,
-  const rcutils_allocator_t * allocator);
+  const @(message_typename)__InitOptions * options);
 
-/// Initialize @(interface_path_to_string(interface_path)) experimental message from external storage.
+/// Reset @(interface_path_to_string(interface_path)) experimental message field values.
 /**
- * Each field is initialized to point into the memory regions described by
- * \p storage.  All regions in \p storage must be valid (non-NULL address and
- * sufficient size); the call fails if any region is insufficient.
- * \param[in,out] msg The previously allocated message pointer.
- * \param[in] storage Fully populated external storage descriptor.
- * \return true if initialization was successful, otherwise false.
+ * Reinitializes field values based on the specified initialization mode.
+ * Does not affect structural initialization (memory allocation).
+ * \param[in,out] msg The message to reset.
+ * \param[in] init_mode The initialization mode to apply.
+ * \return true if successful, false otherwise.
  */
 ROSIDL_GENERATOR_C_PUBLIC_@(package_name)
 bool
-@(message_typename)__init_from_storage(
+@(message_typename)__reset(
   @(message_typename) * msg,
-  const @(message_typename)__ExternalStorage * storage);
+  rosidl_runtime_c__experimental__message_initialization_t init_mode);
 
 /// Finalize @(interface_path_to_string(interface_path)) experimental message.
 /**

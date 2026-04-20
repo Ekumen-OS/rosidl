@@ -37,7 +37,7 @@ extern "C"
 typedef struct rosidl_scalar_init_options_s
 {
   /// Optional external memory (NULL for local storage).
-  rosidl_memory_t * external_memory;
+  const rosidl_memory_t * external_memory;
 
   /// Reserved for future expansion (must be NULL).
   void * reserved[4];

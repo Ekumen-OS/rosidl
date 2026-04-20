@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Tests for the experimental C generator __init_from_storage path.
+// Tests for the experimental C generator __init_with_options with external storage.
 // Verifies that caller-supplied ExternalStorage is properly aliased and
 // that default values are applied at init time.
 
@@ -104,7 +104,9 @@ static int test_storage_basic_types_preserves_value(void)
   storage.members.uint64_value = make_memory(&u64);
 
   EXP(BasicTypes) msg;
-  EXPECT_TRUE(EXP(BasicTypes__init_from_storage)(&msg, &storage));
+  EXP(BasicTypes__InitOptions) options = {0};
+  options.external_storage = &storage;
+  EXPECT_TRUE(EXP(BasicTypes__init_with_options)(&msg, &options));
 
   // Scalar value starts zero (as initialized)
   EXPECT_EQ(0, msg.int32_value.value->data);
@@ -165,7 +167,9 @@ static int test_storage_defaults_backed_values(void)
   storage.members.uint64_value = make_memory(&u64);
 
   EXP(Defaults) msg;
-  EXPECT_TRUE(EXP(Defaults__init_from_storage)(&msg, &storage));
+  EXP(Defaults__InitOptions) options = {0};
+  options.external_storage = &storage;
+  EXPECT_TRUE(EXP(Defaults__init_with_options)(&msg, &options));
 
   // Check defaults applied
   EXPECT_TRUE(msg.bool_value.value->data);
@@ -219,7 +223,9 @@ static int test_storage_strings_regions(void)
   storage.members.bounded_string_value_default5 = make_region(buf_bsvd5, sizeof(buf_bsvd5));
 
   EXP(Strings) msg;
-  EXPECT_TRUE(EXP(Strings__init_from_storage)(&msg, &storage));
+  EXP(Strings__InitOptions) options = {0};
+  options.external_storage = &storage;
+  EXPECT_TRUE(EXP(Strings__init_with_options)(&msg, &options));
 
   // Empty after init
   EXPECT_EQ(0u, msg.string_value.size);
@@ -283,7 +289,9 @@ static int test_storage_nested(void)
   storage.members.basic_types_value = inner_storage;
 
   EXP(Nested) msg;
-  EXPECT_TRUE(EXP(Nested__init_from_storage)(&msg, &storage));
+  EXP(Nested__InitOptions) options = {0};
+  options.external_storage = &storage;
+  EXPECT_TRUE(EXP(Nested__init_with_options)(&msg, &options));
 
   EXPECT_EQ(0, msg.basic_types_value.int32_value.value->data);
   EXPECT_EQ(&i32, (int32_t *)msg.basic_types_value.int32_value.value);
@@ -528,7 +536,9 @@ static int test_storage_arrays_scalar_region(void)
   storage.members.alignment_check = make_memory(&alignment);
 
   EXP(Arrays) msg;
-  EXPECT_TRUE(EXP(Arrays__init_from_storage)(&msg, &storage));
+  EXP(Arrays__InitOptions) options = {0};
+  options.external_storage = &storage;
+  EXPECT_TRUE(EXP(Arrays__init_with_options)(&msg, &options));
 
   EXPECT_EQ((void *)int32_buf, (void *)msg.int32_values.value);
   EXPECT_EQ(0, msg.int32_values.value->data[0]);

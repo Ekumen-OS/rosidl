@@ -35,9 +35,15 @@ struct SequenceWrapper;
     using bounded_type = BOUNDED_T; \
     static constexpr size_t bound = BOUND; \
     static bool init(SEQ_T * s, const rcutils_allocator_t * a) \
-    {return SEQ_T ## __init_with_allocator(s, a);} \
+    { \
+      SEQ_T ## __InitOptions opts = {.allocator = a, .external_storage = NULL, .reserved = {NULL, NULL, NULL, NULL}}; \
+      return SEQ_T ## __init_with_options(s, &opts); \
+    } \
     static bool init_from_region(SEQ_T * s, rosidl_memory_region_t r) \
-    {return SEQ_T ## __init_from_region(s, r);} \
+    { \
+      SEQ_T ## __InitOptions opts = {.allocator = NULL, .external_storage = &r, .reserved = {NULL, NULL, NULL, NULL}}; \
+      return SEQ_T ## __init_with_options(s, &opts); \
+    } \
     static void fini(SEQ_T * s) \
     {SEQ_T ## __fini(s);} \
     static bool push_back(SEQ_T * s, ELEM_T v) \
@@ -51,9 +57,15 @@ struct SequenceWrapper;
     static bool copy(const SEQ_T * in, SEQ_T * out) \
     {return SEQ_T ## __copy(in, out);} \
     static bool bounded_init(BOUNDED_T * s, const rcutils_allocator_t * a) \
-    {return BOUNDED_T ## __init_with_allocator(s, BOUND, a);} \
+    { \
+      BOUNDED_T ## __InitOptions opts = {.allocator = a, .external_storage = NULL, .reserved = {NULL, NULL, NULL, NULL}}; \
+      return BOUNDED_T ## __init_with_options(s, BOUND, &opts); \
+    } \
     static bool bounded_init_from_region(BOUNDED_T * s, rosidl_memory_region_t r) \
-    {return BOUNDED_T ## __init_from_region(s, BOUND, r);} \
+    { \
+      BOUNDED_T ## __InitOptions opts = {.allocator = NULL, .external_storage = &r, .reserved = {NULL, NULL, NULL, NULL}}; \
+      return BOUNDED_T ## __init_with_options(s, BOUND, &opts); \
+    } \
     static void bounded_fini(BOUNDED_T * s) \
     {BOUNDED_T ## __fini(s);} \
     static bool bounded_push_back(BOUNDED_T * s, ELEM_T v) \
@@ -65,34 +77,34 @@ struct SequenceWrapper;
   };
 
 // clang-format off
-DEFINE_PRIMITIVE_SEQUENCE_WRAPPER(rosidl_runtime_c__experimental__FloatSequence,
-  rosidl_runtime_c__experimental__FloatBoundedSequence, float, 3U)
-DEFINE_PRIMITIVE_SEQUENCE_WRAPPER(rosidl_runtime_c__experimental__DoubleSequence,
-  rosidl_runtime_c__experimental__DoubleBoundedSequence, double, 3U)
-DEFINE_PRIMITIVE_SEQUENCE_WRAPPER(rosidl_runtime_c__experimental__LongDoubleSequence,
-  rosidl_runtime_c__experimental__LongDoubleBoundedSequence, long double, 3U)
-DEFINE_PRIMITIVE_SEQUENCE_WRAPPER(rosidl_runtime_c__experimental__CharSequence,
-  rosidl_runtime_c__experimental__CharBoundedSequence, char, 3U)
-DEFINE_PRIMITIVE_SEQUENCE_WRAPPER(rosidl_runtime_c__experimental__WCharSequence,
-  rosidl_runtime_c__experimental__WCharBoundedSequence, wchar_t, 3U)
-DEFINE_PRIMITIVE_SEQUENCE_WRAPPER(rosidl_runtime_c__experimental__BooleanSequence,
-  rosidl_runtime_c__experimental__BooleanBoundedSequence, bool, 3U)
-DEFINE_PRIMITIVE_SEQUENCE_WRAPPER(rosidl_runtime_c__experimental__UInt8Sequence,
-  rosidl_runtime_c__experimental__UInt8BoundedSequence, uint8_t, 3U)
-DEFINE_PRIMITIVE_SEQUENCE_WRAPPER(rosidl_runtime_c__experimental__Int8Sequence,
-  rosidl_runtime_c__experimental__Int8BoundedSequence, int8_t, 3U)
-DEFINE_PRIMITIVE_SEQUENCE_WRAPPER(rosidl_runtime_c__experimental__UInt16Sequence,
-  rosidl_runtime_c__experimental__UInt16BoundedSequence, uint16_t, 3U)
-DEFINE_PRIMITIVE_SEQUENCE_WRAPPER(rosidl_runtime_c__experimental__Int16Sequence,
-  rosidl_runtime_c__experimental__Int16BoundedSequence, int16_t, 3U)
-DEFINE_PRIMITIVE_SEQUENCE_WRAPPER(rosidl_runtime_c__experimental__UInt32Sequence,
-  rosidl_runtime_c__experimental__UInt32BoundedSequence, uint32_t, 3U)
-DEFINE_PRIMITIVE_SEQUENCE_WRAPPER(rosidl_runtime_c__experimental__Int32Sequence,
-  rosidl_runtime_c__experimental__Int32BoundedSequence, int32_t, 3U)
-DEFINE_PRIMITIVE_SEQUENCE_WRAPPER(rosidl_runtime_c__experimental__UInt64Sequence,
-  rosidl_runtime_c__experimental__UInt64BoundedSequence, uint64_t, 3U)
-DEFINE_PRIMITIVE_SEQUENCE_WRAPPER(rosidl_runtime_c__experimental__Int64Sequence,
-  rosidl_runtime_c__experimental__Int64BoundedSequence, int64_t, 3U)
+DEFINE_PRIMITIVE_SEQUENCE_WRAPPER(rosidl_runtime_c__experimental__Float__Sequence,
+  rosidl_runtime_c__experimental__Float__BoundedSequence, float, 3U)
+DEFINE_PRIMITIVE_SEQUENCE_WRAPPER(rosidl_runtime_c__experimental__Double__Sequence,
+  rosidl_runtime_c__experimental__Double__BoundedSequence, double, 3U)
+DEFINE_PRIMITIVE_SEQUENCE_WRAPPER(rosidl_runtime_c__experimental__LongDouble__Sequence,
+  rosidl_runtime_c__experimental__LongDouble__BoundedSequence, long double, 3U)
+DEFINE_PRIMITIVE_SEQUENCE_WRAPPER(rosidl_runtime_c__experimental__Char__Sequence,
+  rosidl_runtime_c__experimental__Char__BoundedSequence, char, 3U)
+DEFINE_PRIMITIVE_SEQUENCE_WRAPPER(rosidl_runtime_c__experimental__WChar__Sequence,
+  rosidl_runtime_c__experimental__WChar__BoundedSequence, wchar_t, 3U)
+DEFINE_PRIMITIVE_SEQUENCE_WRAPPER(rosidl_runtime_c__experimental__Boolean__Sequence,
+  rosidl_runtime_c__experimental__Boolean__BoundedSequence, bool, 3U)
+DEFINE_PRIMITIVE_SEQUENCE_WRAPPER(rosidl_runtime_c__experimental__UInt8__Sequence,
+  rosidl_runtime_c__experimental__UInt8__BoundedSequence, uint8_t, 3U)
+DEFINE_PRIMITIVE_SEQUENCE_WRAPPER(rosidl_runtime_c__experimental__Int8__Sequence,
+  rosidl_runtime_c__experimental__Int8__BoundedSequence, int8_t, 3U)
+DEFINE_PRIMITIVE_SEQUENCE_WRAPPER(rosidl_runtime_c__experimental__UInt16__Sequence,
+  rosidl_runtime_c__experimental__UInt16__BoundedSequence, uint16_t, 3U)
+DEFINE_PRIMITIVE_SEQUENCE_WRAPPER(rosidl_runtime_c__experimental__Int16__Sequence,
+  rosidl_runtime_c__experimental__Int16__BoundedSequence, int16_t, 3U)
+DEFINE_PRIMITIVE_SEQUENCE_WRAPPER(rosidl_runtime_c__experimental__UInt32__Sequence,
+  rosidl_runtime_c__experimental__UInt32__BoundedSequence, uint32_t, 3U)
+DEFINE_PRIMITIVE_SEQUENCE_WRAPPER(rosidl_runtime_c__experimental__Int32__Sequence,
+  rosidl_runtime_c__experimental__Int32__BoundedSequence, int32_t, 3U)
+DEFINE_PRIMITIVE_SEQUENCE_WRAPPER(rosidl_runtime_c__experimental__UInt64__Sequence,
+  rosidl_runtime_c__experimental__UInt64__BoundedSequence, uint64_t, 3U)
+DEFINE_PRIMITIVE_SEQUENCE_WRAPPER(rosidl_runtime_c__experimental__Int64__Sequence,
+  rosidl_runtime_c__experimental__Int64__BoundedSequence, int64_t, 3U)
 // clang-format on
 
 // =============================================================================
@@ -112,22 +124,22 @@ struct SequenceTestTraits;
   };
 
 // clang-format off
-DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__FloatSequence, float, 1.0f, 2.0f)
-DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__DoubleSequence, double, 1.0, 2.0)
-DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__LongDoubleSequence, long double, 1.0L,
+DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__Float__Sequence, float, 1.0f, 2.0f)
+DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__Double__Sequence, double, 1.0, 2.0)
+DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__LongDouble__Sequence, long double, 1.0L,
   2.0L)
-DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__CharSequence, char, 'a', 'b')
-DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__WCharSequence, char16_t, u'a', u'b')
-DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__BooleanSequence, bool, true, false)
-DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__UInt8Sequence, uint8_t, 10u, 20u)
-DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__Int8Sequence, int8_t, 10, 20)
-DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__UInt16Sequence, uint16_t, 100u, 200u)
-DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__Int16Sequence, int16_t, -100, 200)
-DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__UInt32Sequence, uint32_t, 1000u, 2000u)
-DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__Int32Sequence, int32_t, -1000, 2000)
-DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__UInt64Sequence, uint64_t, 100000ULL,
+DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__Char__Sequence, char, 'a', 'b')
+DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__WChar__Sequence, char16_t, u'a', u'b')
+DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__Boolean__Sequence, bool, true, false)
+DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__UInt8__Sequence, uint8_t, 10u, 20u)
+DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__Int8__Sequence, int8_t, 10, 20)
+DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__UInt16__Sequence, uint16_t, 100u, 200u)
+DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__Int16__Sequence, int16_t, -100, 200)
+DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__UInt32__Sequence, uint32_t, 1000u, 2000u)
+DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__Int32__Sequence, int32_t, -1000, 2000)
+DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__UInt64__Sequence, uint64_t, 100000ULL,
   200000ULL)
-DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__Int64Sequence, int64_t, -100000LL,
+DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__Int64__Sequence, int64_t, -100000LL,
   200000LL)
 // clang-format on
 
@@ -145,20 +157,20 @@ protected:
 
 // clang-format off
 using SequenceTypes = ::testing::Types<
-  rosidl_runtime_c__experimental__FloatSequence,
-  rosidl_runtime_c__experimental__DoubleSequence,
-  rosidl_runtime_c__experimental__LongDoubleSequence,
-  rosidl_runtime_c__experimental__CharSequence,
-  rosidl_runtime_c__experimental__WCharSequence,
-  rosidl_runtime_c__experimental__BooleanSequence,
-  rosidl_runtime_c__experimental__UInt8Sequence,
-  rosidl_runtime_c__experimental__Int8Sequence,
-  rosidl_runtime_c__experimental__UInt16Sequence,
-  rosidl_runtime_c__experimental__Int16Sequence,
-  rosidl_runtime_c__experimental__UInt32Sequence,
-  rosidl_runtime_c__experimental__Int32Sequence,
-  rosidl_runtime_c__experimental__UInt64Sequence,
-  rosidl_runtime_c__experimental__Int64Sequence>;
+  rosidl_runtime_c__experimental__Float__Sequence,
+  rosidl_runtime_c__experimental__Double__Sequence,
+  rosidl_runtime_c__experimental__LongDouble__Sequence,
+  rosidl_runtime_c__experimental__Char__Sequence,
+  rosidl_runtime_c__experimental__WChar__Sequence,
+  rosidl_runtime_c__experimental__Boolean__Sequence,
+  rosidl_runtime_c__experimental__UInt8__Sequence,
+  rosidl_runtime_c__experimental__Int8__Sequence,
+  rosidl_runtime_c__experimental__UInt16__Sequence,
+  rosidl_runtime_c__experimental__Int16__Sequence,
+  rosidl_runtime_c__experimental__UInt32__Sequence,
+  rosidl_runtime_c__experimental__Int32__Sequence,
+  rosidl_runtime_c__experimental__UInt64__Sequence,
+  rosidl_runtime_c__experimental__Int64__Sequence>;
 // clang-format on
 
 TYPED_TEST_SUITE(SequenceTest, SequenceTypes);

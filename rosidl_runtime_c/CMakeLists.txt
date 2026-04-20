@@ -31,6 +31,7 @@ add_library(${PROJECT_NAME}
   "src/experimental/array.c"
   "src/experimental/scalar.c"
   "src/experimental/sequence.c"
+  "src/experimental/memory.c"
   "src/string_functions.c"
   "src/experimental/string.c"
   "src/type_hash.c"

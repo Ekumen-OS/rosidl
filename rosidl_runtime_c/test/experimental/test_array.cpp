@@ -72,7 +72,11 @@ struct ArrayWrapper;
     static bool init(T * a) \
     {return T ## __init(a);} \
     static bool init_from_region(T * a, rosidl_memory_region_t r) \
-    {return T ## __init_from_region(a, r);} \
+    { \
+      T ## __InitOptions opts = {0}; \
+      opts.external_storage = &r; \
+      return T ## __init_with_options(a, &opts); \
+    } \
     static void fini(T * a) \
     {T ## __fini(a);} \
     static bool are_equal(const T * l, const T * r) \

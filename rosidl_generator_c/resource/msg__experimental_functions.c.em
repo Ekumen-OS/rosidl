@@ -79,8 +79,9 @@ for member in message.structure.members:
 @[  end for]@
 
 @[end if]@
+
 @# __init / __init_with_allocator
-bool
+static bool
 @(message_typename)__init_with_allocator(
   @(message_typename) * msg,
   const rcutils_allocator_t * allocator)
@@ -97,131 +98,104 @@ for member in message.structure.members:
     lines.append('// ' + member.name)
 
     if isinstance(type_, BasicType):
-        lines.append('if (!{}__init(&msg->{})) {{'.format(field_tn, member.name))
+        lines.append('if (!{}__init_with_options(&msg->{}, NULL)) {{'.format(field_tn, member.name))
         lines.append('  {}__fini(msg);'.format(message_typename))
         lines.append('  return false;')
         lines.append('}')
-        if member.has_annotation('default'):
-            lines.append('msg->{}.value->data = {};'.format(
-                member.name,
-                value_to_c(type_, member.get_annotation_value('default')['value'])))
 
     elif isinstance(type_, (AbstractString, AbstractWString)):
+        # Build init_with_options call with appropriate parameters
+        lines.append('{')
+        lines.append('  rosidl_string_init_options_t _opts = {')
+        lines.append('    .allocator = allocator,')
+        lines.append('    .external_storage = NULL,')
+        lines.append('    .reserved = {NULL, NULL, NULL, NULL}')
+        lines.append('  };')
         if type_.has_maximum_size():
-            lines.append('if (!{}__init_with_allocator(&msg->{}, {}U, allocator)) {{'.format(
+            lines.append('  if (!{}__init_with_options(&msg->{}, {}U, &_opts)) {{'.format(
                 field_tn, member.name, type_.maximum_size))
         else:
-            lines.append('if (!{}__init_with_allocator(&msg->{}, allocator)) {{'.format(field_tn, member.name))
-        lines.append('  {}__fini(msg);'.format(message_typename))
-        lines.append('  return false;')
+            lines.append('  if (!{}__init_with_options(&msg->{}, &_opts)) {{'.format(field_tn, member.name))
+        lines.append('    {}__fini(msg);'.format(message_typename))
+        lines.append('    return false;')
+        lines.append('  }')
         lines.append('}')
-        if member.has_annotation('default'):
-            lines.append('{')
-            lines.append('  bool success = {}__assign(&msg->{}, {});'.format(
-                field_tn, member.name,
-                value_to_c(type_, member.get_annotation_value('default')['value'])))
-            lines.append('  if (!success) {')
-            lines.append('    {}__fini(msg);'.format(message_typename))
-            lines.append('    return false;')
-            lines.append('  }')
-            lines.append('}')
 
     elif isinstance(type_, NamespacedType):
         sub_tn = idl_structure_type_to_experimental_c_typename(type_)
-        lines.append('if (!{}__init_with_allocator(&msg->{}, allocator)) {{'.format(sub_tn, member.name))
-        lines.append('  {}__fini(msg);'.format(message_typename))
-        lines.append('  return false;')
+        lines.append('{')
+        lines.append('  {}__InitOptions _opts = {{'.format(sub_tn))
+        lines.append('    .init_mode = ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_SKIP,')
+        lines.append('    .allocator = allocator,')
+        lines.append('    .external_storage = NULL,')
+        lines.append('    .reserved = {NULL, NULL, NULL, NULL}')
+        lines.append('  };')
+        lines.append('  if (!{}__init_with_options(&msg->{}, &_opts)) {{'.format(sub_tn, member.name))
+        lines.append('    {}__fini(msg);'.format(message_typename))
+        lines.append('    return false;')
+        lines.append('  }')
         lines.append('}')
 
     elif isinstance(type_, Array):
         vt = type_.value_type
         if isinstance(vt, BasicType):
-            lines.append('if (!{}__init(&msg->{})) {{'.format(field_tn, member.name))
+            lines.append('if (!{}__init_with_options(&msg->{}, NULL)) {{'.format(field_tn, member.name))
             lines.append('  {}__fini(msg);'.format(message_typename))
             lines.append('  return false;')
             lines.append('}')
-            if member.has_annotation('default'):
-                for i, dv in enumerate(literal_eval(
-                        member.get_annotation_value('default')['value'])):
-                    lines.append('msg->{}.value->data[{}] = {};'.format(
-                        member.name, i, value_to_c(vt, dv)))
         else:
-            # Arrays of bounded strings need element_bound parameter
+            # Arrays of complex elements: use InitOptions
+            lines.append('{')
+            lines.append('  {}__InitOptions _opts = {{'.format(field_tn))
+            lines.append('    .element_allocator = allocator,')
+            lines.append('    .external_element_storage = NULL,')
+            lines.append('    .external_storage = NULL,')
+            lines.append('    .reserved = {NULL, NULL, NULL, NULL}')
+            lines.append('  };')
             if isinstance(vt, (AbstractString, AbstractWString)) and vt.has_maximum_size():
-                lines.append('if (!{}__init_with_allocator(&msg->{}, {}U, allocator)) {{'.format(
+                lines.append('  if (!{}__init_with_options(&msg->{}, {}U, &_opts)) {{'.format(
                     field_tn, member.name, vt.maximum_size))
             else:
-                lines.append('if (!{}__init_with_allocator(&msg->{}, allocator)) {{'.format(field_tn, member.name))
-            lines.append('  {}__fini(msg);'.format(message_typename))
-            lines.append('  return false;')
+                lines.append('  if (!{}__init_with_options(&msg->{}, &_opts)) {{'.format(field_tn, member.name))
+            lines.append('    {}__fini(msg);'.format(message_typename))
+            lines.append('    return false;')
+            lines.append('  }')
             lines.append('}')
-            if member.has_annotation('default') and isinstance(vt, (AbstractString, AbstractWString)):
-                elem_type = experimental_element_c_type(message_typename, member.name, vt)
-                for i, dv in enumerate(literal_eval(
-                        member.get_annotation_value('default')['value'])):
-                    lines.append('{')
-                    lines.append('  bool success = {}__assign(&msg->{}.value->data[{}], {});'.format(
-                        elem_type, member.name, i, value_to_c(vt, dv)))
-                    lines.append('  if (!success) {')
-                    lines.append('    {}__fini(msg);'.format(message_typename))
-                    lines.append('    return false;')
-                    lines.append('  }')
-                    lines.append('}')
 
     elif isinstance(type_, AbstractSequence):
         vt = type_.value_type
+        # Build InitOptions for sequences
+        lines.append('{')
+        lines.append('  {}__InitOptions _opts = {{'.format(field_tn))
+        lines.append('    .allocator = allocator,')
+        if not isinstance(vt, BasicType):
+            # Complex element sequences need element storage options
+            lines.append('    .external_element_storage = NULL,')
+        lines.append('    .external_storage = NULL,')
+        lines.append('    .reserved = {NULL, NULL, NULL, NULL}')
+        lines.append('  };')
         # Determine init parameters based on sequence and element bounds
         if isinstance(type_, BoundedSequence):
             if isinstance(vt, (AbstractString, AbstractWString)) and vt.has_maximum_size():
                 # Bounded sequence of bounded strings: sequence_bound, element_bound
-                lines.append('if (!{}__init_with_allocator(&msg->{}, {}U, {}U, allocator)) {{'.format(
+                lines.append('  if (!{}__init_with_options(&msg->{}, {}U, {}U, &_opts)) {{'.format(
                     field_tn, member.name, type_.maximum_size, vt.maximum_size))
             else:
                 # Bounded sequence of other types: just sequence_bound
-                lines.append('if (!{}__init_with_allocator(&msg->{}, {}U, allocator)) {{'.format(
+                lines.append('  if (!{}__init_with_options(&msg->{}, {}U, &_opts)) {{'.format(
                     field_tn, member.name, type_.maximum_size))
         else:  # UnboundedSequence
             if isinstance(vt, (AbstractString, AbstractWString)) and vt.has_maximum_size():
                 # Unbounded sequence of bounded strings: element_bound
-                lines.append('if (!{}__init_with_allocator(&msg->{}, {}U, allocator)) {{'.format(
+                lines.append('  if (!{}__init_with_options(&msg->{}, {}U, &_opts)) {{'.format(
                     field_tn, member.name, vt.maximum_size))
             else:
                 # Unbounded sequence of other types: no bounds
-                lines.append('if (!{}__init_with_allocator(&msg->{}, allocator)) {{'.format(field_tn, member.name))
-        lines.append('  {}__fini(msg);'.format(message_typename))
-        lines.append('  return false;')
+                lines.append('  if (!{}__init_with_options(&msg->{}, &_opts)) {{'.format(field_tn, member.name))
+        lines.append('    {}__fini(msg);'.format(message_typename))
+        lines.append('    return false;')
+        lines.append('  }')
         lines.append('}')
-        if member.has_annotation('default') and isinstance(vt, BasicType):
-            default_vals = literal_eval(member.get_annotation_value('default')['value'])
-            lines.append('{')
-            lines.append('  bool success = {}__resize(&msg->{}, {}U);'.format(
-                field_tn, member.name, len(default_vals)))
-            lines.append('  if (!success) {')
-            lines.append('    {}__fini(msg);'.format(message_typename))
-            lines.append('    return false;')
-            lines.append('  }')
-            for i, dv in enumerate(default_vals):
-                lines.append('  msg->{}.value[{}] = {};'.format(
-                    member.name, i, value_to_c(vt, dv)))
-            lines.append('}')
-        elif member.has_annotation('default') and isinstance(vt, (AbstractString, AbstractWString)):
-            default_vals = literal_eval(member.get_annotation_value('default')['value'])
-            lines.append('{')
-            lines.append('  bool success = {}__resize(&msg->{}, {}U);'.format(
-                field_tn, member.name, len(default_vals)))
-            lines.append('  if (!success) {')
-            lines.append('    {}__fini(msg);'.format(message_typename))
-            lines.append('    return false;')
-            lines.append('  }')
-            for i, dv in enumerate(default_vals):
-                lines.append('  success = rosidl_runtime_c__experimental__{}__assign(&msg->{}.value[{}], {});'.format(
-                    'WString' if isinstance(vt, AbstractWString) else 'String',
-                    member.name, i, value_to_c(vt, dv)))
-                lines.append('  if (!success) {')
-                lines.append('    {}__fini(msg);'.format(message_typename))
-                lines.append('    return false;')
-                lines.append('  }')
-            lines.append('}')
 
     lines.append('')
 
@@ -234,14 +208,8 @@ for line in lines:
   return true;
 }
 
-bool
-@(message_typename)__init(@(message_typename) * msg)
-{
-  return @(message_typename)__init_with_allocator(msg, NULL);
-}
-
-@# __init_from_storage
-bool
+@# __init_from_storage (must come first, called by __init_with_options)
+static bool
 @(message_typename)__init_from_storage(
   @(message_typename) * msg,
   const @(message_typename)__ExternalStorage * storage)
@@ -258,78 +226,80 @@ for member in message.structure.members:
     lines.append('// ' + member.name)
 
     if isinstance(type_, BasicType):
-        lines.append('if (!{}__init_from_memory(&msg->{}, storage->members.{})) {{'.format(
-            field_tn, member.name, member.name))
-        lines.append('  {}__fini(msg);'.format(message_typename))
-        lines.append('  return false;')
+        lines.append('{')
+        lines.append('  rosidl_scalar_init_options_t _opts = {')
+        lines.append('    .external_memory = &storage->members.{},'.format(member.name))
+        lines.append('    .reserved = {NULL, NULL, NULL, NULL}')
+        lines.append('  };')
+        lines.append('  if (!{}__init_with_options(&msg->{}, &_opts)) {{'.format(
+            field_tn, member.name))
+        lines.append('    {}__fini(msg);'.format(message_typename))
+        lines.append('    return false;')
+        lines.append('  }')
         lines.append('}')
-        if member.has_annotation('default'):
-            dv = member.get_annotation_value('default')['value']
-            lines.append('msg->{}.value->data = {};'.format(member.name, value_to_c(type_, dv)))
 
     elif isinstance(type_, (AbstractString, AbstractWString)):
+        lines.append('{')
+        lines.append('  rosidl_string_init_options_t _opts = {')
+        lines.append('    .allocator = NULL,')
+        lines.append('    .external_storage = &storage->members.{},'.format(member.name))
+        lines.append('    .reserved = {NULL, NULL, NULL, NULL}')
+        lines.append('  };')
         if type_.has_maximum_size():
-            lines.append('if (!{}__init_from_region(&msg->{}, {}U, storage->members.{})) {{'.format(
-                field_tn, member.name, type_.maximum_size, member.name))
+            lines.append('  if (!{}__init_with_options(&msg->{}, {}U, &_opts)) {{'.format(
+                field_tn, member.name, type_.maximum_size))
         else:
-            lines.append('if (!{}__init_from_region(&msg->{}, storage->members.{})) {{'.format(
-                field_tn, member.name, member.name))
-        lines.append('  {}__fini(msg);'.format(message_typename))
-        lines.append('  return false;')
+            lines.append('  if (!{}__init_with_options(&msg->{}, &_opts)) {{'.format(
+                field_tn, member.name))
+        lines.append('    {}__fini(msg);'.format(message_typename))
+        lines.append('    return false;')
+        lines.append('  }')
         lines.append('}')
-        if member.has_annotation('default'):
-            dv = member.get_annotation_value('default')['value']
-            lines.append('if (!{}__assign(&msg->{}, {})) {{'.format(field_tn, member.name, value_to_c(type_, dv)))
-            lines.append('  {}__fini(msg);'.format(message_typename))
-            lines.append('  return false;')
-            lines.append('}')
 
     elif isinstance(type_, NamespacedType):
         sub_tn = idl_structure_type_to_experimental_c_typename(type_)
-        lines.append('if (!{}__init_from_storage(&msg->{}, &storage->members.{})) {{'.format(
-            sub_tn, member.name, member.name))
-        lines.append('  {}__fini(msg);'.format(message_typename))
-        lines.append('  return false;')
+        lines.append('{')
+        lines.append('  {}__InitOptions _opts = {{'.format(sub_tn))
+        lines.append('    .init_mode = ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_SKIP,')
+        lines.append('    .allocator = NULL,')
+        lines.append('    .external_storage = &storage->members.{},'.format(member.name))
+        lines.append('    .reserved = {NULL, NULL, NULL, NULL}')
+        lines.append('  };')
+        lines.append('  if (!{}__init_with_options(&msg->{}, &_opts)) {{'.format(sub_tn, member.name))
+        lines.append('    {}__fini(msg);'.format(message_typename))
+        lines.append('    return false;')
+        lines.append('  }')
         lines.append('}')
 
     elif isinstance(type_, Array):
         vt = type_.value_type
         if isinstance(vt, BasicType):
-            lines.append('if (!{}__init_from_region(&msg->{}, storage->members.{})) {{'.format(
-                field_tn, member.name, member.name))
-            lines.append('  {}__fini(msg);'.format(message_typename))
-            lines.append('  return false;')
+            lines.append('{')
+            lines.append('  rosidl_primitive_array_init_options_t _opts = {')
+            lines.append('    .external_storage = &storage->members.{},'.format(member.name))
+            lines.append('    .reserved = {NULL, NULL, NULL, NULL}')
+            lines.append('  };')
+            lines.append('  if (!{}__init_with_options(&msg->{}, &_opts)) {{'.format(
+                field_tn, member.name))
+            lines.append('    {}__fini(msg);'.format(message_typename))
+            lines.append('    return false;')
+            lines.append('  }')
             lines.append('}')
         else:
-            # ARRAY: per-element external storage.
-            # First initialize the array wrapper itself
+            # Complex element arrays: use InitOptions with external storage
+            lines.append('{')
+            lines.append('  {}__InitOptions _opts = {{'.format(field_tn))
+            lines.append('    .element_allocator = NULL,')
+            lines.append('    .external_element_storage = storage->members.{},'.format(member.name))
+            lines.append('    .external_storage = NULL,')
+            lines.append('    .reserved = {NULL, NULL, NULL, NULL}')
+            lines.append('  };')
             if isinstance(vt, (AbstractString, AbstractWString)) and vt.has_maximum_size():
-                # Bounded element array needs element_bound parameter
-                lines.append('if (!{}__init(&msg->{}, {}U)) {{'.format(field_tn, member.name, vt.maximum_size))
+                lines.append('  if (!{}__init_with_options(&msg->{}, {}U, &_opts)) {{'.format(
+                    field_tn, member.name, vt.maximum_size))
             else:
-                lines.append('if (!{}__init(&msg->{})) {{'.format(field_tn, member.name))
-            lines.append('  {}__fini(msg);'.format(message_typename))
-            lines.append('  return false;')
-            lines.append('}')
-            # Then initialize each element with external storage
-            # String/WString elements expose __init_from_region(elem, region).
-            # NamespacedType elements expose __init_from_storage(elem, storage).
-            lines.append('for (size_t i = 0U; i < {}U; ++i) {{'.format(type_.size))
-            if isinstance(vt, NamespacedType):
-                sub_tn = idl_structure_type_to_experimental_c_typename(vt)
-                lines.append('  if (!{}__init_from_storage(&msg->{}.value->data[i],'.format(
-                    sub_tn, member.name))
-                lines.append('                             &storage->members.{}[i]))'.format(member.name))
-            else:
-                elem_type = experimental_element_c_type(message_typename, member.name, vt)
-                if isinstance(vt, (AbstractString, AbstractWString)) and vt.has_maximum_size():
-                    lines.append('  if (!{}__init_from_region(&msg->{}.value->data[i], {}U,'.format(
-                        elem_type, member.name, vt.maximum_size))
-                else:
-                    lines.append('  if (!{}__init_from_region(&msg->{}.value->data[i],'.format(
-                        elem_type, member.name))
-                lines.append('                            storage->members.{}[i]))'.format(member.name))
-            lines.append('  {')
+                lines.append('  if (!{}__init_with_options(&msg->{}, &_opts)) {{'.format(
+                    field_tn, member.name))
             lines.append('    {}__fini(msg);'.format(message_typename))
             lines.append('    return false;')
             lines.append('  }')
@@ -338,38 +308,53 @@ for member in message.structure.members:
     elif isinstance(type_, AbstractSequence):
         vt = type_.value_type
         if isinstance(vt, BasicType):
-            # Primitive sequence: pass bounds if bounded
+            # Primitive sequence: use InitOptions with external storage
+            lines.append('{')
+            lines.append('  rosidl_primitive_sequence_init_options_t _opts = {')
+            lines.append('    .allocator = NULL,')
+            lines.append('    .external_storage = &storage->members.{},'.format(member.name))
+            lines.append('    .reserved = {NULL, NULL, NULL, NULL}')
+            lines.append('  };')
             if isinstance(type_, BoundedSequence):
-                lines.append('if (!{}__init_from_region(&msg->{}, {}U, storage->members.{})) {{'.format(
-                    field_tn, member.name, type_.maximum_size, member.name))
+                lines.append('  if (!{}__init_with_options(&msg->{}, {}U, &_opts)) {{'.format(
+                    field_tn, member.name, type_.maximum_size))
             else:
-                lines.append('if (!{}__init_from_region(&msg->{}, storage->members.{})) {{'.format(
-                    field_tn, member.name, member.name))
-            lines.append('  {}__fini(msg);'.format(message_typename))
-            lines.append('  return false;')
+                lines.append('  if (!{}__init_with_options(&msg->{}, &_opts)) {{'.format(
+                    field_tn, member.name))
+            lines.append('    {}__fini(msg);'.format(message_typename))
+            lines.append('    return false;')
+            lines.append('  }')
             lines.append('}')
         else:
-            # Complex element sequence: use region + element storage pool
+            # Complex element sequence: use InitOptions with region + element storage pool
+            lines.append('{')
+            lines.append('  {}__InitOptions _opts = {{'.format(field_tn))
+            lines.append('    .allocator = NULL,')
+            lines.append('    .external_element_storage = storage->members.{}.element_storage_pool,'.format(member.name))
+            lines.append('    .external_storage = &storage->members.{}.region,'.format(member.name))
+            lines.append('    .reserved = {NULL, NULL, NULL, NULL}')
+            lines.append('  };')
             # Pass bounds based on sequence and element types
-            lines.append('if (!{}__init_region_storage(&msg->{},'.format(field_tn, member.name))
             if isinstance(type_, BoundedSequence):
                 if isinstance(vt, (AbstractString, AbstractWString)) and vt.has_maximum_size():
                     # Bounded sequence of bounded strings: sequence_bound, element_bound
-                    lines.append('    {}U, {}U,'.format(type_.maximum_size, vt.maximum_size))
+                    lines.append('  if (!{}__init_with_options(&msg->{}, {}U, {}U, &_opts)) {{'.format(
+                        field_tn, member.name, type_.maximum_size, vt.maximum_size))
                 else:
                     # Bounded sequence of other complex types: just sequence_bound
-                    lines.append('    {}U,'.format(type_.maximum_size))
+                    lines.append('  if (!{}__init_with_options(&msg->{}, {}U, &_opts)) {{'.format(
+                        field_tn, member.name, type_.maximum_size))
             else:  # UnboundedSequence
                 if isinstance(vt, (AbstractString, AbstractWString)) and vt.has_maximum_size():
                     # Unbounded sequence of bounded strings: element_bound
-                    lines.append('    {}U,'.format(vt.maximum_size))
-                # else: no bounds for unbounded sequence of unbounded elements
-            lines.append('    storage->members.{}.region,'.format(member.name))
-            lines.append('    storage->members.{}.element_storage_pool,'.format(member.name))
-            lines.append('    storage->members.{}.element_storage_pool_size))'.format(member.name))
-            lines.append('{')
-            lines.append('  {}__fini(msg);'.format(message_typename))
-            lines.append('  return false;')
+                    lines.append('  if (!{}__init_with_options(&msg->{}, {}U, &_opts)) {{'.format(
+                        field_tn, member.name, vt.maximum_size))
+                else:
+                    # Unbounded sequence of other types: no bounds
+                    lines.append('  if (!{}__init_with_options(&msg->{}, &_opts)) {{'.format(field_tn, member.name))
+            lines.append('    {}__fini(msg);'.format(message_typename))
+            lines.append('    return false;')
+            lines.append('  }')
             lines.append('}')
 
     lines.append('')
@@ -381,6 +366,272 @@ for line in lines:
         print('')
 }@
   return true;
+}
+
+@# __reset - Value initialization based on init_mode
+bool
+@(message_typename)__reset(
+  @(message_typename) * msg,
+  rosidl_runtime_c__experimental__message_initialization_t init_mode)
+{
+  if (!msg) {
+    return false;
+  }
+
+  // Early exit for SKIP mode
+  if (init_mode == ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_SKIP) {
+    return true;
+  }
+@{
+reset_lines = []
+for member in message.structure.members:
+    field_tn = experimental_field_typename(message_typename, member.name, member.type)
+    type_ = member.type
+    has_default = member.has_annotation('default')
+    
+    reset_lines.append('')
+    reset_lines.append('// ' + member.name)
+    
+    if isinstance(type_, BasicType):
+        # BasicType fields
+        if has_default:
+            default_val = value_to_c(type_, member.get_annotation_value('default')['value'])
+            reset_lines.append('switch (init_mode) {')
+            reset_lines.append('  case ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_ALL:')
+            reset_lines.append('  case ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_DEFAULTS_ONLY:')
+            reset_lines.append('    msg->{}.value->data = {};'.format(member.name, default_val))
+            reset_lines.append('    break;')
+            reset_lines.append('  case ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_ZERO:')
+            reset_lines.append('    msg->{}.value->data = 0;'.format(member.name))
+            reset_lines.append('    break;')
+            reset_lines.append('  default:')
+            reset_lines.append('    break;')
+            reset_lines.append('}')
+        else:
+            # No default: ALL and ZERO set to zero
+            reset_lines.append('if (init_mode == ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_ALL ||')
+            reset_lines.append('    init_mode == ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_ZERO) {')
+            reset_lines.append('  msg->{}.value->data = 0;'.format(member.name))
+            reset_lines.append('}')
+    
+    elif isinstance(type_, (AbstractString, AbstractWString)):
+        # String fields
+        if has_default:
+            default_val = value_to_c(type_, member.get_annotation_value('default')['value'])
+            reset_lines.append('switch (init_mode) {')
+            reset_lines.append('  case ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_ALL:')
+            reset_lines.append('  case ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_DEFAULTS_ONLY:')
+            reset_lines.append('    if (!{}__assign(&msg->{}, {})) {{'.format(field_tn, member.name, default_val))
+            reset_lines.append('      return false;')
+            reset_lines.append('    }')
+            reset_lines.append('    break;')
+            reset_lines.append('  case ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_ZERO:')
+            reset_lines.append('    msg->{}.value[0] = \'\\0\';'.format(member.name))
+            reset_lines.append('    msg->{}.size = 0;'.format(member.name))
+            reset_lines.append('    break;')
+            reset_lines.append('  default:')
+            reset_lines.append('    break;')
+            reset_lines.append('}')
+        else:
+            # No default: ALL and ZERO set to empty string
+            reset_lines.append('if (init_mode == ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_ALL ||')
+            reset_lines.append('    init_mode == ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_ZERO) {')
+            reset_lines.append('  msg->{}.value[0] = \'\\0\';'.format(member.name))
+            reset_lines.append('  msg->{}.size = 0;'.format(member.name))
+            reset_lines.append('}')
+    
+    elif isinstance(type_, NamespacedType):
+        # Sub-message: always propagate init_mode recursively
+        sub_tn = idl_structure_type_to_experimental_c_typename(type_)
+        reset_lines.append('if (!{}__reset(&msg->{}, init_mode)) {{'.format(sub_tn, member.name))
+        reset_lines.append('  return false;')
+        reset_lines.append('}')
+    
+    elif isinstance(type_, Array):
+        vt = type_.value_type
+        if isinstance(vt, BasicType):
+            # Array of BasicType
+            if has_default:
+                default_vals = literal_eval(member.get_annotation_value('default')['value'])
+                reset_lines.append('switch (init_mode) {')
+                reset_lines.append('  case ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_ALL:')
+                reset_lines.append('  case ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_DEFAULTS_ONLY:')
+                for i, dv in enumerate(default_vals):
+                    reset_lines.append('    msg->{}.value->data[{}] = {};'.format(
+                        member.name, i, value_to_c(vt, dv)))
+                reset_lines.append('    break;')
+                reset_lines.append('  case ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_ZERO:')
+                reset_lines.append('    for (size_t i = 0; i < {}U; ++i) {{'.format(type_.size))
+                reset_lines.append('      msg->{}.value->data[i] = 0;'.format(member.name))
+                reset_lines.append('    }')
+                reset_lines.append('    break;')
+                reset_lines.append('  default:')
+                reset_lines.append('    break;')
+                reset_lines.append('}')
+            else:
+                # No default
+                reset_lines.append('if (init_mode == ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_ALL ||')
+                reset_lines.append('    init_mode == ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_ZERO) {')
+                reset_lines.append('  for (size_t i = 0; i < {}U; ++i) {{'.format(type_.size))
+                reset_lines.append('    msg->{}.value->data[i] = 0;'.format(member.name))
+                reset_lines.append('  }')
+                reset_lines.append('}')
+        elif isinstance(vt, (AbstractString, AbstractWString)):
+            # Array of Strings
+            elem_type = experimental_element_c_type(message_typename, member.name, vt)
+            if has_default:
+                default_vals = literal_eval(member.get_annotation_value('default')['value'])
+                reset_lines.append('switch (init_mode) {')
+                reset_lines.append('  case ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_ALL:')
+                reset_lines.append('  case ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_DEFAULTS_ONLY:')
+                for i, dv in enumerate(default_vals):
+                    reset_lines.append('    if (!{}__assign(&msg->{}.value->data[{}], {})) {{'.format(
+                        elem_type, member.name, i, value_to_c(vt, dv)))
+                    reset_lines.append('      return false;')
+                    reset_lines.append('    }')
+                reset_lines.append('    break;')
+                reset_lines.append('  case ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_ZERO:')
+                reset_lines.append('    for (size_t i = 0; i < {}U; ++i) {{'.format(type_.size))
+                reset_lines.append('      msg->{}.value->data[i].value[0] = \'\\0\';'.format(member.name))
+                reset_lines.append('      msg->{}.value->data[i].size = 0;'.format(member.name))
+                reset_lines.append('    }')
+                reset_lines.append('    break;')
+                reset_lines.append('  default:')
+                reset_lines.append('    break;')
+                reset_lines.append('}')
+            else:
+                # No default
+                reset_lines.append('if (init_mode == ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_ALL ||')
+                reset_lines.append('    init_mode == ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_ZERO) {')
+                reset_lines.append('  for (size_t i = 0; i < {}U; ++i) {{'.format(type_.size))
+                reset_lines.append('    msg->{}.value->data[i].value[0] = \'\\0\';'.format(member.name))
+                reset_lines.append('    msg->{}.value->data[i].size = 0;'.format(member.name))
+                reset_lines.append('  }')
+                reset_lines.append('}')
+        elif isinstance(vt, NamespacedType):
+            # Array of sub-messages: propagate to all elements
+            sub_tn = idl_structure_type_to_experimental_c_typename(vt)
+            reset_lines.append('for (size_t i = 0; i < {}U; ++i) {{'.format(type_.size))
+            reset_lines.append('  if (!{}__reset(&msg->{}.value->data[i], init_mode)) {{'.format(sub_tn, member.name))
+            reset_lines.append('    return false;')
+            reset_lines.append('  }')
+            reset_lines.append('}')
+    
+    elif isinstance(type_, AbstractSequence):
+        vt = type_.value_type
+        if isinstance(vt, BasicType):
+            # Sequence of BasicType
+            if has_default:
+                default_vals = literal_eval(member.get_annotation_value('default')['value'])
+                reset_lines.append('switch (init_mode) {')
+                reset_lines.append('  case ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_ALL:')
+                reset_lines.append('  case ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_DEFAULTS_ONLY:')
+                reset_lines.append('    if (!{}__resize(&msg->{}, {}U)) {{'.format(
+                    field_tn, member.name, len(default_vals)))
+                reset_lines.append('      return false;')
+                reset_lines.append('    }')
+                for i, dv in enumerate(default_vals):
+                    reset_lines.append('    msg->{}.value[{}] = {};'.format(
+                        member.name, i, value_to_c(vt, dv)))
+                reset_lines.append('    break;')
+                reset_lines.append('  default:')
+                reset_lines.append('    break;')
+                reset_lines.append('}')
+            # No else: empty sequence is the zero state, already set structurally
+        elif isinstance(vt, (AbstractString, AbstractWString)):
+            # Sequence of Strings
+            string_type = 'WString' if isinstance(vt, AbstractWString) else 'String'
+            if has_default:
+                default_vals = literal_eval(member.get_annotation_value('default')['value'])
+                reset_lines.append('switch (init_mode) {')
+                reset_lines.append('  case ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_ALL:')
+                reset_lines.append('  case ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_DEFAULTS_ONLY:')
+                reset_lines.append('    if (!{}__resize(&msg->{}, {}U)) {{'.format(
+                    field_tn, member.name, len(default_vals)))
+                reset_lines.append('      return false;')
+                reset_lines.append('    }')
+                for i, dv in enumerate(default_vals):
+                    reset_lines.append('    if (!rosidl_runtime_c__experimental__{}__assign(&msg->{}.value[{}], {})) {{'.format(
+                        string_type, member.name, i, value_to_c(vt, dv)))
+                    reset_lines.append('      return false;')
+                    reset_lines.append('    }')
+                reset_lines.append('    break;')
+                reset_lines.append('  default:')
+                reset_lines.append('    break;')
+                reset_lines.append('}')
+            # No else: empty sequence is the zero state
+        elif isinstance(vt, NamespacedType):
+            # Sequence of sub-messages: propagate to existing elements
+            sub_tn = idl_structure_type_to_experimental_c_typename(vt)
+            reset_lines.append('for (size_t i = 0; i < msg->{}.size; ++i) {{'.format(member.name))
+            reset_lines.append('  if (!{}__reset(&msg->{}.value[i], init_mode)) {{'.format(sub_tn, member.name))
+            reset_lines.append('    return false;')
+            reset_lines.append('  }')
+            reset_lines.append('}')
+
+for line in reset_lines:
+    if line:
+        print('  ' + line)
+    else:
+        print('')
+}@
+  return true;
+}
+
+@# __init_with_options
+bool
+@(message_typename)__init_with_options(
+  @(message_typename) * msg,
+  const @(message_typename)__InitOptions * options)
+{
+  if (!msg) {
+    return false;
+  }
+
+  // Determine init_mode (default to ALL if not specified)
+  rosidl_runtime_c__experimental__message_initialization_t init_mode =
+    ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_ALL;
+  if (options && options->init_mode != 0) {
+    init_mode = options->init_mode;
+  }
+
+  // Clear external storage flag initially
+  msg->_has_external_storage = false;
+
+  // Phase 1: Structural initialization
+  bool success;
+  if (options && options->external_storage) {
+    // Copy external storage into message (embedded copy)
+    msg->_external_storage = *options->external_storage;
+    msg->_has_external_storage = true;
+    
+    // Initialize from the embedded copy
+    success = @(message_typename)__init_from_storage(msg, &msg->_external_storage);
+  } else {
+    // Otherwise use allocator-based initialization
+    const rcutils_allocator_t * allocator = 
+      (options && options->allocator) ? options->allocator : NULL;
+    success = @(message_typename)__init_with_allocator(msg, allocator);
+  }
+
+  if (!success) {
+    return false;
+  }
+
+  // Phase 2: Value initialization based on init_mode
+  if (!@(message_typename)__reset(msg, init_mode)) {
+    @(message_typename)__fini(msg);
+    return false;
+  }
+
+  return true;
+}
+
+@# __init
+bool
+@(message_typename)__init(@(message_typename) * msg)
+{
+  return @(message_typename)__init_with_options(msg, NULL);
 }
 
 @# __fini
@@ -416,6 +667,8 @@ for line in lines:
     else:
         print('')
 }@
+  // Clear external storage flag
+  msg->_has_external_storage = false;
   return;
 }
 
@@ -429,7 +682,7 @@ for line in lines:
   if (!msg) {
     return NULL;
   }
-  if (!@(message_typename)__init_with_allocator(msg, &alloc)) {
+  if (!@(message_typename)__init(msg)) {
     alloc.deallocate(msg, alloc.state);
     return NULL;
   }

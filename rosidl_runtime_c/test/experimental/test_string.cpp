@@ -36,9 +36,15 @@ struct StringWrapper;
     using bounded_type = BOUNDED_T; \
     static constexpr size_t bound = BOUND; \
     static bool init(STR_T * s, const rcutils_allocator_t * a) \
-    {return STR_T ## __init_with_allocator(s, a);} \
+    { \
+      STR_T ## __InitOptions opts = {.allocator = a, .external_storage = NULL, .reserved = {NULL, NULL, NULL, NULL}}; \
+      return STR_T ## __init_with_options(s, &opts); \
+    } \
     static bool init_from_region(STR_T * s, rosidl_memory_region_t r) \
-    {return STR_T ## __init_from_region(s, r);} \
+    { \
+      STR_T ## __InitOptions opts = {.allocator = NULL, .external_storage = &r, .reserved = {NULL, NULL, NULL, NULL}}; \
+      return STR_T ## __init_with_options(s, &opts); \
+    } \
     static void fini(STR_T * s) \
     {STR_T ## __fini(s);} \
     static bool assignn(STR_T * s, const auto * v, size_t n) \
@@ -54,9 +60,15 @@ struct StringWrapper;
     static bool copy(const STR_T * in, STR_T * out) \
     {return STR_T ## __copy(in, out);} \
     static bool bounded_init(BOUNDED_T * s, const rcutils_allocator_t * a) \
-    {return BOUNDED_T ## __init_with_allocator(s, BOUND, a);} \
+    { \
+      BOUNDED_T ## __InitOptions opts = {.allocator = a, .external_storage = NULL, .reserved = {NULL, NULL, NULL, NULL}}; \
+      return BOUNDED_T ## __init_with_options(s, BOUND, &opts); \
+    } \
     static bool bounded_init_from_region(BOUNDED_T * s, rosidl_memory_region_t r) \
-    {return BOUNDED_T ## __init_from_region(s, BOUND, r);} \
+    { \
+      BOUNDED_T ## __InitOptions opts = {.allocator = NULL, .external_storage = &r, .reserved = {NULL, NULL, NULL, NULL}}; \
+      return BOUNDED_T ## __init_with_options(s, BOUND, &opts); \
+    } \
     static void bounded_fini(BOUNDED_T * s) \
     {BOUNDED_T ## __fini(s);} \
     static bool bounded_assignn(BOUNDED_T * s, const auto * v, size_t n) \

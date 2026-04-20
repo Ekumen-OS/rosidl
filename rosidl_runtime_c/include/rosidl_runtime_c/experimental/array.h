@@ -848,7 +848,7 @@ typedef struct rosidl_primitive_array_init_options_s
   ELEMENT_TYPE ## __Array__ ## OPERATION((ELEMENT_TYPE ## __Array *)(ARRAY_PTR), __VA_ARGS__)
 
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_DISPATCH_2(ELEMENT_TYPE, OPERATION, LHS_ARRAY_PTR, RHS_ARRAY_PTR, ...) \
-  ELEMENT_TYPE ## __Array__ ## OPERATION((ELEMENT_TYPE ## __Array *)(LHS_ARRAY_PTR), (const ELEMENT_TYPE ## __Array *)(RHS_ARRAY_PTR), __VA_ARGS__)
+  ELEMENT_TYPE ## __Array__ ## OPERATION((ELEMENT_TYPE ## __Array *)(LHS_ARRAY_PTR), (ELEMENT_TYPE ## __Array *)(RHS_ARRAY_PTR), __VA_ARGS__)
 
 /// @brief Declare a fixed-size typed array of objects, dispatching to
 /// ELEMENT_TYPE ## Array structure operations.
