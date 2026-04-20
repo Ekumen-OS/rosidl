@@ -15,9 +15,10 @@
 #include "rosidl_runtime_c/experimental/string.h"
 
 // Unbounded strings
-ROSIDL_RUNTIME_C__EXPERIMENTAL__BASIC_STRING_DEFINE(rosidl_runtime_c__experimental__String, char);
-ROSIDL_RUNTIME_C__EXPERIMENTAL__BASIC_STRING_DEFINE(rosidl_runtime_c__experimental__WString,
-  char16_t);
+ROSIDL_RUNTIME_C__EXPERIMENTAL__BASIC_STRING_DEFINE(
+  rosidl_runtime_c__experimental__String, char);
+ROSIDL_RUNTIME_C__EXPERIMENTAL__BASIC_STRING_DEFINE(
+  rosidl_runtime_c__experimental__WString, char16_t);
 
 // Bounded strings
 ROSIDL_RUNTIME_C__EXPERIMENTAL__BASIC_BOUNDED_STRING_DEFINE(

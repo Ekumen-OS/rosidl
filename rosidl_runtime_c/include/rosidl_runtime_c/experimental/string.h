@@ -22,6 +22,7 @@
 
 #include "rcutils/allocator.h"
 #include "rosidl_runtime_c/experimental/detail/value_helpers.h"
+#include "rosidl_runtime_c/experimental/initialization.h"
 #include "rosidl_runtime_c/experimental/memory.h"
 #include "rosidl_runtime_c/experimental/storage.h"
 
@@ -35,8 +36,25 @@ extern "C"
 
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__INLINE_STRING_CAPACITY 63U
 
+/// @brief Initialization options for experimental strings.
+///
+/// Provides control over allocation and external storage for string initialization.
+typedef struct rosidl_string_init_options_s
+{
+  /// Optional allocator (NULL to use default allocator).
+  const rcutils_allocator_t * allocator;
+  
+  /// Optional external storage region (NULL for heap allocation).
+  const rosidl_memory_region_t * external_storage;
+  
+  /// Reserved for future expansion (must be NULL).
+  void * reserved[4];
+} rosidl_string_init_options_t;
+
 /// @brief Declare a bounded basic string wrapper and function signatures.
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__BASIC_BOUNDED_STRING_DECLARE(STRUCT_NAME, CHAR_TYPE) \
+  typedef rosidl_string_init_options_t STRUCT_NAME ## __InitOptions; \
+  typedef rosidl_memory_region_t STRUCT_NAME ## __ExternalStorage; \
   typedef struct STRUCT_NAME ## _s \
   { \
     CHAR_TYPE * value; \
@@ -50,6 +68,7 @@ extern "C"
         struct { \
           CHAR_TYPE data[ROSIDL_RUNTIME_C__EXPERIMENTAL__INLINE_STRING_CAPACITY + 1U]; \
         } local; \
+        CHAR_TYPE * data; \
       } storage; \
       size_t capacity; \
       size_t upper_bound; \
@@ -59,18 +78,10 @@ extern "C"
   bool STRUCT_NAME ## __init( \
     STRUCT_NAME * _string, \
     size_t upper_bound); \
-  bool STRUCT_NAME ## __init_with_allocator( \
+  bool STRUCT_NAME ## __init_with_options( \
     STRUCT_NAME * _string, \
     size_t upper_bound, \
-    const rcutils_allocator_t * allocator); \
-  bool STRUCT_NAME ## __init_from_region( \
-    STRUCT_NAME * _string, \
-    size_t upper_bound, \
-    rosidl_memory_region_t region); \
-  bool STRUCT_NAME ## __init_from_storage( \
-    STRUCT_NAME * _string, \
-    size_t upper_bound, \
-    const rosidl_memory_region_t * storage); \
+    const STRUCT_NAME ## __InitOptions * options); \
   void STRUCT_NAME ## __fini( \
     STRUCT_NAME * _string); \
   bool STRUCT_NAME ## __reserve( \
@@ -99,6 +110,8 @@ extern "C"
 
 /// @brief Declare a basic string wrapper and function signatures.
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__BASIC_STRING_DECLARE(STRUCT_NAME, CHAR_TYPE) \
+  typedef rosidl_string_init_options_t STRUCT_NAME ## __InitOptions; \
+  typedef rosidl_memory_region_t STRUCT_NAME ## __ExternalStorage; \
   typedef struct STRUCT_NAME ## _s \
   { \
     CHAR_TYPE * value; \
@@ -112,6 +125,7 @@ extern "C"
         struct { \
           CHAR_TYPE data[ROSIDL_RUNTIME_C__EXPERIMENTAL__INLINE_STRING_CAPACITY + 1U]; \
         } local; \
+        CHAR_TYPE * data; \
       } storage; \
       size_t capacity; \
       rcutils_allocator_t allocator; \
@@ -119,15 +133,9 @@ extern "C"
   } STRUCT_NAME; \
   bool STRUCT_NAME ## __init( \
     STRUCT_NAME * _string); \
-  bool STRUCT_NAME ## __init_with_allocator( \
+  bool STRUCT_NAME ## __init_with_options( \
     STRUCT_NAME * _string, \
-    const rcutils_allocator_t * allocator); \
-  bool STRUCT_NAME ## __init_from_region( \
-    STRUCT_NAME * _string, \
-    rosidl_memory_region_t region); \
-  bool STRUCT_NAME ## __init_from_storage( \
-    STRUCT_NAME * _string, \
-    const rosidl_memory_region_t * storage); \
+    const STRUCT_NAME ## __InitOptions * options); \
   void STRUCT_NAME ## __fini( \
     STRUCT_NAME * _string); \
   bool STRUCT_NAME ## __reserve( \
@@ -158,27 +166,17 @@ extern "C"
 /// Generates a typedef and static inline forwarding functions for all string operations.
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__STRING_ALIAS(ALIAS_NAME, BASE_TYPE, CHAR_TYPE) \
   typedef BASE_TYPE ALIAS_NAME; \
+  typedef BASE_TYPE ## __InitOptions ALIAS_NAME ## __InitOptions; \
+  typedef BASE_TYPE ## __ExternalStorage ALIAS_NAME ## __ExternalStorage; \
   static inline bool ALIAS_NAME ## __init(ALIAS_NAME * _string) \
   { \
     return BASE_TYPE ## __init(_string); \
   } \
-  static inline bool ALIAS_NAME ## __init_with_allocator( \
+  static inline bool ALIAS_NAME ## __init_with_options( \
     ALIAS_NAME * _string, \
-    const rcutils_allocator_t * allocator) \
+    const ALIAS_NAME ## __InitOptions * options) \
   { \
-    return BASE_TYPE ## __init_with_allocator(_string, allocator); \
-  } \
-  static inline bool ALIAS_NAME ## __init_from_region( \
-    ALIAS_NAME * _string, \
-    rosidl_memory_region_t region) \
-  { \
-    return BASE_TYPE ## __init_from_region(_string, region); \
-  } \
-  static inline bool ALIAS_NAME ## __init_from_storage( \
-    ALIAS_NAME * _string, \
-    const rosidl_memory_region_t * storage) \
-  { \
-    return BASE_TYPE ## __init_from_storage(_string, storage); \
+    return BASE_TYPE ## __init_with_options(_string, options); \
   } \
   static inline void ALIAS_NAME ## __fini(ALIAS_NAME * _string) \
   { \
@@ -219,31 +217,18 @@ extern "C"
 /// Generates a typedef and static inline forwarding functions including upper_bound parameter.
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_STRING_ALIAS(ALIAS_NAME, BASE_TYPE, CHAR_TYPE) \
   typedef BASE_TYPE ALIAS_NAME; \
+  typedef BASE_TYPE ## __InitOptions ALIAS_NAME ## __InitOptions; \
   typedef BASE_TYPE ## __ExternalStorage ALIAS_NAME ## __ExternalStorage; \
   static inline bool ALIAS_NAME ## __init(ALIAS_NAME * _string, size_t upper_bound) \
   { \
     return BASE_TYPE ## __init(_string, upper_bound); \
   } \
-  static inline bool ALIAS_NAME ## __init_with_allocator( \
+  static inline bool ALIAS_NAME ## __init_with_options( \
     ALIAS_NAME * _string, \
     size_t upper_bound, \
-    const rcutils_allocator_t * allocator) \
+    const ALIAS_NAME ## __InitOptions * options) \
   { \
-    return BASE_TYPE ## __init_with_allocator(_string, upper_bound, allocator); \
-  } \
-  static inline bool ALIAS_NAME ## __init_from_region( \
-    ALIAS_NAME * _string, \
-    size_t upper_bound, \
-    rosidl_memory_region_t region) \
-  { \
-    return BASE_TYPE ## __init_from_region(_string, upper_bound, region); \
-  } \
-  static inline bool ALIAS_NAME ## __init_from_storage( \
-    ALIAS_NAME * _string, \
-    size_t upper_bound, \
-    const rosidl_memory_region_t * storage) \
-  { \
-    return BASE_TYPE ## __init_from_storage(_string, upper_bound, storage); \
+    return BASE_TYPE ## __init_with_options(_string, upper_bound, options); \
   } \
   static inline void ALIAS_NAME ## __fini(ALIAS_NAME * _string) \
   { \
@@ -282,7 +267,7 @@ extern "C"
 
 /// @brief Define basic string functions.
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__BASIC_BOUNDED_STRING_DEFINE(STRUCT_NAME, CHAR_TYPE) \
-  bool STRUCT_NAME ## __init_with_allocator( \
+  static bool STRUCT_NAME ## __init_with_allocator( \
     STRUCT_NAME * _string, \
     size_t upper_bound, \
     const rcutils_allocator_t * allocator) \
@@ -293,28 +278,28 @@ extern "C"
     _string->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__LOCAL; \
     _string->_impl.upper_bound = upper_bound; \
     _string->_impl.capacity = ROSIDL_RUNTIME_C__EXPERIMENTAL__INLINE_STRING_CAPACITY; \
-    if (_string->_impl.upper_bound > 0U && _string->_impl.capacity > _string->_impl.upper_bound) { \
+    if (_string->_impl.capacity > _string->_impl.upper_bound) { \
       _string->_impl.capacity = _string->_impl.upper_bound; \
     } \
-    _string->_impl.allocator = \
-      rosidl_runtime_c__experimental__detail__allocator_or_default(allocator); \
+    if (allocator != NULL) { \
+      if (!rcutils_allocator_is_valid(allocator)) { \
+        return false; \
+      } \
+      _string->_impl.allocator = *allocator; \
+    } else { \
+      _string->_impl.allocator = rcutils_get_default_allocator(); \
+    } \
     _string->value = _string->_impl.storage.local.data; \
     _string->size = 0U; \
     _string->value[0] = (CHAR_TYPE)0; \
     return true; \
   } \
-  bool STRUCT_NAME ## __init( \
-    STRUCT_NAME * _string, \
-    size_t upper_bound) \
-  { \
-    return STRUCT_NAME ## __init_with_allocator(_string, upper_bound, NULL); \
-  } \
-  bool STRUCT_NAME ## __init_from_region( \
+  static bool STRUCT_NAME ## __init_with_region( \
     STRUCT_NAME * _string, \
     size_t upper_bound, \
     rosidl_memory_region_t region) \
   { \
-    if (_string == NULL || region.location.address == NULL) { \
+    if (_string == NULL || !rosidl_memory_region_is_valid(&region)) { \
       return false; \
     } \
     if (region.size < sizeof(CHAR_TYPE)) { \
@@ -324,24 +309,31 @@ extern "C"
     _string->_impl.storage.region = region; \
     _string->_impl.upper_bound = upper_bound; \
     _string->_impl.capacity = (region.size / sizeof(CHAR_TYPE)) - 1U; \
-    if (_string->_impl.upper_bound > 0U && _string->_impl.capacity > _string->_impl.upper_bound) { \
+    if (_string->_impl.capacity > _string->_impl.upper_bound) { \
       _string->_impl.capacity = _string->_impl.upper_bound; \
     } \
-    _string->_impl.allocator = rcutils_get_default_allocator(); \
+    _string->_impl.allocator = rcutils_get_zero_initialized_allocator(); \
     _string->value = (CHAR_TYPE *)region.location.address; \
     _string->size = 0U; \
     _string->value[0] = (CHAR_TYPE)0; \
     return true; \
   } \
-  bool STRUCT_NAME ## __init_from_storage( \
+  bool STRUCT_NAME ## __init_with_options( \
     STRUCT_NAME * _string, \
     size_t upper_bound, \
-    const rosidl_memory_region_t * storage) \
+    const STRUCT_NAME ## __InitOptions * options) \
   { \
-    if (storage == NULL) { \
-      return false; \
+    if (options != NULL && options->external_storage != NULL) { \
+      return STRUCT_NAME ## __init_with_region(_string, upper_bound, *options->external_storage); \
     } \
-    return STRUCT_NAME ## __init_from_region(_string, upper_bound, *storage); \
+    const rcutils_allocator_t * allocator = (options != NULL) ? options->allocator : NULL; \
+    return STRUCT_NAME ## __init_with_allocator(_string, upper_bound, allocator); \
+  } \
+  bool STRUCT_NAME ## __init( \
+    STRUCT_NAME * _string, \
+    size_t upper_bound) \
+  { \
+    return STRUCT_NAME ## __init_with_options(_string, upper_bound, NULL); \
   } \
   void STRUCT_NAME ## __fini( \
     STRUCT_NAME * _string) \
@@ -350,19 +342,12 @@ extern "C"
       return; \
     } \
     if (_string->_impl.kind == ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__MANAGED && \
-      _string->_impl.storage.region.location.address != NULL) \
+      _string->_impl.storage.data != NULL) \
     { \
       _string->_impl.allocator.deallocate( \
-        _string->_impl.storage.region.location.address, _string->_impl.allocator.state); \
+        _string->_impl.storage.data, _string->_impl.allocator.state); \
     } \
-    _string->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__LOCAL; \
-    _string->_impl.capacity = ROSIDL_RUNTIME_C__EXPERIMENTAL__INLINE_STRING_CAPACITY; \
-    if (_string->_impl.upper_bound > 0U && _string->_impl.capacity > _string->_impl.upper_bound) { \
-      _string->_impl.capacity = _string->_impl.upper_bound; \
-    } \
-    _string->value = _string->_impl.storage.local.data; \
-    _string->size = 0U; \
-    _string->value[0] = (CHAR_TYPE)0; \
+    _string->value = NULL; \
   } \
   bool STRUCT_NAME ## __reserve( \
     STRUCT_NAME * _string, \
@@ -371,7 +356,7 @@ extern "C"
     if (_string == NULL) { \
       return false; \
     } \
-    if (_string->_impl.upper_bound > 0U && requested_capacity > _string->_impl.upper_bound) { \
+    if (requested_capacity > _string->_impl.upper_bound) { \
       return false; \
     } \
     if (requested_capacity <= _string->_impl.capacity) { \
@@ -388,22 +373,16 @@ extern "C"
     { \
       return false; \
     } \
-    void * new_buffer = _string->_impl.allocator.allocate( \
-        byte_count, _string->_impl.allocator.state); \
+    void * old_buffer = \
+      _string->_impl.kind == ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__MANAGED ? \
+      _string->_impl.storage.data : NULL; \
+    void * new_buffer = _string->_impl.allocator.reallocate( \
+        old_buffer, byte_count, _string->_impl.allocator.state); \
     if (new_buffer == NULL) { \
       return false; \
     } \
-    (void)memcpy(new_buffer, _string->value, (_string->size + 1U) * sizeof(CHAR_TYPE)); \
-    if (_string->_impl.kind == ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__MANAGED && \
-      _string->_impl.storage.region.location.address != NULL) \
-    { \
-      _string->_impl.allocator.deallocate( \
-        _string->_impl.storage.region.location.address, _string->_impl.allocator.state); \
-    } \
     _string->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__MANAGED; \
-    _string->_impl.storage.region.location.address = new_buffer; \
-    _string->_impl.storage.region.location.attributes = 0; \
-    _string->_impl.storage.region.size = byte_count; \
+    _string->_impl.storage.data = new_buffer; \
     _string->_impl.capacity = new_capacity; \
     _string->value = (CHAR_TYPE *)new_buffer; \
     return true; \
@@ -512,32 +491,33 @@ extern "C"
 
 /// @brief Define basic string functions.
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__BASIC_STRING_DEFINE(STRUCT_NAME, CHAR_TYPE) \
-  bool STRUCT_NAME ## __init_with_allocator( \
+  static bool STRUCT_NAME ## __init_with_allocator( \
     STRUCT_NAME * _string, \
     const rcutils_allocator_t * allocator) \
   { \
     if (_string == NULL) { \
       return false; \
     } \
+    if (allocator != NULL) { \
+      if (!rcutils_allocator_is_valid(allocator)) { \
+        return false; \
+      } \
+      _string->_impl.allocator = *allocator; \
+    } else { \
+      _string->_impl.allocator = rcutils_get_default_allocator(); \
+    } \
     _string->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__LOCAL; \
     _string->_impl.capacity = ROSIDL_RUNTIME_C__EXPERIMENTAL__INLINE_STRING_CAPACITY; \
-    _string->_impl.allocator = \
-      rosidl_runtime_c__experimental__detail__allocator_or_default(allocator); \
     _string->value = _string->_impl.storage.local.data; \
     _string->size = 0U; \
     _string->value[0] = (CHAR_TYPE)0; \
     return true; \
   } \
-  bool STRUCT_NAME ## __init( \
-    STRUCT_NAME * _string) \
-  { \
-    return STRUCT_NAME ## __init_with_allocator(_string, NULL); \
-  } \
-  bool STRUCT_NAME ## __init_from_region( \
+  static bool STRUCT_NAME ## __init_with_region( \
     STRUCT_NAME * _string, \
     rosidl_memory_region_t region) \
   { \
-    if (_string == NULL || region.location.address == NULL) { \
+    if (_string == NULL || !rosidl_memory_region_is_valid(&region)) { \
       return false; \
     } \
     if (region.size < sizeof(CHAR_TYPE)) { \
@@ -546,20 +526,26 @@ extern "C"
     _string->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__EXTERNAL; \
     _string->_impl.storage.region = region; \
     _string->_impl.capacity = (region.size / sizeof(CHAR_TYPE)) - 1U; \
-    _string->_impl.allocator = rcutils_get_default_allocator(); \
+    _string->_impl.allocator = rcutils_get_zero_initialized_allocator(); \
     _string->value = (CHAR_TYPE *)region.location.address; \
     _string->size = 0U; \
     _string->value[0] = (CHAR_TYPE)0; \
     return true; \
   } \
-  bool STRUCT_NAME ## __init_from_storage( \
+  bool STRUCT_NAME ## __init_with_options( \
     STRUCT_NAME * _string, \
-    const rosidl_memory_region_t * storage) \
+    const STRUCT_NAME ## __InitOptions * options) \
   { \
-    if (storage == NULL) { \
-      return false; \
+    if (options != NULL && options->external_storage != NULL) { \
+      return STRUCT_NAME ## __init_with_region(_string, *options->external_storage); \
     } \
-    return STRUCT_NAME ## __init_from_region(_string, *storage); \
+    const rcutils_allocator_t * allocator = (options != NULL) ? options->allocator : NULL; \
+    return STRUCT_NAME ## __init_with_allocator(_string, allocator); \
+  } \
+  bool STRUCT_NAME ## __init( \
+    STRUCT_NAME * _string) \
+  { \
+    return STRUCT_NAME ## __init_with_options(_string, NULL); \
   } \
   void STRUCT_NAME ## __fini( \
     STRUCT_NAME * _string) \
@@ -573,11 +559,7 @@ extern "C"
       _string->_impl.allocator.deallocate( \
         _string->_impl.storage.region.location.address, _string->_impl.allocator.state); \
     } \
-    _string->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__LOCAL; \
-    _string->_impl.capacity = ROSIDL_RUNTIME_C__EXPERIMENTAL__INLINE_STRING_CAPACITY; \
-    _string->value = _string->_impl.storage.local.data; \
-    _string->size = 0U; \
-    _string->value[0] = (CHAR_TYPE)0; \
+    _string->value = NULL; \
   } \
   bool STRUCT_NAME ## __reserve( \
     STRUCT_NAME * _string, \
@@ -600,22 +582,16 @@ extern "C"
     { \
       return false; \
     } \
-    void * new_buffer = _string->_impl.allocator.allocate( \
-        byte_count, _string->_impl.allocator.state); \
+    void * old_buffer = \
+      _string->_impl.kind == ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__MANAGED ? \
+      _string->_impl.storage.data : NULL; \
+    void * new_buffer = _string->_impl.allocator.reallocate( \
+        old_buffer, byte_count, _string->_impl.allocator.state); \
     if (new_buffer == NULL) { \
       return false; \
     } \
-    (void)memcpy(new_buffer, _string->value, (_string->size + 1U) * sizeof(CHAR_TYPE)); \
-    if (_string->_impl.kind == ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__MANAGED && \
-      _string->_impl.storage.region.location.address != NULL) \
-    { \
-      _string->_impl.allocator.deallocate( \
-        _string->_impl.storage.region.location.address, _string->_impl.allocator.state); \
-    } \
     _string->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__MANAGED; \
-    _string->_impl.storage.region.location.address = new_buffer; \
-    _string->_impl.storage.region.location.attributes = 0; \
-    _string->_impl.storage.region.size = byte_count; \
+    _string->_impl.storage.data = new_buffer; \
     _string->_impl.capacity = new_capacity; \
     _string->value = (CHAR_TYPE *)new_buffer; \
     return true; \
@@ -741,18 +717,6 @@ ROSIDL_RUNTIME_C__EXPERIMENTAL__BASIC_BOUNDED_STRING_DECLARE(
   rosidl_runtime_c__experimental__BoundedString, char);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__BASIC_BOUNDED_STRING_DECLARE(
   rosidl_runtime_c__experimental__BoundedWString, char16_t);
-
-/// @brief External storage type for String initialization.
-typedef rosidl_memory_region_t rosidl_runtime_c__experimental__String__ExternalStorage;
-
-/// @brief External storage type for WString initialization.
-typedef rosidl_memory_region_t rosidl_runtime_c__experimental__WString__ExternalStorage;
-
-/// @brief External storage type for BoundedString initialization.
-typedef rosidl_memory_region_t rosidl_runtime_c__experimental__BoundedString__ExternalStorage;
-
-/// @brief External storage type for BoundedWString initialization.
-typedef rosidl_memory_region_t rosidl_runtime_c__experimental__BoundedWString__ExternalStorage;
 
 #ifdef __cplusplus
 }

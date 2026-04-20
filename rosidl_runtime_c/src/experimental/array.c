@@ -47,3 +47,8 @@ ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_STRUCTURE_DEFINE(
   rosidl_runtime_c__experimental__String);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_STRUCTURE_DEFINE(
   rosidl_runtime_c__experimental__WString);
+
+ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_ARRAY_STRUCTURE_DEFINE(
+  rosidl_runtime_c__experimental__BoundedString);
+ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_ARRAY_STRUCTURE_DEFINE(
+  rosidl_runtime_c__experimental__BoundedWString);

@@ -35,9 +35,25 @@ extern "C"
 /// @file
 /// @brief Experimental C11 sequence wrapper macros.
 
+/// @brief Initialization options for experimental sequences.
+///
+/// Provides control over allocation, capacity, and external storage for sequence initialization.
+typedef struct rosidl_primitive_sequence_init_options_s
+{
+  /// Optional allocator (NULL to use default allocator).
+  const rcutils_allocator_t * allocator;
+
+  /// Optional external storage region for sequence backing buffer (NULL for heap allocation).
+  const rosidl_memory_region_t * external_storage;
+
+  /// Reserved for future expansion (must be NULL).
+  void * reserved[4];
+} rosidl_primitive_sequence_init_options_t;
+
 /// @brief Declare a bounded dynamic typed sequence wrapper and function signatures.
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_BOUNDED_SEQUENCE_DECLARE( \
     STRUCT_NAME, VALUE_TYPE) \
+  typedef rosidl_primitive_sequence_init_options_t STRUCT_NAME ## __InitOptions; \
   typedef struct STRUCT_NAME ## _s \
   { \
     VALUE_TYPE * value; \
@@ -51,21 +67,17 @@ extern "C"
         rosidl_memory_region_t region; \
         VALUE_TYPE * data; \
       } storage; \
-      size_t upper_bound; \
       rcutils_allocator_t allocator; \
+      size_t upper_bound; \
     } _impl; \
   } STRUCT_NAME; \
   bool STRUCT_NAME ## __init( \
     STRUCT_NAME * _sequence, \
     size_t upper_bound); \
-  bool STRUCT_NAME ## __init_with_allocator( \
+  bool STRUCT_NAME ## __init_with_options( \
     STRUCT_NAME * _sequence, \
     size_t upper_bound, \
-    const rcutils_allocator_t * allocator); \
-  bool STRUCT_NAME ## __init_from_region( \
-    STRUCT_NAME * _sequence, \
-    size_t upper_bound, \
-    rosidl_memory_region_t region); \
+    const STRUCT_NAME ## __InitOptions * options); \
   void STRUCT_NAME ## __fini( \
     STRUCT_NAME * _sequence); \
   bool STRUCT_NAME ## __reserve( \
@@ -86,6 +98,7 @@ extern "C"
 
 /// @brief Declare a dynamic typed sequence wrapper and function signatures.
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_SEQUENCE_DECLARE(STRUCT_NAME, VALUE_TYPE) \
+  typedef rosidl_primitive_sequence_init_options_t STRUCT_NAME ## __InitOptions; \
   typedef struct STRUCT_NAME ## _s \
   { \
     VALUE_TYPE * value; \
@@ -104,12 +117,9 @@ extern "C"
   } STRUCT_NAME; \
   bool STRUCT_NAME ## __init( \
     STRUCT_NAME * _sequence); \
-  bool STRUCT_NAME ## __init_with_allocator( \
+  bool STRUCT_NAME ## __init_with_options( \
     STRUCT_NAME * _sequence, \
-    const rcutils_allocator_t * allocator); \
-  bool STRUCT_NAME ## __init_from_region( \
-    STRUCT_NAME * _sequence, \
-    rosidl_memory_region_t region); \
+    const STRUCT_NAME ## __InitOptions * options); \
   void STRUCT_NAME ## __fini( \
     STRUCT_NAME * _sequence); \
   bool STRUCT_NAME ## __reserve( \
@@ -130,7 +140,7 @@ extern "C"
 
 /// @brief Define dynamic typed sequence functions.
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_BOUNDED_SEQUENCE_DEFINE(STRUCT_NAME, VALUE_TYPE) \
-  bool STRUCT_NAME ## __init_with_allocator( \
+  static bool STRUCT_NAME ## __init_with_allocator( \
     STRUCT_NAME * _sequence, \
     size_t upper_bound, \
     const rcutils_allocator_t * allocator) \
@@ -138,42 +148,58 @@ extern "C"
     if (_sequence == NULL) { \
       return false; \
     } \
-    _sequence->value = NULL; \
-    _sequence->size = 0U; \
-    _sequence->capacity = 0U; \
+    if (allocator != NULL) { \
+      if (!rcutils_allocator_is_valid(allocator)) { \
+        return false; \
+      } \
+      _sequence->_impl.allocator = *allocator; \
+    } else { \
+      _sequence->_impl.allocator = rcutils_get_default_allocator(); \
+    } \
     _sequence->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__MANAGED; \
     _sequence->_impl.storage.data = NULL; \
     _sequence->_impl.upper_bound = upper_bound; \
-    _sequence->_impl.allocator = \
-      rosidl_runtime_c__experimental__detail__allocator_or_default(allocator); \
-    return rcutils_allocator_is_valid(&_sequence->_impl.allocator); \
+    _sequence->value = NULL; \
+    _sequence->size = 0U; \
+    _sequence->capacity = 0U; \
+    return true; \
   } \
-  bool STRUCT_NAME ## __init( \
-    STRUCT_NAME * _sequence, \
-    size_t upper_bound) \
-  { \
-    return STRUCT_NAME ## __init_with_allocator(_sequence, upper_bound, NULL); \
-  } \
-  bool STRUCT_NAME ## __init_from_region( \
+  static bool STRUCT_NAME ## __init_with_region( \
     STRUCT_NAME * _sequence, \
     size_t upper_bound, \
     rosidl_memory_region_t region) \
   { \
-    if (_sequence == NULL || region.location.address == NULL) \
-    { \
+    if (_sequence == NULL || !rosidl_memory_region_is_valid(&region)) { \
       return false; \
     } \
     _sequence->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__EXTERNAL; \
     _sequence->_impl.storage.region = region; \
     _sequence->_impl.upper_bound = upper_bound; \
-    _sequence->_impl.allocator = rcutils_get_default_allocator(); \
+    _sequence->_impl.allocator = rcutils_get_zero_initialized_allocator(); \
     _sequence->value = (VALUE_TYPE *)region.location.address; \
     _sequence->size = 0U; \
     _sequence->capacity = region.size / sizeof(VALUE_TYPE); \
-    if (_sequence->_impl.upper_bound > 0U && _sequence->capacity > _sequence->_impl.upper_bound) { \
+    if (_sequence->capacity > _sequence->_impl.upper_bound) { \
       _sequence->capacity = _sequence->_impl.upper_bound; \
     } \
     return true; \
+  } \
+  bool STRUCT_NAME ## __init_with_options( \
+    STRUCT_NAME * _sequence, \
+    size_t upper_bound, \
+    const STRUCT_NAME ## __InitOptions * options) \
+  { \
+    if (options != NULL && options->external_storage != NULL) { \
+      return STRUCT_NAME ## __init_with_region(_sequence, upper_bound, *options->external_storage); \
+    } \
+    const rcutils_allocator_t * allocator = options != NULL ? options->allocator : NULL; \
+    return STRUCT_NAME ## __init_with_allocator(_sequence, upper_bound, allocator); \
+  } \
+  bool STRUCT_NAME ## __init( \
+    STRUCT_NAME * _sequence, \
+    size_t upper_bound) \
+  { \
+    return STRUCT_NAME ## __init_with_options(_sequence, upper_bound, NULL); \
   } \
   void STRUCT_NAME ## __fini( \
     STRUCT_NAME * _sequence) \
@@ -184,7 +210,8 @@ extern "C"
     if (_sequence->_impl.kind == ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__MANAGED && \
       _sequence->_impl.storage.data != NULL) \
     { \
-      _sequence->_impl.allocator.deallocate(_sequence->_impl.storage.data, \
+      _sequence->_impl.allocator.deallocate( \
+        _sequence->_impl.storage.data, \
         _sequence->_impl.allocator.state); \
     } \
     _sequence->value = NULL; \
@@ -199,7 +226,7 @@ extern "C"
     if (_sequence == NULL) { \
       return false; \
     } \
-    if (_sequence->_impl.upper_bound > 0U && requested_capacity > _sequence->_impl.upper_bound) { \
+    if (requested_capacity > _sequence->_impl.upper_bound) { \
       return false; \
     } \
     if (requested_capacity <= _sequence->capacity) { \
@@ -288,8 +315,11 @@ extern "C"
     if (input == NULL || output == NULL) { \
       return false; \
     } \
-    if (input->size > 0U && input->value == NULL) { \
+    if (input->value == NULL || output->value == NULL) { \
       return false; \
+    } \
+    if (input == output) { \
+      return true; \
     } \
     if (!STRUCT_NAME ## __resize(output, input->size)) { \
       return false; \
@@ -302,43 +332,59 @@ extern "C"
 
 /// @brief Define sequence functions declared with
 /// ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_SEQUENCE_DEFINE.
-/// This macro defines unbounded sequences without upper_bound checks.
+/// This macro defines unbounded sequences.
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_SEQUENCE_DEFINE(STRUCT_NAME, VALUE_TYPE) \
-  bool STRUCT_NAME ## __init_with_allocator( \
+  static bool STRUCT_NAME ## __init_with_allocator( \
     STRUCT_NAME * _sequence, \
     const rcutils_allocator_t * allocator) \
   { \
     if (_sequence == NULL) { \
       return false; \
     } \
+    if (allocator != NULL) { \
+      if (!rcutils_allocator_is_valid(allocator)) { \
+        return false; \
+      } \
+      _sequence->_impl.allocator = *allocator; \
+    } else { \
+      _sequence->_impl.allocator = rcutils_get_default_allocator(); \
+    } \
+    _sequence->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__MANAGED; \
+    _sequence->_impl.storage.data = NULL; \
     _sequence->value = NULL; \
     _sequence->size = 0U; \
     _sequence->capacity = 0U; \
-    _sequence->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__MANAGED; \
-    _sequence->_impl.storage.data = NULL; \
-    _sequence->_impl.allocator = \
-      rosidl_runtime_c__experimental__detail__allocator_or_default(allocator); \
-    return rcutils_allocator_is_valid(&_sequence->_impl.allocator); \
+    return true; \
   } \
-  bool STRUCT_NAME ## __init( \
-    STRUCT_NAME * _sequence) \
-  { \
-    return STRUCT_NAME ## __init_with_allocator(_sequence, NULL); \
-  } \
-  bool STRUCT_NAME ## __init_from_region( \
+  static bool STRUCT_NAME ## __init_with_region( \
     STRUCT_NAME * _sequence, \
     rosidl_memory_region_t region) \
   { \
-    if (_sequence == NULL || region.location.address == NULL) { \
+    if (_sequence == NULL || !rosidl_memory_region_is_valid(&region)) { \
       return false; \
     } \
     _sequence->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__EXTERNAL; \
     _sequence->_impl.storage.region = region; \
-    _sequence->_impl.allocator = rcutils_get_default_allocator(); \
+    _sequence->_impl.allocator = rcutils_get_zero_initialized_allocator(); \
     _sequence->value = (VALUE_TYPE *)region.location.address; \
     _sequence->size = 0U; \
     _sequence->capacity = region.size / sizeof(VALUE_TYPE); \
     return true; \
+  } \
+  bool STRUCT_NAME ## __init_with_options( \
+    STRUCT_NAME * _sequence, \
+    const STRUCT_NAME ## __InitOptions * options) \
+  { \
+    if (options != NULL && options->external_storage != NULL) { \
+      return STRUCT_NAME ## __init_with_region(_sequence, *options->external_storage); \
+    } \
+    const rcutils_allocator_t * allocator = options != NULL ? options->allocator : NULL; \
+    return STRUCT_NAME ## __init_with_allocator(_sequence, allocator); \
+  } \
+  bool STRUCT_NAME ## __init( \
+    STRUCT_NAME * _sequence) \
+  { \
+    return STRUCT_NAME ## __init_with_options(_sequence, NULL); \
   } \
   void STRUCT_NAME ## __fini( \
     STRUCT_NAME * _sequence) \
@@ -349,13 +395,14 @@ extern "C"
     if (_sequence->_impl.kind == ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__MANAGED && \
       _sequence->_impl.storage.data != NULL) \
     { \
-      _sequence->_impl.allocator.deallocate(_sequence->_impl.storage.data, \
+      _sequence->_impl.allocator.deallocate( \
+        _sequence->_impl.storage.data, \
         _sequence->_impl.allocator.state); \
     } \
+    _sequence->_impl.storage.data = NULL; \
     _sequence->value = NULL; \
     _sequence->size = 0U; \
     _sequence->capacity = 0U; \
-    _sequence->_impl.storage.data = NULL; \
   } \
   bool STRUCT_NAME ## __reserve( \
     STRUCT_NAME * _sequence, \
@@ -416,8 +463,7 @@ extern "C"
     if (!STRUCT_NAME ## __reserve(_sequence, _sequence->size + 1U)) { \
       return false; \
     } \
-    _sequence->value[_sequence->size] = value; \
-    ++_sequence->size; \
+    _sequence->value[_sequence->size++] = value; \
     return true; \
   } \
   bool STRUCT_NAME ## __are_equal( \
@@ -445,8 +491,11 @@ extern "C"
     if (input == NULL || output == NULL) { \
       return false; \
     } \
-    if (input->size > 0U && input->value == NULL) { \
+    if (input->value == NULL || output->value == NULL) { \
       return false; \
+    } \
+    if (input == output) { \
+      return true; \
     } \
     if (!STRUCT_NAME ## __resize(output, input->size)) { \
       return false; \
@@ -457,35 +506,24 @@ extern "C"
     return true; \
   }
 
-/// @brief Convenience macro declaring and defining a bounded sequence in one place.
-#define ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_BOUNDED_SEQUENCE(STRUCT_NAME, VALUE_TYPE) \
-  ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_BOUNDED_SEQUENCE_DECLARE(STRUCT_NAME, VALUE_TYPE); \
-  ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_BOUNDED_SEQUENCE_DEFINE(STRUCT_NAME, VALUE_TYPE)
-
-/// @brief Convenience macro declaring and defining a sequence in one place.
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_SEQUENCE(STRUCT_NAME, VALUE_TYPE) \
-  ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_SEQUENCE_DECLARE(STRUCT_NAME, VALUE_TYPE); \
+  ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_SEQUENCE_DECLARE(STRUCT_NAME, VALUE_TYPE) \
   ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_SEQUENCE_DEFINE(STRUCT_NAME, VALUE_TYPE)
 
 /// @brief Create a type alias for an unbounded primitive sequence type with function forwarding.
 /// Generates a typedef and static inline forwarding functions for all sequence operations.
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_SEQUENCE_ALIAS(ALIAS_NAME, BASE_TYPE, VALUE_TYPE) \
   typedef BASE_TYPE ALIAS_NAME; \
+  typedef BASE_TYPE ## __InitOptions ALIAS_NAME ## __InitOptions; \
   static inline bool ALIAS_NAME ## __init(ALIAS_NAME * _sequence) \
   { \
     return BASE_TYPE ## __init(_sequence); \
   } \
-  static inline bool ALIAS_NAME ## __init_with_allocator( \
+  static inline bool ALIAS_NAME ## __init_with_options( \
     ALIAS_NAME * _sequence, \
-    const rcutils_allocator_t * allocator) \
+    const ALIAS_NAME ## __InitOptions * options) \
   { \
-    return BASE_TYPE ## __init_with_allocator(_sequence, allocator); \
-  } \
-  static inline bool ALIAS_NAME ## __init_from_region( \
-    ALIAS_NAME * _sequence, \
-    rosidl_memory_region_t region) \
-  { \
-    return BASE_TYPE ## __init_from_region(_sequence, region); \
+    return BASE_TYPE ## __init_with_options(_sequence, options); \
   } \
   static inline void ALIAS_NAME ## __fini(ALIAS_NAME * _sequence) \
   { \
@@ -522,27 +560,25 @@ extern "C"
     return BASE_TYPE ## __copy(input, output); \
   }
 
+#define ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_BOUNDED_SEQUENCE(STRUCT_NAME, VALUE_TYPE) \
+  ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_BOUNDED_SEQUENCE_DECLARE(STRUCT_NAME, VALUE_TYPE) \
+  ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_BOUNDED_SEQUENCE_DEFINE(STRUCT_NAME, VALUE_TYPE)
+
 /// @brief Create a type alias for a bounded primitive sequence type with function forwarding.
 /// Generates a typedef and static inline forwarding functions including upper_bound parameter.
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_BOUNDED_SEQUENCE_ALIAS(ALIAS_NAME, BASE_TYPE, VALUE_TYPE) \
   typedef BASE_TYPE ALIAS_NAME; \
+  typedef BASE_TYPE ## __InitOptions ALIAS_NAME ## __InitOptions; \
   static inline bool ALIAS_NAME ## __init(ALIAS_NAME * _sequence, size_t upper_bound) \
   { \
     return BASE_TYPE ## __init(_sequence, upper_bound); \
   } \
-  static inline bool ALIAS_NAME ## __init_with_allocator( \
+  static inline bool ALIAS_NAME ## __init_with_options( \
     ALIAS_NAME * _sequence, \
     size_t upper_bound, \
-    const rcutils_allocator_t * allocator) \
+    const ALIAS_NAME ## __InitOptions * options) \
   { \
-    return BASE_TYPE ## __init_with_allocator(_sequence, upper_bound, allocator); \
-  } \
-  static inline bool ALIAS_NAME ## __init_from_region( \
-    ALIAS_NAME * _sequence, \
-    size_t upper_bound, \
-    rosidl_memory_region_t region) \
-  { \
-    return BASE_TYPE ## __init_from_region(_sequence, upper_bound, region); \
+    return BASE_TYPE ## __init_with_options(_sequence, upper_bound, options); \
   } \
   static inline void ALIAS_NAME ## __fini(ALIAS_NAME * _sequence) \
   { \
@@ -581,17 +617,17 @@ extern "C"
 
 /// @brief Declare a bounded sequence of object (non-primitive) elements.
 ///
-/// Each element is of type ELEMENT_TYPE, which must expose:
-///   bool ELEMENT_TYPE ## __init(ELEMENT_TYPE *, const rcutils_allocator_t *)
-///   void ELEMENT_TYPE ## __fini(ELEMENT_TYPE *)
-///   bool ELEMENT_TYPE ## __are_equal(const ELEMENT_TYPE *, const ELEMENT_TYPE *)
-///   bool ELEMENT_TYPE ## __copy(const ELEMENT_TYPE *, ELEMENT_TYPE *)
-///
-/// Unlike the primitive BOUNDED_SEQUENCE, elements are heap-allocated individually
+/// Unlike the PRIMITIVE_BOUNDED_SEQUENCE, elements are heap-allocated individually
 /// (no realloc), so ELEMENT_TYPE may itself contain pointers into managed memory.
 /// push_back takes a pointer (not a value) to avoid requiring copyability by value.
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_SEQUENCE_DECLARE( \
     STRUCT_NAME, ELEMENT_TYPE) \
+  typedef struct STRUCT_NAME ## __InitOptions_s { \
+    const rcutils_allocator_t * allocator; \
+    const ELEMENT_TYPE ## __ExternalStorage * external_element_storage; \
+    const rosidl_memory_region_t * external_storage; \
+    void * reserved[4]; \
+  } STRUCT_NAME ## __InitOptions; \
   typedef struct STRUCT_NAME ## _s \
   { \
     ELEMENT_TYPE * value; \
@@ -605,35 +641,20 @@ extern "C"
         rosidl_memory_region_t region; \
         ELEMENT_TYPE * data; \
       } storage; \
-      size_t upper_bound; \
       rcutils_allocator_t allocator; \
-      ELEMENT_TYPE ## __ExternalStorage * element_storage_pool; \
-      size_t element_storage_pool_size; \
+      struct { \
+        const ELEMENT_TYPE ## __ExternalStorage * storage; \
+      } prototype; \
+      size_t upper_bound; \
     } _impl; \
   } STRUCT_NAME; \
   bool STRUCT_NAME ## __init( \
     STRUCT_NAME * _sequence, \
     size_t upper_bound); \
-  bool STRUCT_NAME ## __init_with_allocator( \
+  bool STRUCT_NAME ## __init_with_options( \
     STRUCT_NAME * _sequence, \
     size_t upper_bound, \
-    const rcutils_allocator_t * allocator); \
-  bool STRUCT_NAME ## __init_with_storage( \
-    STRUCT_NAME * _sequence, \
-    size_t upper_bound, \
-    const rcutils_allocator_t * allocator, \
-    ELEMENT_TYPE ## __ExternalStorage * element_storage_pool, \
-    size_t element_storage_pool_size); \
-  bool STRUCT_NAME ## __init_from_region( \
-    STRUCT_NAME * _sequence, \
-    size_t upper_bound, \
-    rosidl_memory_region_t region); \
-  bool STRUCT_NAME ## __init_region_storage( \
-    STRUCT_NAME * _sequence, \
-    size_t upper_bound, \
-    rosidl_memory_region_t region, \
-    ELEMENT_TYPE ## __ExternalStorage * element_storage_pool, \
-    size_t element_storage_pool_size); \
+    const STRUCT_NAME ## __InitOptions * options); \
   void STRUCT_NAME ## __fini( \
     STRUCT_NAME * _sequence); \
   bool STRUCT_NAME ## __reserve( \
@@ -654,6 +675,13 @@ extern "C"
 
 /// @brief Declare an unbounded sequence of object (non-primitive) elements.
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__SEQUENCE_DECLARE(STRUCT_NAME, ELEMENT_TYPE) \
+  typedef struct STRUCT_NAME ## __InitOptions_s { \
+    const rcutils_allocator_t * allocator; \
+    const ELEMENT_TYPE ## __ExternalStorage * external_element_storage; \
+    size_t external_element_storage_size; \
+    const rosidl_memory_region_t * external_storage; \
+    void * reserved[4]; \
+  } STRUCT_NAME ## __InitOptions; \
   typedef struct STRUCT_NAME ## _s \
   { \
     ELEMENT_TYPE * value; \
@@ -668,28 +696,17 @@ extern "C"
         ELEMENT_TYPE * data; \
       } storage; \
       rcutils_allocator_t allocator; \
-      ELEMENT_TYPE ## __ExternalStorage * element_storage_pool; \
-      size_t element_storage_pool_size; \
+      struct { \
+        const ELEMENT_TYPE ## __ExternalStorage * storage; \
+        size_t max_instances; \
+      } prototype; \
     } _impl; \
   } STRUCT_NAME; \
   bool STRUCT_NAME ## __init( \
     STRUCT_NAME * _sequence); \
-  bool STRUCT_NAME ## __init_with_allocator( \
+  bool STRUCT_NAME ## __init_with_options( \
     STRUCT_NAME * _sequence, \
-    const rcutils_allocator_t * allocator); \
-  bool STRUCT_NAME ## __init_with_storage( \
-    STRUCT_NAME * _sequence, \
-    const rcutils_allocator_t * allocator, \
-    ELEMENT_TYPE ## __ExternalStorage * element_storage_pool, \
-    size_t element_storage_pool_size); \
-  bool STRUCT_NAME ## __init_from_region( \
-    STRUCT_NAME * _sequence, \
-    rosidl_memory_region_t region); \
-  bool STRUCT_NAME ## __init_region_storage( \
-    STRUCT_NAME * _sequence, \
-    rosidl_memory_region_t region, \
-    ELEMENT_TYPE ## __ExternalStorage * element_storage_pool, \
-    size_t element_storage_pool_size); \
+    const STRUCT_NAME ## __InitOptions * options); \
   void STRUCT_NAME ## __fini( \
     STRUCT_NAME * _sequence); \
   bool STRUCT_NAME ## __reserve( \
@@ -715,165 +732,47 @@ extern "C"
 /// invalidate per-element internal pointers such as those in String / sub-message
 /// fields).
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_SEQUENCE_DEFINE(STRUCT_NAME, ELEMENT_TYPE) \
-  bool STRUCT_NAME ## __init_with_allocator( \
+  bool STRUCT_NAME ## __init_with_options( \
     STRUCT_NAME * _sequence, \
     size_t upper_bound, \
-    const rcutils_allocator_t * allocator) \
+    const STRUCT_NAME ## __InitOptions * options) \
   { \
     if (_sequence == NULL) { \
       return false; \
     } \
-    _sequence->value = NULL; \
-    _sequence->size = 0U; \
-    _sequence->capacity = 0U; \
-    _sequence->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__MANAGED; \
-    _sequence->_impl.storage.data = NULL; \
+    if (options != NULL && options->allocator != NULL) { \
+      if (!rcutils_allocator_is_valid(options->allocator)) { \
+        return false; \
+      } \
+      _sequence->_impl.allocator = *options->allocator; \
+    } else { \
+      _sequence->_impl.allocator = rcutils_get_default_allocator(); \
+    } \
     _sequence->_impl.upper_bound = upper_bound; \
-    _sequence->_impl.allocator = \
-      rosidl_runtime_c__experimental__detail__allocator_or_default(allocator); \
-    _sequence->_impl.element_storage_pool = NULL; \
-    _sequence->_impl.element_storage_pool_size = 0U; \
-    return rcutils_allocator_is_valid(&_sequence->_impl.allocator); \
+    if (options != NULL && options->external_storage != NULL) { \
+      _sequence->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__EXTERNAL; \
+      _sequence->_impl.storage.region = *options->external_storage; \
+      _sequence->value = (ELEMENT_TYPE *)_sequence->_impl.storage.region.location.address; \
+      _sequence->capacity = _sequence->_impl.storage.region.size / sizeof(ELEMENT_TYPE); \
+      _sequence->size = 0U; \
+      if (_sequence->capacity > _sequence->_impl.upper_bound) { \
+        _sequence->capacity = _sequence->_impl.upper_bound; \
+      } \
+    } else { \
+      _sequence->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__MANAGED; \
+      _sequence->_impl.storage.data = NULL; \
+      _sequence->value = NULL; \
+      _sequence->capacity = 0U; \
+      _sequence->size = 0U; \
+    } \
+    _sequence->_impl.prototype.storage = options != NULL ? options->external_element_storage : NULL; \
+    return true; \
   } \
   bool STRUCT_NAME ## __init( \
     STRUCT_NAME * _sequence, \
     size_t upper_bound) \
   { \
-    return STRUCT_NAME ## __init_with_allocator(_sequence, upper_bound, NULL); \
-  } \
-  bool STRUCT_NAME ## __init_with_storage( \
-    STRUCT_NAME * _sequence, \
-    size_t upper_bound, \
-    const rcutils_allocator_t * allocator, \
-    ELEMENT_TYPE ## __ExternalStorage * element_storage_pool, \
-    size_t element_storage_pool_size) \
-  { \
-    if (_sequence == NULL) { \
-      return false; \
-    } \
-    if (element_storage_pool == NULL || element_storage_pool_size == 0U) { \
-      return STRUCT_NAME ## __init_with_allocator(_sequence, upper_bound, allocator); \
-    } \
-    _sequence->value = NULL; \
-    _sequence->size = 0U; \
-    _sequence->capacity = 0U; \
-    _sequence->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__MANAGED; \
-    _sequence->_impl.storage.data = NULL; \
-    _sequence->_impl.upper_bound = upper_bound; \
-    _sequence->_impl.allocator = \
-      rosidl_runtime_c__experimental__detail__allocator_or_default(allocator); \
-    if (!rcutils_allocator_is_valid(&_sequence->_impl.allocator)) { \
-      return false; \
-    } \
-    rcutils_allocator_t default_allocator = rcutils_get_default_allocator(); \
-    size_t pool_bytes = element_storage_pool_size * sizeof(ELEMENT_TYPE ## __ExternalStorage); \
-    _sequence->_impl.element_storage_pool = \
-      (ELEMENT_TYPE ## __ExternalStorage *)default_allocator.allocate( \
-        pool_bytes, default_allocator.state); \
-    if (_sequence->_impl.element_storage_pool == NULL) { \
-      return false; \
-    } \
-    (void)memcpy( \
-      _sequence->_impl.element_storage_pool, element_storage_pool, pool_bytes); \
-    _sequence->_impl.element_storage_pool_size = element_storage_pool_size; \
-    return true; \
-  } \
-  bool STRUCT_NAME ## __init_from_region( \
-    STRUCT_NAME * _sequence, \
-    size_t upper_bound, \
-    rosidl_memory_region_t region) \
-  { \
-    if (_sequence == NULL || region.location.address == NULL) { \
-      return false; \
-    } \
-    _sequence->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__EXTERNAL; \
-    _sequence->_impl.storage.region = region; \
-    _sequence->_impl.upper_bound = upper_bound; \
-    _sequence->_impl.allocator = rcutils_get_default_allocator(); \
-    _sequence->value = (ELEMENT_TYPE *)region.location.address; \
-    _sequence->size = 0U; \
-    _sequence->capacity = region.size / sizeof(ELEMENT_TYPE); \
-    if (_sequence->_impl.upper_bound > 0U && _sequence->capacity > _sequence->_impl.upper_bound) { \
-      _sequence->capacity = _sequence->_impl.upper_bound; \
-    } \
-    _sequence->_impl.element_storage_pool = NULL; \
-    _sequence->_impl.element_storage_pool_size = 0U; \
-    size_t _init_i; \
-    for (_init_i = 0U; _init_i < _sequence->capacity; ++_init_i) { \
-      if (!ELEMENT_TYPE ## __init_with_allocator( \
-          &_sequence->value[_init_i], &_sequence->_impl.allocator)) { \
-        for (; _init_i-- > 0U; ) { \
-          ELEMENT_TYPE ## __fini(&_sequence->value[_init_i]); \
-        } \
-        _sequence->value = NULL; \
-        _sequence->capacity = 0U; \
-        return false; \
-      } \
-    } \
-    return true; \
-  } \
-  bool STRUCT_NAME ## __init_region_storage( \
-    STRUCT_NAME * _sequence, \
-    size_t upper_bound, \
-    rosidl_memory_region_t region, \
-    ELEMENT_TYPE ## __ExternalStorage * element_storage_pool, \
-    size_t element_storage_pool_size) \
-  { \
-    if (_sequence == NULL || region.location.address == NULL) { \
-      return false; \
-    } \
-    if (element_storage_pool == NULL || element_storage_pool_size == 0U) { \
-      return STRUCT_NAME ## __init_from_region(_sequence, upper_bound, region); \
-    } \
-    _sequence->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__EXTERNAL; \
-    _sequence->_impl.storage.region = region; \
-    _sequence->_impl.upper_bound = upper_bound; \
-    _sequence->_impl.allocator = rcutils_get_default_allocator(); \
-    _sequence->value = (ELEMENT_TYPE *)region.location.address; \
-    _sequence->size = 0U; \
-    _sequence->capacity = region.size / sizeof(ELEMENT_TYPE); \
-    if (_sequence->_impl.upper_bound > 0U && _sequence->capacity > _sequence->_impl.upper_bound) { \
-      _sequence->capacity = _sequence->_impl.upper_bound; \
-    } \
-    rcutils_allocator_t default_allocator = rcutils_get_default_allocator(); \
-    size_t pool_bytes = element_storage_pool_size * sizeof(ELEMENT_TYPE ## __ExternalStorage); \
-    _sequence->_impl.element_storage_pool = \
-      (ELEMENT_TYPE ## __ExternalStorage *)default_allocator.allocate( \
-        pool_bytes, default_allocator.state); \
-    if (_sequence->_impl.element_storage_pool == NULL) { \
-      return false; \
-    } \
-    (void)memcpy( \
-      _sequence->_impl.element_storage_pool, element_storage_pool, pool_bytes); \
-    _sequence->_impl.element_storage_pool_size = element_storage_pool_size; \
-    if (_sequence->capacity > element_storage_pool_size) { \
-      _sequence->capacity = element_storage_pool_size; \
-    } \
-    size_t _init_i; \
-    for (_init_i = 0U; _init_i < _sequence->capacity; ++_init_i) { \
-      bool _init_success; \
-      if (_init_i < _sequence->_impl.element_storage_pool_size) { \
-        _init_success = ELEMENT_TYPE ## __init_from_storage( \
-          &_sequence->value[_init_i], \
-          &_sequence->_impl.element_storage_pool[_init_i]); \
-      } else { \
-        _init_success = ELEMENT_TYPE ## __init_with_allocator( \
-          &_sequence->value[_init_i], &_sequence->_impl.allocator); \
-      } \
-      if (!_init_success) { \
-        for (; _init_i-- > 0U; ) { \
-          ELEMENT_TYPE ## __fini(&_sequence->value[_init_i]); \
-        } \
-        default_allocator.deallocate( \
-          _sequence->_impl.element_storage_pool, default_allocator.state); \
-        _sequence->_impl.element_storage_pool = NULL; \
-        _sequence->_impl.element_storage_pool_size = 0U; \
-        _sequence->value = NULL; \
-        _sequence->capacity = 0U; \
-        return false; \
-      } \
-    } \
-    return true; \
+    return STRUCT_NAME ## __init_with_options(_sequence, upper_bound, NULL); \
   } \
   void STRUCT_NAME ## __fini( \
     STRUCT_NAME * _sequence) \
@@ -882,7 +781,7 @@ extern "C"
       return; \
     } \
     if (_sequence->value != NULL) { \
-      for (size_t _i = 0U; _i < _sequence->capacity; ++_i) { \
+      for (size_t _i = 0U; _i < _sequence->size; ++_i) { \
         ELEMENT_TYPE ## __fini(&_sequence->value[_i]); \
       } \
     } \
@@ -891,18 +790,11 @@ extern "C"
     { \
       _sequence->_impl.allocator.deallocate( \
         _sequence->_impl.storage.data, _sequence->_impl.allocator.state); \
-    } \
-    if (_sequence->_impl.element_storage_pool != NULL) { \
-      rcutils_allocator_t default_allocator = rcutils_get_default_allocator(); \
-      default_allocator.deallocate( \
-        _sequence->_impl.element_storage_pool, default_allocator.state); \
-      _sequence->_impl.element_storage_pool = NULL; \
+      _sequence->_impl.storage.data = NULL; \
     } \
     _sequence->value = NULL; \
     _sequence->size = 0U; \
     _sequence->capacity = 0U; \
-    _sequence->_impl.element_storage_pool_size = 0U; \
-    _sequence->_impl.storage.data = NULL; \
   } \
   bool STRUCT_NAME ## __reserve( \
     STRUCT_NAME * _sequence, \
@@ -911,29 +803,19 @@ extern "C"
     if (_sequence == NULL) { \
       return false; \
     } \
-    if (_sequence->_impl.upper_bound > 0U && requested_capacity > _sequence->_impl.upper_bound) { \
-      return false; \
-    } \
-    if (_sequence->_impl.element_storage_pool != NULL && \
-      requested_capacity > _sequence->_impl.element_storage_pool_size) \
-    { \
-      return false; \
-    } \
     if (requested_capacity <= _sequence->capacity) { \
       return true; \
+    } \
+    if (requested_capacity > _sequence->_impl.upper_bound) { \
+      return false; \
     } \
     if (_sequence->_impl.kind != ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__MANAGED) { \
       return false; \
     } \
     size_t new_capacity = rosidl_runtime_c__experimental__detail__next_capacity( \
       _sequence->capacity, requested_capacity); \
-    if (_sequence->_impl.upper_bound > 0U && new_capacity > _sequence->_impl.upper_bound) { \
+    if (new_capacity > _sequence->_impl.upper_bound) { \
       new_capacity = _sequence->_impl.upper_bound; \
-    } \
-    if (_sequence->_impl.element_storage_pool != NULL && \
-      new_capacity > _sequence->_impl.element_storage_pool_size) \
-    { \
-      new_capacity = _sequence->_impl.element_storage_pool_size; \
     } \
     size_t new_bytes = 0U; \
     if (!rosidl_runtime_c__experimental__detail__compute_bytes( \
@@ -947,41 +829,31 @@ extern "C"
     if (new_data == NULL) { \
       return false; \
     } \
-    size_t _i; \
-    for (_i = 0U; _i < new_capacity; ++_i) { \
-      bool _init_success; \
-      if (_sequence->_impl.element_storage_pool != NULL && \
-        _i < _sequence->_impl.element_storage_pool_size) \
-      { \
-        _init_success = ELEMENT_TYPE ## __init_from_storage( \
-          &new_data[_i], &_sequence->_impl.element_storage_pool[_i]); \
-      } else { \
-        _init_success = ELEMENT_TYPE ## __init_with_allocator( \
-          &new_data[_i], &_sequence->_impl.allocator); \
+    for (size_t _i = 0U; _i < _sequence->size; ++_i) { \
+      ELEMENT_TYPE ## __InitOptions _element_options = {0}; \
+      _element_options.allocator = &_sequence->_impl.allocator; \
+      if (_sequence->_impl.prototype.storage != NULL) { \
+        _element_options.external_storage = &_sequence->_impl.prototype.storage[_i]; \
       } \
-      if (!_init_success) { \
-        for (; _i-- > 0U; ) { \
-          ELEMENT_TYPE ## __fini(&new_data[_i]); \
-        } \
-        _sequence->_impl.allocator.deallocate(new_data, _sequence->_impl.allocator.state); \
-        return false; \
-      } \
-    } \
-    for (_i = 0U; _i < _sequence->size; ++_i) { \
-      if (!ELEMENT_TYPE ## __copy(&_sequence->value[_i], &new_data[_i])) { \
-        for (size_t _j = 0U; _j < new_capacity; ++_j) { \
+      if (!ELEMENT_TYPE ## __init_with_options(&new_data[_i], &_element_options)) { \
+        for (size_t _j = 0U; _j < _i; ++_j) { \
           ELEMENT_TYPE ## __fini(&new_data[_j]); \
         } \
-        _sequence->_impl.allocator.deallocate(new_data, _sequence->_impl.allocator.state); \
+        _sequence->_impl.allocator.deallocate( \
+          new_data, _sequence->_impl.allocator.state); \
+        return false; \
+      } \
+      if (!ELEMENT_TYPE ## __copy(&_sequence->value[_i], &new_data[_i])) { \
+        for (size_t _j = 0U; _j <= _i; ++_j) { \
+          ELEMENT_TYPE ## __fini(&new_data[_j]); \
+        } \
+        _sequence->_impl.allocator.deallocate( \
+          new_data, _sequence->_impl.allocator.state); \
         return false; \
       } \
     } \
-    for (_i = 0U; _i < _sequence->capacity; ++_i) { \
+    for (size_t _i = 0U; _i < _sequence->size; ++_i) { \
       ELEMENT_TYPE ## __fini(&_sequence->value[_i]); \
-    } \
-    if (_sequence->_impl.storage.data != NULL) { \
-      _sequence->_impl.allocator.deallocate( \
-        _sequence->_impl.storage.data, _sequence->_impl.allocator.state); \
     } \
     _sequence->_impl.storage.data = new_data; \
     _sequence->value = new_data; \
@@ -995,8 +867,31 @@ extern "C"
     if (_sequence == NULL) { \
       return false; \
     } \
-    if (!STRUCT_NAME ## __reserve(_sequence, new_size)) { \
-      return false; \
+    if (new_size == _sequence->size) { \
+      return true; \
+    } \
+    if (new_size > _sequence->size) { \
+      if (!STRUCT_NAME ## __reserve(_sequence, new_size)) { \
+        return false; \
+      } \
+      for (size_t _i = _sequence->size; _i < new_size; ++_i) { \
+        ELEMENT_TYPE ## __InitOptions _element_options = {0}; \
+        _element_options.allocator = &_sequence->_impl.allocator; \
+        if (_sequence->_impl.prototype.storage != NULL) { \
+          _element_options.external_storage = &_sequence->_impl.prototype.storage[_i]; \
+        } \
+        if (!ELEMENT_TYPE ## __init_with_options(&_sequence->value[_i], &_element_options)) \
+        { \
+          for (size_t _j = _i - 1; _j > _sequence->size; --_j) { \
+            ELEMENT_TYPE ## __fini(&_sequence->value[_j]); \
+          } \
+          return false; \
+        } \
+      } \
+    } else { \
+      for (size_t _i = _sequence->size - 1; _i >= new_size; --_i) { \
+        ELEMENT_TYPE ## __fini(&_sequence->value[_i]); \
+      } \
     } \
     _sequence->size = new_size; \
     return true; \
@@ -1008,14 +903,10 @@ extern "C"
     if (_sequence == NULL || value == NULL) { \
       return false; \
     } \
-    if (!STRUCT_NAME ## __reserve(_sequence, _sequence->size + 1U)) { \
+    if (!STRUCT_NAME ## __resize(_sequence, _sequence->size + 1U)) { \
       return false; \
     } \
-    if (!ELEMENT_TYPE ## __copy(value, &_sequence->value[_sequence->size])) { \
-      return false; \
-    } \
-    ++_sequence->size; \
-    return true; \
+    return ELEMENT_TYPE ## __copy(value, &_sequence->value[_sequence->size - 1]); \
   } \
   bool STRUCT_NAME ## __are_equal( \
     const STRUCT_NAME * lhs, \
@@ -1024,14 +915,14 @@ extern "C"
     if (lhs == NULL || rhs == NULL) { \
       return false; \
     } \
+    if (lhs->value == NULL || rhs->value == NULL) { \
+      return false; \
+    } \
     if (lhs->size != rhs->size) { \
       return false; \
     } \
     if (lhs->size == 0U) { \
       return true; \
-    } \
-    if (lhs->value == NULL || rhs->value == NULL) { \
-      return false; \
     } \
     for (size_t _i = 0U; _i < lhs->size; ++_i) { \
       if (!ELEMENT_TYPE ## __are_equal(&lhs->value[_i], &rhs->value[_i])) { \
@@ -1047,202 +938,66 @@ extern "C"
     if (input == NULL || output == NULL) { \
       return false; \
     } \
-    if (input->size > 0U && input->value == NULL) { \
+    if (input->value == NULL || output->value == NULL) { \
       return false; \
     } \
-    if (output->_impl.element_storage_pool != NULL) { \
-      rcutils_allocator_t default_allocator = rcutils_get_default_allocator(); \
-      default_allocator.deallocate( \
-        output->_impl.element_storage_pool, default_allocator.state); \
-      output->_impl.element_storage_pool = NULL; \
-      output->_impl.element_storage_pool_size = 0U; \
+    if (input == output) { \
+      return true; \
     } \
-    if (input->_impl.element_storage_pool != NULL && \
-      input->_impl.element_storage_pool_size > 0U) { \
-      rcutils_allocator_t default_allocator = rcutils_get_default_allocator(); \
-      size_t pool_bytes = \
-        input->_impl.element_storage_pool_size * sizeof(ELEMENT_TYPE ## __ExternalStorage); \
-      output->_impl.element_storage_pool = \
-        (ELEMENT_TYPE ## __ExternalStorage *)default_allocator.allocate( \
-          pool_bytes, default_allocator.state); \
-      if (output->_impl.element_storage_pool == NULL) { \
-        return false; \
-      } \
-      (void)memcpy( \
-        output->_impl.element_storage_pool, \
-        input->_impl.element_storage_pool, \
-        pool_bytes); \
-      output->_impl.element_storage_pool_size = input->_impl.element_storage_pool_size; \
-    } \
-    if (output->size > input->size) { \
-      output->size = input->size; \
-    } \
-    if (!STRUCT_NAME ## __reserve(output, input->size)) { \
-      if (output->_impl.element_storage_pool != NULL) { \
-        rcutils_allocator_t default_allocator = rcutils_get_default_allocator(); \
-        default_allocator.deallocate( \
-          output->_impl.element_storage_pool, default_allocator.state); \
-        output->_impl.element_storage_pool = NULL; \
-        output->_impl.element_storage_pool_size = 0U; \
-      } \
+    if (!STRUCT_NAME ## __resize(output, input->size)) { \
       return false; \
     } \
     for (size_t _i = 0U; _i < input->size; ++_i) { \
       if (!ELEMENT_TYPE ## __copy(&input->value[_i], &output->value[_i])) { \
-        output->size = _i; \
         return false; \
       } \
     } \
-    output->size = input->size; \
     return true; \
   }
 
 /// @brief Define an unbounded sequence of object elements.
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__SEQUENCE_DEFINE(STRUCT_NAME, ELEMENT_TYPE) \
-  bool STRUCT_NAME ## __init_with_allocator( \
+  bool STRUCT_NAME ## __init_with_options( \
     STRUCT_NAME * _sequence, \
-    const rcutils_allocator_t * allocator) \
+    const STRUCT_NAME ## __InitOptions * options) \
   { \
     if (_sequence == NULL) { \
       return false; \
     } \
-    _sequence->value = NULL; \
-    _sequence->size = 0U; \
-    _sequence->capacity = 0U; \
-    _sequence->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__MANAGED; \
-    _sequence->_impl.storage.data = NULL; \
-    _sequence->_impl.allocator = \
-      rosidl_runtime_c__experimental__detail__allocator_or_default(allocator); \
-    _sequence->_impl.element_storage_pool = NULL; \
-    _sequence->_impl.element_storage_pool_size = 0U; \
-    return rcutils_allocator_is_valid(&_sequence->_impl.allocator); \
+    if (options != NULL && options->allocator != NULL) { \
+      if (!rcutils_allocator_is_valid(options->allocator)) { \
+        return false; \
+      } \
+      _sequence->_impl.allocator = *options->allocator; \
+    } else { \
+      _sequence->_impl.allocator = rcutils_get_default_allocator(); \
+    } \
+    if (options != NULL && options->external_storage != NULL) { \
+      _sequence->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__EXTERNAL; \
+      _sequence->_impl.storage.region = *options->external_storage; \
+      _sequence->value = (ELEMENT_TYPE *)_sequence->_impl.storage.region.location.address; \
+      _sequence->capacity = _sequence->_impl.storage.region.size / sizeof(ELEMENT_TYPE); \
+      _sequence->size = 0U; \
+    } else { \
+      _sequence->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__MANAGED; \
+      _sequence->_impl.storage.data = NULL; \
+      _sequence->value = NULL; \
+      _sequence->capacity = 0U; \
+      _sequence->size = 0U; \
+    } \
+    if (options != NULL) { \
+      _sequence->_impl.prototype.storage = options->external_element_storage; \
+      _sequence->_impl.prototype.max_instances = options->external_element_storage_size; \
+    } else { \
+      _sequence->_impl.prototype.storage = NULL; \
+      _sequence->_impl.prototype.max_instances = 0U; \
+    } \
+    return true; \
   } \
   bool STRUCT_NAME ## __init( \
     STRUCT_NAME * _sequence) \
   { \
-    return STRUCT_NAME ## __init_with_allocator(_sequence, NULL); \
-  } \
-  bool STRUCT_NAME ## __init_with_storage( \
-    STRUCT_NAME * _sequence, \
-    const rcutils_allocator_t * allocator, \
-    ELEMENT_TYPE ## __ExternalStorage * element_storage_pool, \
-    size_t element_storage_pool_size) \
-  { \
-    if (_sequence == NULL) { \
-      return false; \
-    } \
-    if (element_storage_pool == NULL || element_storage_pool_size == 0U) { \
-      return STRUCT_NAME ## __init_with_allocator(_sequence, allocator); \
-    } \
-    _sequence->value = NULL; \
-    _sequence->size = 0U; \
-    _sequence->capacity = 0U; \
-    _sequence->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__MANAGED; \
-    _sequence->_impl.storage.data = NULL; \
-    _sequence->_impl.allocator = \
-      rosidl_runtime_c__experimental__detail__allocator_or_default(allocator); \
-    if (!rcutils_allocator_is_valid(&_sequence->_impl.allocator)) { \
-      return false; \
-    } \
-    rcutils_allocator_t default_allocator = rcutils_get_default_allocator(); \
-    size_t pool_bytes = element_storage_pool_size * sizeof(ELEMENT_TYPE ## __ExternalStorage); \
-    _sequence->_impl.element_storage_pool = \
-      (ELEMENT_TYPE ## __ExternalStorage *)default_allocator.allocate( \
-        pool_bytes, default_allocator.state); \
-    if (_sequence->_impl.element_storage_pool == NULL) { \
-      return false; \
-    } \
-    (void)memcpy( \
-      _sequence->_impl.element_storage_pool, element_storage_pool, pool_bytes); \
-    _sequence->_impl.element_storage_pool_size = element_storage_pool_size; \
-    return true; \
-  } \
-  bool STRUCT_NAME ## __init_from_region( \
-    STRUCT_NAME * _sequence, \
-    rosidl_memory_region_t region) \
-  { \
-    if (_sequence == NULL || region.location.address == NULL) { \
-      return false; \
-    } \
-    _sequence->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__EXTERNAL; \
-    _sequence->_impl.storage.region = region; \
-    _sequence->_impl.allocator = rcutils_get_default_allocator(); \
-    _sequence->value = (ELEMENT_TYPE *)region.location.address; \
-    _sequence->size = 0U; \
-    _sequence->capacity = region.size / sizeof(ELEMENT_TYPE); \
-    _sequence->_impl.element_storage_pool = NULL; \
-    _sequence->_impl.element_storage_pool_size = 0U; \
-    size_t _init_i; \
-    for (_init_i = 0U; _init_i < _sequence->capacity; ++_init_i) { \
-      if (!ELEMENT_TYPE ## __init_with_allocator( \
-          &_sequence->value[_init_i], &_sequence->_impl.allocator)) { \
-        for (; _init_i-- > 0U; ) { \
-          ELEMENT_TYPE ## __fini(&_sequence->value[_init_i]); \
-        } \
-        _sequence->value = NULL; \
-        _sequence->capacity = 0U; \
-        return false; \
-      } \
-    } \
-    return true; \
-  } \
-  bool STRUCT_NAME ## __init_region_storage( \
-    STRUCT_NAME * _sequence, \
-    rosidl_memory_region_t region, \
-    ELEMENT_TYPE ## __ExternalStorage * element_storage_pool, \
-    size_t element_storage_pool_size) \
-  { \
-    if (_sequence == NULL || region.location.address == NULL) { \
-      return false; \
-    } \
-    if (element_storage_pool == NULL || element_storage_pool_size == 0U) { \
-      return STRUCT_NAME ## __init_from_region(_sequence, region); \
-    } \
-    _sequence->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__EXTERNAL; \
-    _sequence->_impl.storage.region = region; \
-    _sequence->_impl.allocator = rcutils_get_default_allocator(); \
-    _sequence->value = (ELEMENT_TYPE *)region.location.address; \
-    _sequence->size = 0U; \
-    _sequence->capacity = region.size / sizeof(ELEMENT_TYPE); \
-    rcutils_allocator_t default_allocator = rcutils_get_default_allocator(); \
-    size_t pool_bytes = element_storage_pool_size * sizeof(ELEMENT_TYPE ## __ExternalStorage); \
-    _sequence->_impl.element_storage_pool = \
-      (ELEMENT_TYPE ## __ExternalStorage *)default_allocator.allocate( \
-        pool_bytes, default_allocator.state); \
-    if (_sequence->_impl.element_storage_pool == NULL) { \
-      return false; \
-    } \
-    (void)memcpy( \
-      _sequence->_impl.element_storage_pool, element_storage_pool, pool_bytes); \
-    _sequence->_impl.element_storage_pool_size = element_storage_pool_size; \
-    if (_sequence->capacity > element_storage_pool_size) { \
-      _sequence->capacity = element_storage_pool_size; \
-    } \
-    size_t _init_i; \
-    for (_init_i = 0U; _init_i < _sequence->capacity; ++_init_i) { \
-      bool _init_success; \
-      if (_init_i < _sequence->_impl.element_storage_pool_size) { \
-        _init_success = ELEMENT_TYPE ## __init_from_storage( \
-          &_sequence->value[_init_i], \
-          &_sequence->_impl.element_storage_pool[_init_i]); \
-      } else { \
-        _init_success = ELEMENT_TYPE ## __init_with_allocator( \
-          &_sequence->value[_init_i], &_sequence->_impl.allocator); \
-      } \
-      if (!_init_success) { \
-        for (; _init_i-- > 0U; ) { \
-          ELEMENT_TYPE ## __fini(&_sequence->value[_init_i]); \
-        } \
-        default_allocator.deallocate( \
-          _sequence->_impl.element_storage_pool, default_allocator.state); \
-        _sequence->_impl.element_storage_pool = NULL; \
-        _sequence->_impl.element_storage_pool_size = 0U; \
-        _sequence->value = NULL; \
-        _sequence->capacity = 0U; \
-        return false; \
-      } \
-    } \
-    return true; \
+    return STRUCT_NAME ## __init_with_options(_sequence, NULL); \
   } \
   void STRUCT_NAME ## __fini( \
     STRUCT_NAME * _sequence) \
@@ -1251,7 +1006,7 @@ extern "C"
       return; \
     } \
     if (_sequence->value != NULL) { \
-      for (size_t _i = 0U; _i < _sequence->capacity; ++_i) { \
+      for (size_t _i = 0U; _i < _sequence->size; ++_i) { \
         ELEMENT_TYPE ## __fini(&_sequence->value[_i]); \
       } \
     } \
@@ -1260,18 +1015,11 @@ extern "C"
     { \
       _sequence->_impl.allocator.deallocate( \
         _sequence->_impl.storage.data, _sequence->_impl.allocator.state); \
-    } \
-    if (_sequence->_impl.element_storage_pool != NULL) { \
-      rcutils_allocator_t default_allocator = rcutils_get_default_allocator(); \
-      default_allocator.deallocate( \
-        _sequence->_impl.element_storage_pool, default_allocator.state); \
-      _sequence->_impl.element_storage_pool = NULL; \
+      _sequence->_impl.storage.data = NULL; \
     } \
     _sequence->value = NULL; \
     _sequence->size = 0U; \
     _sequence->capacity = 0U; \
-    _sequence->_impl.element_storage_pool_size = 0U; \
-    _sequence->_impl.storage.data = NULL; \
   } \
   bool STRUCT_NAME ## __reserve( \
     STRUCT_NAME * _sequence, \
@@ -1280,23 +1028,23 @@ extern "C"
     if (_sequence == NULL) { \
       return false; \
     } \
-    if (_sequence->_impl.element_storage_pool != NULL && \
-      requested_capacity > _sequence->_impl.element_storage_pool_size) \
-    { \
-      return false; \
-    } \
     if (requested_capacity <= _sequence->capacity) { \
       return true; \
     } \
     if (_sequence->_impl.kind != ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__MANAGED) { \
       return false; \
     } \
+    if (_sequence->_impl.prototype.max_instances > 0U && \
+      requested_capacity > _sequence->_impl.prototype.max_instances) \
+    { \
+      return false; \
+    } \
     size_t new_capacity = rosidl_runtime_c__experimental__detail__next_capacity( \
       _sequence->capacity, requested_capacity); \
-    if (_sequence->_impl.element_storage_pool != NULL && \
-      new_capacity > _sequence->_impl.element_storage_pool_size) \
+    if (_sequence->_impl.prototype.max_instances > 0U && \
+      new_capacity > _sequence->_impl.prototype.max_instances) \
     { \
-      new_capacity = _sequence->_impl.element_storage_pool_size; \
+      new_capacity = _sequence->_impl.prototype.max_instances; \
     } \
     size_t new_bytes = 0U; \
     if (!rosidl_runtime_c__experimental__detail__compute_bytes( \
@@ -1304,47 +1052,36 @@ extern "C"
     { \
       return false; \
     } \
-    ELEMENT_TYPE * new_data = \
-      (ELEMENT_TYPE *)_sequence->_impl.allocator.allocate( \
-        new_bytes, _sequence->_impl.allocator.state); \
+    ELEMENT_TYPE * new_data = (ELEMENT_TYPE *)_sequence->_impl.allocator.allocate( \
+      new_bytes, _sequence->_impl.allocator.state); \
     if (new_data == NULL) { \
       return false; \
     } \
-    size_t _i; \
-    for (_i = 0U; _i < new_capacity; ++_i) { \
-      bool _init_success; \
-      if (_sequence->_impl.element_storage_pool != NULL && \
-        _i < _sequence->_impl.element_storage_pool_size) \
-      { \
-        _init_success = ELEMENT_TYPE ## __init_from_storage( \
-          &new_data[_i], &_sequence->_impl.element_storage_pool[_i]); \
-      } else { \
-        _init_success = ELEMENT_TYPE ## __init_with_allocator( \
-          &new_data[_i], &_sequence->_impl.allocator); \
+    for (size_t _i = 0U; _i < _sequence->size; ++_i) { \
+      ELEMENT_TYPE ## __InitOptions _element_options = {0}; \
+      _element_options.allocator = &_sequence->_impl.allocator; \
+      if (_sequence->_impl.prototype.storage != NULL) { \
+        _element_options.external_storage = &_sequence->_impl.prototype.storage[_i]; \
       } \
-      if (!_init_success) { \
-        for (; _i-- > 0U; ) { \
-          ELEMENT_TYPE ## __fini(&new_data[_i]); \
-        } \
-        _sequence->_impl.allocator.deallocate(new_data, _sequence->_impl.allocator.state); \
-        return false; \
-      } \
-    } \
-    for (_i = 0U; _i < _sequence->size; ++_i) { \
-      if (!ELEMENT_TYPE ## __copy(&_sequence->value[_i], &new_data[_i])) { \
-        for (size_t _j = 0U; _j < new_capacity; ++_j) { \
+      if (!ELEMENT_TYPE ## __init_with_options(&new_data[_i], &_element_options)) { \
+        for (size_t _j = 0U; _j < _i; ++_j) { \
           ELEMENT_TYPE ## __fini(&new_data[_j]); \
         } \
-        _sequence->_impl.allocator.deallocate(new_data, _sequence->_impl.allocator.state); \
+        _sequence->_impl.allocator.deallocate( \
+          new_data, _sequence->_impl.allocator.state); \
+        return false; \
+      } \
+      if (!ELEMENT_TYPE ## __copy(&_sequence->value[_i], &new_data[_i])) { \
+        for (size_t _j = 0U; _j <= _i; ++_j) { \
+          ELEMENT_TYPE ## __fini(&new_data[_j]); \
+        } \
+        _sequence->_impl.allocator.deallocate( \
+          new_data, _sequence->_impl.allocator.state); \
         return false; \
       } \
     } \
-    for (_i = 0U; _i < _sequence->capacity; ++_i) { \
+    for (size_t _i = 0U; _i < _sequence->size; ++_i) { \
       ELEMENT_TYPE ## __fini(&_sequence->value[_i]); \
-    } \
-    if (_sequence->_impl.storage.data != NULL) { \
-      _sequence->_impl.allocator.deallocate( \
-        _sequence->_impl.storage.data, _sequence->_impl.allocator.state); \
     } \
     _sequence->_impl.storage.data = new_data; \
     _sequence->value = new_data; \
@@ -1358,8 +1095,31 @@ extern "C"
     if (_sequence == NULL) { \
       return false; \
     } \
-    if (!STRUCT_NAME ## __reserve(_sequence, new_size)) { \
-      return false; \
+    if (new_size == _sequence->size) { \
+      return true; \
+    } \
+    if (new_size > _sequence->size) { \
+      if (!STRUCT_NAME ## __reserve(_sequence, new_size)) { \
+        return false; \
+      } \
+      for (size_t _i = _sequence->size; _i < new_size; ++_i) { \
+        ELEMENT_TYPE ## __InitOptions _element_options = {0}; \
+        _element_options.allocator = &_sequence->_impl.allocator; \
+        if (_sequence->_impl.prototype.storage != NULL) { \
+          _element_options.external_storage = &_sequence->_impl.prototype.storage[_i]; \
+        } \
+        if (!ELEMENT_TYPE ## __init_with_options(&_sequence->value[_i], &_element_options)) \
+        { \
+          for (size_t _j = _i - 1; _j > _sequence->size; --_j) { \
+            ELEMENT_TYPE ## __fini(&_sequence->value[_j]); \
+          } \
+          return false; \
+        } \
+      } \
+    } else { \
+      for (size_t _i = _sequence->size - 1; _i >= new_size; --_i) { \
+        ELEMENT_TYPE ## __fini(&_sequence->value[_i]); \
+      } \
     } \
     _sequence->size = new_size; \
     return true; \
@@ -1371,14 +1131,10 @@ extern "C"
     if (_sequence == NULL || value == NULL) { \
       return false; \
     } \
-    if (!STRUCT_NAME ## __reserve(_sequence, _sequence->size + 1U)) { \
+    if (!STRUCT_NAME ## __resize(_sequence, _sequence->size + 1U)) { \
       return false; \
     } \
-    if (!ELEMENT_TYPE ## __copy(value, &_sequence->value[_sequence->size])) { \
-      return false; \
-    } \
-    ++_sequence->size; \
-    return true; \
+    return ELEMENT_TYPE ## __copy(value, &_sequence->value[_sequence->size - 1]); \
   } \
   bool STRUCT_NAME ## __are_equal( \
     const STRUCT_NAME * lhs, \
@@ -1387,14 +1143,14 @@ extern "C"
     if (lhs == NULL || rhs == NULL) { \
       return false; \
     } \
+    if (lhs->value == NULL || rhs->value == NULL) { \
+      return false; \
+    } \
     if (lhs->size != rhs->size) { \
       return false; \
     } \
     if (lhs->size == 0U) { \
       return true; \
-    } \
-    if (lhs->value == NULL || rhs->value == NULL) { \
-      return false; \
     } \
     for (size_t _i = 0U; _i < lhs->size; ++_i) { \
       if (!ELEMENT_TYPE ## __are_equal(&lhs->value[_i], &rhs->value[_i])) { \
@@ -1410,53 +1166,20 @@ extern "C"
     if (input == NULL || output == NULL) { \
       return false; \
     } \
-    if (input->size > 0U && input->value == NULL) { \
+    if (input->value == NULL || output->value == NULL) { \
       return false; \
     } \
-    if (output->_impl.element_storage_pool != NULL) { \
-      rcutils_allocator_t default_allocator = rcutils_get_default_allocator(); \
-      default_allocator.deallocate( \
-        output->_impl.element_storage_pool, default_allocator.state); \
-      output->_impl.element_storage_pool = NULL; \
-      output->_impl.element_storage_pool_size = 0U; \
+    if (input == output) { \
+      return true; \
     } \
-    if (input->_impl.element_storage_pool != NULL && \
-      input->_impl.element_storage_pool_size > 0U) { \
-      rcutils_allocator_t default_allocator = rcutils_get_default_allocator(); \
-      size_t pool_bytes = \
-        input->_impl.element_storage_pool_size * sizeof(ELEMENT_TYPE ## __ExternalStorage); \
-      output->_impl.element_storage_pool = \
-        (ELEMENT_TYPE ## __ExternalStorage *)default_allocator.allocate( \
-          pool_bytes, default_allocator.state); \
-      if (output->_impl.element_storage_pool == NULL) { \
-        return false; \
-      } \
-      (void)memcpy( \
-        output->_impl.element_storage_pool, \
-        input->_impl.element_storage_pool, \
-        pool_bytes); \
-      output->_impl.element_storage_pool_size = input->_impl.element_storage_pool_size; \
-    } \
-    if (output->size > input->size) { \
-      output->size = input->size; \
-    } \
-    if (!STRUCT_NAME ## __reserve(output, input->size)) { \
-      if (output->_impl.element_storage_pool != NULL) { \
-        rcutils_allocator_t default_allocator = rcutils_get_default_allocator(); \
-        default_allocator.deallocate( \
-          output->_impl.element_storage_pool, default_allocator.state); \
-        output->_impl.element_storage_pool = NULL; \
-        output->_impl.element_storage_pool_size = 0U; \
-      } \
+    if (!STRUCT_NAME ## __resize(output, input->size)) { \
       return false; \
     } \
     for (size_t _i = 0U; _i < input->size; ++_i) { \
       if (!ELEMENT_TYPE ## __copy(&input->value[_i], &output->value[_i])) { \
-        output->size = _i; \
         return false; \
       } \
     } \
-    output->size = input->size; \
     return true; \
   }
 
@@ -1475,30 +1198,16 @@ extern "C"
 /// This version includes init_region_storage for complex element sequences.
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__SEQUENCE_ALIAS(ALIAS_NAME, BASE_TYPE, ELEMENT_TYPE) \
   typedef BASE_TYPE ALIAS_NAME; \
+  typedef BASE_TYPE ## __InitOptions ALIAS_NAME ## __InitOptions; \
   static inline bool ALIAS_NAME ## __init(ALIAS_NAME * _sequence) \
   { \
     return BASE_TYPE ## __init(_sequence); \
   } \
-  static inline bool ALIAS_NAME ## __init_with_allocator( \
+  static inline bool ALIAS_NAME ## __init_with_options( \
     ALIAS_NAME * _sequence, \
-    const rcutils_allocator_t * allocator) \
+    const ALIAS_NAME ## __InitOptions * options) \
   { \
-    return BASE_TYPE ## __init_with_allocator(_sequence, allocator); \
-  } \
-  static inline bool ALIAS_NAME ## __init_from_region( \
-    ALIAS_NAME * _sequence, \
-    rosidl_memory_region_t region) \
-  { \
-    return BASE_TYPE ## __init_from_region(_sequence, region); \
-  } \
-  static inline bool ALIAS_NAME ## __init_region_storage( \
-    ALIAS_NAME * _sequence, \
-    rosidl_memory_region_t region, \
-    ELEMENT_TYPE ## __ExternalStorage * element_storage_pool, \
-    size_t element_storage_pool_size) \
-  { \
-    return BASE_TYPE ## __init_region_storage( \
-      _sequence, region, (void *)element_storage_pool, element_storage_pool_size); \
+    return BASE_TYPE ## __init_with_options(_sequence, options); \
   } \
   static inline void ALIAS_NAME ## __fini(ALIAS_NAME * _sequence) \
   { \
@@ -1540,33 +1249,17 @@ extern "C"
 /// This version includes init_region_storage for complex element sequences.
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_SEQUENCE_ALIAS(ALIAS_NAME, BASE_TYPE, ELEMENT_TYPE) \
   typedef BASE_TYPE ALIAS_NAME; \
+  typedef BASE_TYPE ## __InitOptions ALIAS_NAME ## __InitOptions; \
   static inline bool ALIAS_NAME ## __init(ALIAS_NAME * _sequence, size_t upper_bound) \
   { \
     return BASE_TYPE ## __init(_sequence, upper_bound); \
   } \
-  static inline bool ALIAS_NAME ## __init_with_allocator( \
+  static inline bool ALIAS_NAME ## __init_with_options( \
     ALIAS_NAME * _sequence, \
     size_t upper_bound, \
-    const rcutils_allocator_t * allocator) \
+    const ALIAS_NAME ## __InitOptions * options) \
   { \
-    return BASE_TYPE ## __init_with_allocator(_sequence, upper_bound, allocator); \
-  } \
-  static inline bool ALIAS_NAME ## __init_from_region( \
-    ALIAS_NAME * _sequence, \
-    size_t upper_bound, \
-    rosidl_memory_region_t region) \
-  { \
-    return BASE_TYPE ## __init_from_region(_sequence, upper_bound, region); \
-  } \
-  static inline bool ALIAS_NAME ## __init_region_storage( \
-    ALIAS_NAME * _sequence, \
-    size_t upper_bound, \
-    rosidl_memory_region_t region, \
-    ELEMENT_TYPE ## __ExternalStorage * element_storage_pool, \
-    size_t element_storage_pool_size) \
-  { \
-    return BASE_TYPE ## __init_region_storage( \
-      _sequence, upper_bound, region, (void *)element_storage_pool, element_storage_pool_size); \
+    return BASE_TYPE ## __init_with_options(_sequence, upper_bound, options); \
   } \
   static inline void ALIAS_NAME ## __fini(ALIAS_NAME * _sequence) \
   { \
@@ -1608,6 +1301,13 @@ extern "C"
 /// Used for sequences of BoundedString, BoundedWString, or other bounded types.
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_SEQUENCE_DECLARE( \
     STRUCT_NAME, ELEMENT_TYPE) \
+  typedef struct STRUCT_NAME ## __InitOptions_s { \
+    const rcutils_allocator_t * allocator; \
+    const ELEMENT_TYPE ## __ExternalStorage * external_element_storage; \
+    size_t external_element_storage_size; \
+    const rosidl_memory_region_t * external_storage; \
+    void * reserved[4]; \
+  } STRUCT_NAME ## __InitOptions; \
   typedef struct STRUCT_NAME ## _s \
   { \
     ELEMENT_TYPE * value; \
@@ -1622,26 +1322,25 @@ extern "C"
         ELEMENT_TYPE * data; \
       } storage; \
       rcutils_allocator_t allocator; \
-      ELEMENT_TYPE ## __ExternalStorage * element_storage_pool; \
-      size_t element_storage_pool_size; \
+      struct { \
+        const ELEMENT_TYPE ## __ExternalStorage * storage; \
+        size_t max_instances; \
+        size_t upper_bound; \
+      } prototype; \
     } _impl; \
   } STRUCT_NAME; \
   bool STRUCT_NAME ## __init(STRUCT_NAME * _sequence, size_t element_bound); \
-  bool STRUCT_NAME ## __init_with_allocator( \
+  bool STRUCT_NAME ## __init_with_options( \
     STRUCT_NAME * _sequence, \
     size_t element_bound, \
-    const rcutils_allocator_t * allocator); \
-  bool STRUCT_NAME ## __init_region_storage( \
-    STRUCT_NAME * _sequence, \
-    size_t element_bound, \
-    rosidl_memory_region_t region, \
-    ELEMENT_TYPE ## __ExternalStorage * element_storage_pool, \
-    size_t element_storage_pool_size); \
+    const STRUCT_NAME ## __InitOptions * options); \
   void STRUCT_NAME ## __fini(STRUCT_NAME * _sequence); \
   bool STRUCT_NAME ## __reserve( \
     STRUCT_NAME * _sequence, \
-    size_t element_bound, \
     size_t requested_capacity); \
+  bool STRUCT_NAME ## __resize( \
+    STRUCT_NAME * _sequence, \
+    size_t new_size); \
   bool STRUCT_NAME ## __push_back( \
     STRUCT_NAME * _sequence, \
     const ELEMENT_TYPE * value); \
@@ -1656,6 +1355,12 @@ extern "C"
 /// This macro creates a sequence with an upper bound where elements also require bounds.
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_BOUNDED_SEQUENCE_DECLARE( \
     STRUCT_NAME, ELEMENT_TYPE) \
+  typedef struct STRUCT_NAME ## __InitOptions_s { \
+    const rcutils_allocator_t * allocator; \
+    const ELEMENT_TYPE ## __ExternalStorage * external_element_storage; \
+    const rosidl_memory_region_t * external_storage; \
+    void * reserved[4]; \
+  } STRUCT_NAME ## __InitOptions; \
   typedef struct STRUCT_NAME ## _s \
   { \
     ELEMENT_TYPE * value; \
@@ -1669,33 +1374,30 @@ extern "C"
         rosidl_memory_region_t region; \
         ELEMENT_TYPE * data; \
       } storage; \
-      size_t upper_bound; \
       rcutils_allocator_t allocator; \
-      ELEMENT_TYPE ## __ExternalStorage * element_storage_pool; \
-      size_t element_storage_pool_size; \
+      struct { \
+        const ELEMENT_TYPE ## __ExternalStorage * storage; \
+        size_t upper_bound; \
+      } prototype; \
+      size_t upper_bound; \
     } _impl; \
   } STRUCT_NAME; \
   bool STRUCT_NAME ## __init( \
     STRUCT_NAME * _sequence, \
     size_t upper_bound, \
-    size_t element_bound); \
-  bool STRUCT_NAME ## __init_with_allocator( \
+    size_t element_upper_bound); \
+  bool STRUCT_NAME ## __init_with_options( \
     STRUCT_NAME * _sequence, \
     size_t upper_bound, \
-    size_t element_bound, \
-    const rcutils_allocator_t * allocator); \
-  bool STRUCT_NAME ## __init_region_storage( \
-    STRUCT_NAME * _sequence, \
-    size_t upper_bound, \
-    size_t element_bound, \
-    rosidl_memory_region_t region, \
-    ELEMENT_TYPE ## __ExternalStorage * element_storage_pool, \
-    size_t element_storage_pool_size); \
+    size_t element_upper_bound, \
+    const STRUCT_NAME ## __InitOptions * options); \
   void STRUCT_NAME ## __fini(STRUCT_NAME * _sequence); \
   bool STRUCT_NAME ## __reserve( \
     STRUCT_NAME * _sequence, \
-    size_t element_bound, \
     size_t requested_capacity); \
+  bool STRUCT_NAME ## __resize( \
+    STRUCT_NAME * _sequence, \
+    size_t new_size); \
   bool STRUCT_NAME ## __push_back( \
     STRUCT_NAME * _sequence, \
     const ELEMENT_TYPE * value); \
@@ -1711,104 +1413,50 @@ extern "C"
 /// Elements require a bound parameter during initialization (e.g., BoundedString).
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_SEQUENCE_DEFINE( \
     STRUCT_NAME, ELEMENT_TYPE) \
-  bool STRUCT_NAME ## __init_with_allocator( \
+  bool STRUCT_NAME ## __init_with_options( \
     STRUCT_NAME * _sequence, \
-    size_t element_bound, \
-    const rcutils_allocator_t * allocator) \
+    size_t element_upper_bound, \
+    const STRUCT_NAME ## __InitOptions * options) \
   { \
     if (_sequence == NULL) { \
       return false; \
     } \
-    _sequence->value = NULL; \
-    _sequence->size = 0U; \
-    _sequence->capacity = 0U; \
-    _sequence->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__MANAGED; \
-    _sequence->_impl.storage.data = NULL; \
-    _sequence->_impl.allocator = \
-      rosidl_runtime_c__experimental__detail__allocator_or_default(allocator); \
-    _sequence->_impl.element_storage_pool = NULL; \
-    _sequence->_impl.element_storage_pool_size = 0U; \
-    (void)element_bound; \
-    return rcutils_allocator_is_valid(&_sequence->_impl.allocator); \
+    if (options != NULL && options->allocator != NULL) { \
+      if (!rcutils_allocator_is_valid(options->allocator)) { \
+        return false; \
+      } \
+      _sequence->_impl.allocator = *options->allocator; \
+    } else { \
+      _sequence->_impl.allocator = rcutils_get_default_allocator(); \
+    } \
+    if (options != NULL && options->external_storage != NULL) { \
+      _sequence->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__EXTERNAL; \
+      _sequence->_impl.storage.region = *options->external_storage; \
+      _sequence->value = (ELEMENT_TYPE *)_sequence->_impl.storage.region.location.address; \
+      _sequence->capacity = _sequence->_impl.storage.region.size / sizeof(ELEMENT_TYPE); \
+      _sequence->size = 0U; \
+    } else { \
+      _sequence->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__MANAGED; \
+      _sequence->_impl.storage.data = NULL; \
+      _sequence->value = NULL; \
+      _sequence->capacity = 0U; \
+      _sequence->size = 0U; \
+    } \
+    _sequence->_impl.prototype.upper_bound = element_upper_bound; \
+    if (options != NULL) { \
+      _sequence->_impl.prototype.storage = options->external_element_storage; \
+      _sequence->_impl.prototype.max_instances = options->external_element_storage_size; \
+    } else { \
+      _sequence->_impl.prototype.storage = NULL; \
+      _sequence->_impl.prototype.max_instances = 0U; \
+    } \
+    return true; \
   } \
   bool STRUCT_NAME ## __init( \
     STRUCT_NAME * _sequence, \
-    size_t element_bound) \
+    size_t element_upper_bound) \
   { \
-    return STRUCT_NAME ## __init_with_allocator(_sequence, element_bound, NULL); \
-  } \
-  bool STRUCT_NAME ## __init_region_storage( \
-    STRUCT_NAME * _sequence, \
-    size_t element_bound, \
-    rosidl_memory_region_t region, \
-    ELEMENT_TYPE ## __ExternalStorage * element_storage_pool, \
-    size_t element_storage_pool_size) \
-  { \
-    if (_sequence == NULL || region.location.address == NULL) { \
-      return false; \
-    } \
-    _sequence->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__EXTERNAL; \
-    _sequence->_impl.storage.region = region; \
-    _sequence->_impl.allocator = rcutils_get_default_allocator(); \
-    _sequence->value = (ELEMENT_TYPE *)region.location.address; \
-    _sequence->size = 0U; \
-    _sequence->capacity = region.size / sizeof(ELEMENT_TYPE); \
-    if (element_storage_pool == NULL || element_storage_pool_size == 0U) { \
-      _sequence->_impl.element_storage_pool = NULL; \
-      _sequence->_impl.element_storage_pool_size = 0U; \
-      size_t _init_i; \
-      for (_init_i = 0U; _init_i < _sequence->capacity; ++_init_i) { \
-        if (!ELEMENT_TYPE ## __init(&_sequence->value[_init_i], element_bound)) { \
-          for (; _init_i-- > 0U; ) { \
-            ELEMENT_TYPE ## __fini(&_sequence->value[_init_i]); \
-          } \
-          _sequence->value = NULL; \
-          _sequence->capacity = 0U; \
-          return false; \
-        } \
-      } \
-      return true; \
-    } \
-    rcutils_allocator_t default_allocator = rcutils_get_default_allocator(); \
-    size_t pool_bytes = element_storage_pool_size * sizeof(ELEMENT_TYPE ## __ExternalStorage); \
-    _sequence->_impl.element_storage_pool = \
-      (ELEMENT_TYPE ## __ExternalStorage *)default_allocator.allocate( \
-        pool_bytes, default_allocator.state); \
-    if (_sequence->_impl.element_storage_pool == NULL) { \
-      return false; \
-    } \
-    (void)memcpy( \
-      _sequence->_impl.element_storage_pool, element_storage_pool, pool_bytes); \
-    _sequence->_impl.element_storage_pool_size = element_storage_pool_size; \
-    if (_sequence->capacity > element_storage_pool_size) { \
-      _sequence->capacity = element_storage_pool_size; \
-    } \
-    size_t _init_i; \
-    for (_init_i = 0U; _init_i < _sequence->capacity; ++_init_i) { \
-      bool _init_success; \
-      if (_init_i < _sequence->_impl.element_storage_pool_size) { \
-        _init_success = ELEMENT_TYPE ## __init_from_storage( \
-          &_sequence->value[_init_i], \
-          element_bound, \
-          &_sequence->_impl.element_storage_pool[_init_i]); \
-      } else { \
-        _init_success = ELEMENT_TYPE ## __init( \
-          &_sequence->value[_init_i], element_bound); \
-      } \
-      if (!_init_success) { \
-        for (; _init_i-- > 0U; ) { \
-          ELEMENT_TYPE ## __fini(&_sequence->value[_init_i]); \
-        } \
-        default_allocator.deallocate( \
-          _sequence->_impl.element_storage_pool, default_allocator.state); \
-        _sequence->_impl.element_storage_pool = NULL; \
-        _sequence->_impl.element_storage_pool_size = 0U; \
-        _sequence->value = NULL; \
-        _sequence->capacity = 0U; \
-        return false; \
-      } \
-    } \
-    return true; \
+    return STRUCT_NAME ## __init_with_options(_sequence, element_upper_bound, NULL); \
   } \
   void STRUCT_NAME ## __fini( \
     STRUCT_NAME * _sequence) \
@@ -1826,30 +1474,17 @@ extern "C"
     { \
       _sequence->_impl.allocator.deallocate( \
         _sequence->_impl.storage.data, _sequence->_impl.allocator.state); \
-    } \
-    if (_sequence->_impl.element_storage_pool != NULL) { \
-      rcutils_allocator_t default_allocator = rcutils_get_default_allocator(); \
-      default_allocator.deallocate( \
-        _sequence->_impl.element_storage_pool, default_allocator.state); \
-      _sequence->_impl.element_storage_pool = NULL; \
+      _sequence->_impl.storage.data = NULL; \
     } \
     _sequence->value = NULL; \
     _sequence->size = 0U; \
     _sequence->capacity = 0U; \
-    _sequence->_impl.element_storage_pool_size = 0U; \
-    _sequence->_impl.storage.data = NULL; \
   } \
   bool STRUCT_NAME ## __reserve( \
     STRUCT_NAME * _sequence, \
-    size_t element_bound, \
     size_t requested_capacity) \
   { \
     if (_sequence == NULL) { \
-      return false; \
-    } \
-    if (_sequence->_impl.element_storage_pool != NULL && \
-      requested_capacity > _sequence->_impl.element_storage_pool_size) \
-    { \
       return false; \
     } \
     if (requested_capacity <= _sequence->capacity) { \
@@ -1858,12 +1493,17 @@ extern "C"
     if (_sequence->_impl.kind != ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__MANAGED) { \
       return false; \
     } \
+    if (_sequence->_impl.prototype.max_instances > 0U && \
+      requested_capacity > _sequence->_impl.prototype.max_instances) \
+    { \
+      return false; \
+    } \
     size_t new_capacity = rosidl_runtime_c__experimental__detail__next_capacity( \
       _sequence->capacity, requested_capacity); \
-    if (_sequence->_impl.element_storage_pool != NULL && \
-      new_capacity > _sequence->_impl.element_storage_pool_size) \
+    if (_sequence->_impl.prototype.max_instances > 0U && \
+      new_capacity > _sequence->_impl.prototype.max_instances) \
     { \
-      new_capacity = _sequence->_impl.element_storage_pool_size; \
+      new_capacity = _sequence->_impl.prototype.max_instances; \
     } \
     size_t bytes_to_allocate = new_capacity * sizeof(ELEMENT_TYPE); \
     ELEMENT_TYPE * new_data = (ELEMENT_TYPE *)_sequence->_impl.allocator.allocate( \
@@ -1871,46 +1511,73 @@ extern "C"
     if (new_data == NULL) { \
       return false; \
     } \
-    size_t _init_i; \
-    for (_init_i = 0U; _init_i < new_capacity; ++_init_i) { \
-      bool _init_success; \
-      if (_init_i < _sequence->_impl.element_storage_pool_size) { \
-        _init_success = ELEMENT_TYPE ## __init_from_storage( \
-          &new_data[_init_i], \
-          element_bound, \
-          &_sequence->_impl.element_storage_pool[_init_i]); \
-      } else { \
-        _init_success = ELEMENT_TYPE ## __init(&new_data[_init_i], element_bound); \
+    for (size_t _i = 0U; _i < _sequence->size; ++_i) { \
+      ELEMENT_TYPE ## __InitOptions _element_options = {0}; \
+      _element_options.allocator = &_sequence->_impl.allocator; \
+      if (_sequence->_impl.prototype.storage != NULL) { \
+        _element_options.external_storage = &_sequence->_impl.prototype.storage[_i]; \
       } \
-      if (!_init_success) { \
-        for (; _init_i-- > 0U; ) { \
-          ELEMENT_TYPE ## __fini(&new_data[_init_i]); \
+      if (!ELEMENT_TYPE ## __init_with_options( \
+          &new_data[_i], _sequence->_impl.prototype.upper_bound, &_element_options)) { \
+        for (size_t _j = 0U; _j < _i; ++_j) { \
+          ELEMENT_TYPE ## __fini(&new_data[_j]); \
         } \
-        _sequence->_impl.allocator.deallocate(new_data, _sequence->_impl.allocator.state); \
+        _sequence->_impl.allocator.deallocate( \
+          new_data, _sequence->_impl.allocator.state); \
+        return false; \
+      } \
+      if (!ELEMENT_TYPE ## __copy(&_sequence->value[_i], &new_data[_i])) { \
+        for (size_t _j = 0U; _j <= _i; ++_j) { \
+          ELEMENT_TYPE ## __fini(&new_data[_j]); \
+        } \
+        _sequence->_impl.allocator.deallocate( \
+          new_data, _sequence->_impl.allocator.state); \
         return false; \
       } \
     } \
-    if (_sequence->value != NULL) { \
-      for (size_t _i = 0U; _i < _sequence->size; ++_i) { \
-        if (!ELEMENT_TYPE ## __copy(&_sequence->value[_i], &new_data[_i])) { \
-          for (size_t _j = 0U; _j < new_capacity; ++_j) { \
-            ELEMENT_TYPE ## __fini(&new_data[_j]); \
+    for (size_t _i = 0U; _i < _sequence->size; ++_i) { \
+      ELEMENT_TYPE ## __fini(&_sequence->value[_i]); \
+    } \
+    _sequence->_impl.storage.data = new_data; \
+    _sequence->value = new_data; \
+    _sequence->capacity = new_capacity; \
+    return true; \
+  } \
+  bool STRUCT_NAME ## __resize( \
+    STRUCT_NAME * _sequence, \
+    size_t new_size) \
+  { \
+    if (_sequence == NULL) { \
+      return false; \
+    } \
+    if (new_size == _sequence->size) { \
+      return true; \
+    } \
+    if (new_size > _sequence->size) { \
+      if (!STRUCT_NAME ## __reserve(_sequence, new_size)) { \
+        return false; \
+      } \
+      for (size_t _i = _sequence->size; _i < new_size; ++_i) { \
+        ELEMENT_TYPE ## __InitOptions _element_options = {0}; \
+        _element_options.allocator = &_sequence->_impl.allocator; \
+        if (_sequence->_impl.prototype.storage != NULL) { \
+          _element_options.external_storage = &_sequence->_impl.prototype.storage[_i]; \
+        } \
+        if (!ELEMENT_TYPE ## __init_with_options( \
+            &_sequence->value[_i], _sequence->_impl.prototype.upper_bound, &_element_options)) \
+        { \
+          for (size_t _j = _i - 1; _j > _sequence->size; --_j) { \
+            ELEMENT_TYPE ## __fini(&_sequence->value[_j]); \
           } \
-          _sequence->_impl.allocator.deallocate(new_data, _sequence->_impl.allocator.state); \
           return false; \
         } \
       } \
-      for (size_t _i = 0U; _i < _sequence->capacity; ++_i) { \
+    } else { \
+      for (size_t _i = _sequence->size - 1; _i >= new_size; --_i) { \
         ELEMENT_TYPE ## __fini(&_sequence->value[_i]); \
       } \
     } \
-    if (_sequence->_impl.storage.data != NULL) { \
-      _sequence->_impl.allocator.deallocate( \
-        _sequence->_impl.storage.data, _sequence->_impl.allocator.state); \
-    } \
-    _sequence->value = new_data; \
-    _sequence->_impl.storage.data = new_data; \
-    _sequence->capacity = new_capacity; \
+    _sequence->size = new_size; \
     return true; \
   } \
   bool STRUCT_NAME ## __push_back( \
@@ -1920,16 +1587,19 @@ extern "C"
     if (_sequence == NULL || value == NULL) { \
       return false; \
     } \
-    if (_sequence->size >= _sequence->capacity) { \
+    if (!STRUCT_NAME ## __resize(_sequence, _sequence->size + 1)) { \
       return false; \
     } \
-    return ELEMENT_TYPE ## __copy(value, &_sequence->value[_sequence->size++]); \
+    return ELEMENT_TYPE ## __copy(value, &_sequence->value[_sequence->size - 1]); \
   } \
   bool STRUCT_NAME ## __are_equal( \
     const STRUCT_NAME * lhs, \
     const STRUCT_NAME * rhs) \
   { \
     if (lhs == NULL || rhs == NULL) { \
+      return false; \
+    } \
+    if (lhs->value == NULL || rhs->value == NULL) { \
       return false; \
     } \
     if (lhs == rhs) { \
@@ -1952,7 +1622,13 @@ extern "C"
     if (input == NULL || output == NULL) { \
       return false; \
     } \
-    if (output->capacity < input->size) { \
+    if (input->value == NULL || output->value == NULL) { \
+      return false; \
+    } \
+    if (input == output) { \
+      return true; \
+    } \
+    if (!STRUCT_NAME ## __resize(output, input->size)) { \
       return false; \
     } \
     for (size_t _i = 0U; _i < input->size; ++_i) { \
@@ -1960,7 +1636,6 @@ extern "C"
         return false; \
       } \
     } \
-    output->size = input->size; \
     return true; \
   }
 
@@ -1968,112 +1643,50 @@ extern "C"
 /// Both sequence and elements have upper bounds.
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_BOUNDED_SEQUENCE_DEFINE( \
     STRUCT_NAME, ELEMENT_TYPE) \
-  bool STRUCT_NAME ## __init_with_allocator( \
+  bool STRUCT_NAME ## __init_with_options( \
     STRUCT_NAME * _sequence, \
     size_t upper_bound, \
-    size_t element_bound, \
-    const rcutils_allocator_t * allocator) \
+    size_t element_upper_bound, \
+    const STRUCT_NAME ## __InitOptions * options) \
   { \
     if (_sequence == NULL) { \
       return false; \
     } \
-    _sequence->value = NULL; \
-    _sequence->size = 0U; \
-    _sequence->capacity = 0U; \
-    _sequence->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__MANAGED; \
-    _sequence->_impl.storage.data = NULL; \
+    if (options != NULL && options->allocator != NULL) { \
+      if (!rcutils_allocator_is_valid(options->allocator)) { \
+        return false; \
+      } \
+      _sequence->_impl.allocator = *options->allocator; \
+    } else { \
+      _sequence->_impl.allocator = rcutils_get_default_allocator(); \
+    } \
     _sequence->_impl.upper_bound = upper_bound; \
-    _sequence->_impl.allocator = \
-      rosidl_runtime_c__experimental__detail__allocator_or_default(allocator); \
-    _sequence->_impl.element_storage_pool = NULL; \
-    _sequence->_impl.element_storage_pool_size = 0U; \
-    (void)element_bound; \
-    return rcutils_allocator_is_valid(&_sequence->_impl.allocator); \
+    if (options != NULL && options->external_storage != NULL) { \
+      _sequence->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__EXTERNAL; \
+      _sequence->_impl.storage.region = *options->external_storage; \
+      _sequence->value = (ELEMENT_TYPE *)_sequence->_impl.storage.region.location.address; \
+      _sequence->capacity = _sequence->_impl.storage.region.size / sizeof(ELEMENT_TYPE); \
+      if (_sequence->capacity > _sequence->_impl.upper_bound) { \
+        _sequence->capacity = _sequence->_impl.upper_bound; \
+      } \
+      _sequence->size = 0U; \
+    } else { \
+      _sequence->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__MANAGED; \
+      _sequence->_impl.storage.data = NULL; \
+      _sequence->value = NULL; \
+      _sequence->capacity = 0U; \
+      _sequence->size = 0U; \
+    } \
+    _sequence->_impl.prototype.storage = options != NULL ? options->external_element_storage : NULL; \
+    _sequence->_impl.prototype.upper_bound = element_upper_bound; \
+    return true; \
   } \
   bool STRUCT_NAME ## __init( \
     STRUCT_NAME * _sequence, \
     size_t upper_bound, \
-    size_t element_bound) \
+    size_t element_upper_bound) \
   { \
-    return STRUCT_NAME ## __init_with_allocator(_sequence, upper_bound, element_bound, NULL); \
-  } \
-  bool STRUCT_NAME ## __init_region_storage( \
-    STRUCT_NAME * _sequence, \
-    size_t upper_bound, \
-    size_t element_bound, \
-    rosidl_memory_region_t region, \
-    ELEMENT_TYPE ## __ExternalStorage * element_storage_pool, \
-    size_t element_storage_pool_size) \
-  { \
-    if (_sequence == NULL || region.location.address == NULL) { \
-      return false; \
-    } \
-    _sequence->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__EXTERNAL; \
-    _sequence->_impl.storage.region = region; \
-    _sequence->_impl.upper_bound = upper_bound; \
-    _sequence->_impl.allocator = rcutils_get_default_allocator(); \
-    _sequence->value = (ELEMENT_TYPE *)region.location.address; \
-    _sequence->size = 0U; \
-    _sequence->capacity = region.size / sizeof(ELEMENT_TYPE); \
-    if (_sequence->_impl.upper_bound > 0U && _sequence->capacity > _sequence->_impl.upper_bound) { \
-      _sequence->capacity = _sequence->_impl.upper_bound; \
-    } \
-    if (element_storage_pool == NULL || element_storage_pool_size == 0U) { \
-      _sequence->_impl.element_storage_pool = NULL; \
-      _sequence->_impl.element_storage_pool_size = 0U; \
-      size_t _init_i; \
-      for (_init_i = 0U; _init_i < _sequence->capacity; ++_init_i) { \
-        if (!ELEMENT_TYPE ## __init(&_sequence->value[_init_i], element_bound)) { \
-          for (; _init_i-- > 0U; ) { \
-            ELEMENT_TYPE ## __fini(&_sequence->value[_init_i]); \
-          } \
-          _sequence->value = NULL; \
-          _sequence->capacity = 0U; \
-          return false; \
-        } \
-      } \
-      return true; \
-    } \
-    rcutils_allocator_t default_allocator = rcutils_get_default_allocator(); \
-    size_t pool_bytes = element_storage_pool_size * sizeof(ELEMENT_TYPE ## __ExternalStorage); \
-    _sequence->_impl.element_storage_pool = \
-      (ELEMENT_TYPE ## __ExternalStorage *)default_allocator.allocate( \
-        pool_bytes, default_allocator.state); \
-    if (_sequence->_impl.element_storage_pool == NULL) { \
-      return false; \
-    } \
-    (void)memcpy( \
-      _sequence->_impl.element_storage_pool, element_storage_pool, pool_bytes); \
-    _sequence->_impl.element_storage_pool_size = element_storage_pool_size; \
-    if (_sequence->capacity > element_storage_pool_size) { \
-      _sequence->capacity = element_storage_pool_size; \
-    } \
-    size_t _init_i; \
-    for (_init_i = 0U; _init_i < _sequence->capacity; ++_init_i) { \
-      bool _init_success; \
-      if (_init_i < _sequence->_impl.element_storage_pool_size) { \
-        _init_success = ELEMENT_TYPE ## __init_from_storage( \
-          &_sequence->value[_init_i], \
-          element_bound, \
-          &_sequence->_impl.element_storage_pool[_init_i]); \
-      } else { \
-        _init_success = ELEMENT_TYPE ## __init( \
-          &_sequence->value[_init_i], element_bound); \
-      } \
-      if (!_init_success) { \
-        for (; _init_i-- > 0U; ) { \
-          ELEMENT_TYPE ## __fini(&_sequence->value[_init_i]); \
-        } \
-        default_allocator.deallocate( \
-          _sequence->_impl.element_storage_pool, default_allocator.state); \
-        _sequence->_impl.element_storage_pool = NULL; \
-        _sequence->_impl.element_storage_pool_size = 0U; \
-        _sequence->value = NULL; \
-        _sequence->capacity = 0U; \
-        return false; \
-      } \
-    } \
-    return true; \
+    return STRUCT_NAME ## __init_with_options(_sequence, upper_bound, element_upper_bound, NULL); \
   } \
   void STRUCT_NAME ## __fini( \
     STRUCT_NAME * _sequence) \
@@ -2082,7 +1695,7 @@ extern "C"
       return; \
     } \
     if (_sequence->value != NULL) { \
-      for (size_t _i = 0U; _i < _sequence->capacity; ++_i) { \
+      for (size_t _i = 0U; _i < _sequence->size; ++_i) { \
         ELEMENT_TYPE ## __fini(&_sequence->value[_i]); \
       } \
     } \
@@ -2091,50 +1704,32 @@ extern "C"
     { \
       _sequence->_impl.allocator.deallocate( \
         _sequence->_impl.storage.data, _sequence->_impl.allocator.state); \
-    } \
-    if (_sequence->_impl.element_storage_pool != NULL) { \
-      rcutils_allocator_t default_allocator = rcutils_get_default_allocator(); \
-      default_allocator.deallocate( \
-        _sequence->_impl.element_storage_pool, default_allocator.state); \
-      _sequence->_impl.element_storage_pool = NULL; \
+        _sequence->_impl.storage.data = NULL; \
     } \
     _sequence->value = NULL; \
     _sequence->size = 0U; \
     _sequence->capacity = 0U; \
-    _sequence->_impl.element_storage_pool_size = 0U; \
-    _sequence->_impl.storage.data = NULL; \
   } \
   bool STRUCT_NAME ## __reserve( \
     STRUCT_NAME * _sequence, \
-    size_t element_bound, \
     size_t requested_capacity) \
   { \
     if (_sequence == NULL) { \
       return false; \
     } \
-    if (_sequence->_impl.upper_bound > 0U && requested_capacity > _sequence->_impl.upper_bound) { \
-      return false; \
-    } \
-    if (_sequence->_impl.element_storage_pool != NULL && \
-      requested_capacity > _sequence->_impl.element_storage_pool_size) \
-    { \
-      return false; \
-    } \
     if (requested_capacity <= _sequence->capacity) { \
       return true; \
+    } \
+    if (requested_capacity > _sequence->_impl.upper_bound) { \
+      return false; \
     } \
     if (_sequence->_impl.kind != ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__MANAGED) { \
       return false; \
     } \
     size_t new_capacity = rosidl_runtime_c__experimental__detail__next_capacity( \
       _sequence->capacity, requested_capacity); \
-    if (_sequence->_impl.upper_bound > 0U && new_capacity > _sequence->_impl.upper_bound) { \
+    if (new_capacity > _sequence->_impl.upper_bound) { \
       new_capacity = _sequence->_impl.upper_bound; \
-    } \
-    if (_sequence->_impl.element_storage_pool != NULL && \
-      new_capacity > _sequence->_impl.element_storage_pool_size) \
-    { \
-      new_capacity = _sequence->_impl.element_storage_pool_size; \
     } \
     size_t bytes_to_allocate = new_capacity * sizeof(ELEMENT_TYPE); \
     ELEMENT_TYPE * new_data = (ELEMENT_TYPE *)_sequence->_impl.allocator.allocate( \
@@ -2142,46 +1737,73 @@ extern "C"
     if (new_data == NULL) { \
       return false; \
     } \
-    size_t _init_i; \
-    for (_init_i = 0U; _init_i < new_capacity; ++_init_i) { \
-      bool _init_success; \
-      if (_init_i < _sequence->_impl.element_storage_pool_size) { \
-        _init_success = ELEMENT_TYPE ## __init_from_storage( \
-          &new_data[_init_i], \
-          element_bound, \
-          &_sequence->_impl.element_storage_pool[_init_i]); \
-      } else { \
-        _init_success = ELEMENT_TYPE ## __init(&new_data[_init_i], element_bound); \
+    for (size_t _i = 0U; _i < _sequence->size; ++_i) { \
+      ELEMENT_TYPE ## __InitOptions _element_options = {0}; \
+      _element_options.allocator = &_sequence->_impl.allocator; \
+      if (_sequence->_impl.prototype.storage != NULL) { \
+        _element_options.external_storage = &_sequence->_impl.prototype.storage[_i]; \
       } \
-      if (!_init_success) { \
-        for (; _init_i-- > 0U; ) { \
-          ELEMENT_TYPE ## __fini(&new_data[_init_i]); \
+      if (!ELEMENT_TYPE ## __init_with_options( \
+          &new_data[_i], _sequence->_impl.prototype.upper_bound, &_element_options)) { \
+        for (size_t _j = 0U; _j < _i; ++_j) { \
+          ELEMENT_TYPE ## __fini(&new_data[_j]); \
         } \
-        _sequence->_impl.allocator.deallocate(new_data, _sequence->_impl.allocator.state); \
+        _sequence->_impl.allocator.deallocate( \
+          new_data, _sequence->_impl.allocator.state); \
+        return false; \
+      } \
+      if (!ELEMENT_TYPE ## __copy(&_sequence->value[_i], &new_data[_i])) { \
+        for (size_t _j = 0U; _j <= _i; ++_j) { \
+          ELEMENT_TYPE ## __fini(&new_data[_j]); \
+        } \
+        _sequence->_impl.allocator.deallocate( \
+          new_data, _sequence->_impl.allocator.state); \
         return false; \
       } \
     } \
-    if (_sequence->value != NULL) { \
-      for (size_t _i = 0U; _i < _sequence->size; ++_i) { \
-        if (!ELEMENT_TYPE ## __copy(&_sequence->value[_i], &new_data[_i])) { \
-          for (size_t _j = 0U; _j < new_capacity; ++_j) { \
-            ELEMENT_TYPE ## __fini(&new_data[_j]); \
+    for (size_t _i = 0U; _i < _sequence->size; ++_i) { \
+      ELEMENT_TYPE ## __fini(&_sequence->value[_i]); \
+    } \
+    _sequence->_impl.storage.data = new_data; \
+    _sequence->value = new_data; \
+    _sequence->capacity = new_capacity; \
+    return true; \
+  } \
+  bool STRUCT_NAME ## __resize( \
+    STRUCT_NAME * _sequence, \
+    size_t new_size) \
+  { \
+    if (_sequence == NULL) { \
+      return false; \
+    } \
+    if (new_size == _sequence->size) { \
+      return true; \
+    } \
+    if (new_size > _sequence->size) { \
+      if (!STRUCT_NAME ## __reserve(_sequence, new_size)) { \
+        return false; \
+      } \
+      for (size_t _i = _sequence->size; _i < new_size; ++_i) { \
+        ELEMENT_TYPE ## __InitOptions _element_options = {0}; \
+        _element_options.allocator = &_sequence->_impl.allocator; \
+        if (_sequence->_impl.prototype.storage != NULL) { \
+          _element_options.external_storage = &_sequence->_impl.prototype.storage[_i]; \
+        } \
+        if (!ELEMENT_TYPE ## __init_with_options( \
+            &_sequence->value[_i], _sequence->_impl.prototype.upper_bound, &_element_options)) \
+        { \
+          for (size_t _j = _i - 1; _j > _sequence->size; --_j) { \
+            ELEMENT_TYPE ## __fini(&_sequence->value[_j]); \
           } \
-          _sequence->_impl.allocator.deallocate(new_data, _sequence->_impl.allocator.state); \
           return false; \
         } \
       } \
-      for (size_t _i = 0U; _i < _sequence->capacity; ++_i) { \
+    } else { \
+      for (size_t _i = _sequence->size - 1; _i >= new_size; --_i) { \
         ELEMENT_TYPE ## __fini(&_sequence->value[_i]); \
       } \
     } \
-    if (_sequence->_impl.storage.data != NULL) { \
-      _sequence->_impl.allocator.deallocate( \
-        _sequence->_impl.storage.data, _sequence->_impl.allocator.state); \
-    } \
-    _sequence->value = new_data; \
-    _sequence->_impl.storage.data = new_data; \
-    _sequence->capacity = new_capacity; \
+    _sequence->size = new_size; \
     return true; \
   } \
   bool STRUCT_NAME ## __push_back( \
@@ -2191,16 +1813,19 @@ extern "C"
     if (_sequence == NULL || value == NULL) { \
       return false; \
     } \
-    if (_sequence->size >= _sequence->capacity) { \
+    if (!STRUCT_NAME ## __resize(_sequence, _sequence->size + 1)) { \
       return false; \
     } \
-    return ELEMENT_TYPE ## __copy(value, &_sequence->value[_sequence->size++]); \
+    return ELEMENT_TYPE ## __copy(value, &_sequence->value[_sequence->size - 1]); \
   } \
   bool STRUCT_NAME ## __are_equal( \
     const STRUCT_NAME * lhs, \
     const STRUCT_NAME * rhs) \
   { \
     if (lhs == NULL || rhs == NULL) { \
+      return false; \
+    } \
+    if (lhs->value == NULL || rhs->value == NULL) { \
       return false; \
     } \
     if (lhs == rhs) { \
@@ -2223,7 +1848,13 @@ extern "C"
     if (input == NULL || output == NULL) { \
       return false; \
     } \
-    if (output->capacity < input->size) { \
+    if (input->value == NULL || output->value == NULL) { \
+      return false; \
+    } \
+    if (output == input) { \
+      return true; \
+    } \
+    if (!STRUCT_NAME ## __resize(output, input->size)) { \
       return false; \
     } \
     for (size_t _i = 0U; _i < input->size; ++_i) { \
@@ -2231,121 +1862,100 @@ extern "C"
         return false; \
       } \
     } \
-    output->size = input->size; \
     return true; \
   }
 
 // Sequence types for unbounded string/wstring.
 ROSIDL_RUNTIME_C__EXPERIMENTAL__SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__StringSequence,
+  rosidl_runtime_c__experimental__String__Sequence,
   rosidl_runtime_c__experimental__String);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__WStringSequence,
+  rosidl_runtime_c__experimental__WString__Sequence,
+  rosidl_runtime_c__experimental__WString);
+
+// Bounded sequence types for unbounded string/wstring.
+ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_SEQUENCE_DECLARE(
+  rosidl_runtime_c__experimental__String__BoundedSequence,
+  rosidl_runtime_c__experimental__String);
+ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_SEQUENCE_DECLARE(
+  rosidl_runtime_c__experimental__WString__BoundedSequence,
   rosidl_runtime_c__experimental__WString);
 
 // Unbounded sequence types for bounded string/wstring.
 ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__BoundedStringSequence,
+  rosidl_runtime_c__experimental__BoundedString__Sequence,
   rosidl_runtime_c__experimental__BoundedString);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__BoundedWStringSequence,
+  rosidl_runtime_c__experimental__BoundedWString__Sequence,
   rosidl_runtime_c__experimental__BoundedWString);
 
 // Bounded sequence types for bounded string/wstring.
 ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_BOUNDED_SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__BoundedStringBoundedSequence,
+  rosidl_runtime_c__experimental__BoundedString__BoundedSequence,
   rosidl_runtime_c__experimental__BoundedString);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_BOUNDED_SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__BoundedWStringBoundedSequence,
+  rosidl_runtime_c__experimental__BoundedWString__BoundedSequence,
   rosidl_runtime_c__experimental__BoundedWString);
 
 // Sequence types for all primitive ROSIDL C types.
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__FloatSequence,
-  float);
+  rosidl_runtime_c__experimental__Float__Sequence, float);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__DoubleSequence,
-  double);
+  rosidl_runtime_c__experimental__Double__Sequence, double);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__LongDoubleSequence,
-  long double);
+  rosidl_runtime_c__experimental__LongDouble__Sequence, long double);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__CharSequence,
-  char);
+  rosidl_runtime_c__experimental__Char__Sequence, char);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__WCharSequence,
-  char16_t);
+  rosidl_runtime_c__experimental__WChar__Sequence, char16_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__BooleanSequence,
-  bool);
+  rosidl_runtime_c__experimental__Boolean__Sequence, bool);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__UInt8Sequence,
-  uint8_t);
+  rosidl_runtime_c__experimental__UInt8__Sequence, uint8_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__Int8Sequence,
-  int8_t);
+  rosidl_runtime_c__experimental__Int8__Sequence, int8_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__UInt16Sequence,
-  uint16_t);
+  rosidl_runtime_c__experimental__UInt16__Sequence, uint16_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__Int16Sequence,
-  int16_t);
+  rosidl_runtime_c__experimental__Int16__Sequence, int16_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__UInt32Sequence,
-  uint32_t);
+  rosidl_runtime_c__experimental__UInt32__Sequence, uint32_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__Int32Sequence,
-  int32_t);
+  rosidl_runtime_c__experimental__Int32__Sequence, int32_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__UInt64Sequence,
-  uint64_t);
+  rosidl_runtime_c__experimental__UInt64__Sequence, uint64_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__Int64Sequence,
-  int64_t);
+  rosidl_runtime_c__experimental__Int64__Sequence, int64_t);
 
 // Bounded sequence types for all primitive ROSIDL C types.
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_BOUNDED_SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__FloatBoundedSequence,
-  float);
+  rosidl_runtime_c__experimental__Float__BoundedSequence, float);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_BOUNDED_SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__DoubleBoundedSequence,
-  double);
+  rosidl_runtime_c__experimental__Double__BoundedSequence, double);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_BOUNDED_SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__LongDoubleBoundedSequence,
-  long double);
+  rosidl_runtime_c__experimental__LongDouble__BoundedSequence, long double);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_BOUNDED_SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__CharBoundedSequence,
-  char);
+  rosidl_runtime_c__experimental__Char__BoundedSequence, char);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_BOUNDED_SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__WCharBoundedSequence,
-  char16_t);
+  rosidl_runtime_c__experimental__WChar__BoundedSequence, char16_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_BOUNDED_SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__BooleanBoundedSequence,
-  bool);
+  rosidl_runtime_c__experimental__Boolean__BoundedSequence, bool);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_BOUNDED_SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__UInt8BoundedSequence,
-  uint8_t);
+  rosidl_runtime_c__experimental__UInt8__BoundedSequence, uint8_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_BOUNDED_SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__Int8BoundedSequence,
-  int8_t);
+  rosidl_runtime_c__experimental__Int8__BoundedSequence, int8_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_BOUNDED_SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__UInt16BoundedSequence,
-  uint16_t);
+  rosidl_runtime_c__experimental__UInt16__BoundedSequence, uint16_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_BOUNDED_SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__Int16BoundedSequence,
-  int16_t);
+  rosidl_runtime_c__experimental__Int16__BoundedSequence, int16_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_BOUNDED_SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__UInt32BoundedSequence,
-  uint32_t);
+  rosidl_runtime_c__experimental__UInt32__BoundedSequence, uint32_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_BOUNDED_SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__Int32BoundedSequence,
-  int32_t);
+  rosidl_runtime_c__experimental__Int32__BoundedSequence, int32_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_BOUNDED_SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__UInt64BoundedSequence,
-  uint64_t);
+  rosidl_runtime_c__experimental__UInt64__BoundedSequence, uint64_t);
 ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_BOUNDED_SEQUENCE_DECLARE(
-  rosidl_runtime_c__experimental__Int64BoundedSequence,
-  int64_t);
+  rosidl_runtime_c__experimental__Int64__BoundedSequence, int64_t);
 
 #ifdef __cplusplus
 }

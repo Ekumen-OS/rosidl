@@ -19,6 +19,7 @@
 #include <stdint.h>
 #include <uchar.h>
 
+#include "rosidl_runtime_c/experimental/initialization.h"
 #include "rosidl_runtime_c/experimental/memory.h"
 #include "rosidl_runtime_c/experimental/storage.h"
 
@@ -30,8 +31,21 @@ extern "C"
 /// @file
 /// @brief Experimental C11 scalar wrapper macros.
 
+/// @brief Initialization options for experimental scalars.
+///
+/// Provides control over external memory for scalar initialization.
+typedef struct rosidl_scalar_init_options_s
+{
+  /// Optional external memory (NULL for local storage).
+  rosidl_memory_t * external_memory;
+
+  /// Reserved for future expansion (must be NULL).
+  void * reserved[4];
+} rosidl_scalar_init_options_t;
+
 /// @brief Declare a typed scalar wrapper and its function signatures.
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__SCALAR_DECLARE(STRUCT_NAME, VALUE_TYPE) \
+  typedef rosidl_scalar_init_options_t STRUCT_NAME ## __InitOptions; \
   typedef struct STRUCT_NAME ## _s \
   { \
     struct { \
@@ -51,43 +65,38 @@ extern "C"
     } _impl; \
   } STRUCT_NAME; \
   bool STRUCT_NAME ## __init(STRUCT_NAME * _scalar); \
-  bool STRUCT_NAME ## __init_from_memory(STRUCT_NAME * _scalar, rosidl_memory_t memory); \
+  bool STRUCT_NAME ## __init_with_options( \
+    STRUCT_NAME * _scalar, \
+    const STRUCT_NAME ## __InitOptions * options); \
   void STRUCT_NAME ## __fini(STRUCT_NAME * _scalar);
 
 /// @brief Define scalar functions declared with ROSIDL_RUNTIME_C__EXPERIMENTAL__SCALAR_DECLARE.
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__SCALAR_DEFINE(STRUCT_NAME, VALUE_TYPE) \
-  bool STRUCT_NAME ## __init( \
-    STRUCT_NAME * _scalar) \
-  { \
-    if (_scalar == NULL) { \
-      return false; \
-    } \
-    _scalar->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__LOCAL; \
-    _scalar->_impl.storage.local.data = (VALUE_TYPE)0; \
-    _scalar->value = (void *)&_scalar->_impl.storage.local; \
-    return true; \
-  } \
-  bool STRUCT_NAME ## __init_from_memory( \
+  bool STRUCT_NAME ## __init_with_options( \
     STRUCT_NAME * _scalar, \
-    rosidl_memory_t memory) \
-  { \
-    if (_scalar == NULL || memory.address == NULL) { \
-      return false; \
-    } \
-    _scalar->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__EXTERNAL; \
-    _scalar->_impl.storage.memory = memory; \
-    _scalar->value = (void *)memory.address; \
-    return true; \
-  } \
-  void STRUCT_NAME ## __fini( \
-    STRUCT_NAME * _scalar) \
+    const STRUCT_NAME ## __InitOptions * options) \
   { \
     if (_scalar == NULL) { \
-      return; \
+      return false; \
     } \
-    if (_scalar->_impl.kind == ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__LOCAL) { \
+    if (options != NULL && rosidl_memory_is_valid(options->external_memory)) { \
+      _scalar->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__EXTERNAL; \
+      _scalar->_impl.storage.memory = *options->external_memory; \
+      _scalar->value = (void *)_scalar->_impl.storage.memory.address; \
+    } else { \
+      _scalar->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__LOCAL; \
       _scalar->_impl.storage.local.data = (VALUE_TYPE)0; \
       _scalar->value = (void *)&_scalar->_impl.storage.local; \
+    } \
+    return true; \
+  } \
+  bool STRUCT_NAME ## __init(STRUCT_NAME * _scalar) \
+  { \
+    return STRUCT_NAME ## __init_with_options(_scalar, NULL); \
+  } \
+  void STRUCT_NAME ## __fini(STRUCT_NAME * _scalar) \
+  { \
+    if (_scalar == NULL) { \
       return; \
     } \
     _scalar->value = NULL; \
@@ -102,15 +111,16 @@ extern "C"
 /// Generates a typedef and static inline forwarding functions for all scalar operations.
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__SCALAR_ALIAS(ALIAS_NAME, BASE_TYPE) \
   typedef BASE_TYPE ALIAS_NAME; \
+  typedef BASE_TYPE ## __InitOptions ALIAS_NAME ## __InitOptions; \
   static inline bool ALIAS_NAME ## __init(ALIAS_NAME * _scalar) \
   { \
     return BASE_TYPE ## __init(_scalar); \
   } \
-  static inline bool ALIAS_NAME ## __init_from_memory( \
+  static inline bool ALIAS_NAME ## __init_with_options( \
     ALIAS_NAME * _scalar, \
-    rosidl_memory_t memory) \
+    const ALIAS_NAME ## __InitOptions * options) \
   { \
-    return BASE_TYPE ## __init_from_memory(_scalar, memory); \
+    return BASE_TYPE ## __init_with_options(_scalar, options); \
   } \
   static inline void ALIAS_NAME ## __fini(ALIAS_NAME * _scalar) \
   { \

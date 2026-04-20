@@ -15,6 +15,7 @@
 #ifndef ROSIDL_RUNTIME_C__EXPERIMENTAL__MEMORY_H_
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__MEMORY_H_
 
+#include <stdbool.h>
 #include <stddef.h>
 
 #ifdef __cplusplus
@@ -22,17 +23,43 @@ extern "C"
 {
 #endif
 
+/**
+ * Memory descriptor.
+ *
+ * Describes a memory location and its attributes.
+ */
 typedef struct rosidl_memory_s
 {
-  void * address;
-  int attributes;
+  void * address;    ///< Memory address.
+  int attributes;    ///< Memory attributes.
 } rosidl_memory_t;
 
+/**
+ * Check if a memory descriptor is valid.
+ *
+ * \param[in] memory Memory descriptor to validate.
+ * \return true if the memory descriptor is valid, false otherwise.
+ */
+bool rosidl_memory_is_valid(const rosidl_memory_t * memory);
+
+/**
+ * Memory region descriptor.
+ *
+ * Describes a contiguous region of memory with a location and size.
+ */
 typedef struct rosidl_memory_region_s
 {
-  rosidl_memory_t location;
-  size_t size;
+  rosidl_memory_t location;    ///< Memory location.
+  size_t size;                 ///< Size of the memory region in bytes.
 } rosidl_memory_region_t;
+
+/**
+ * Check if a memory region descriptor is valid.
+ *
+ * \param[in] region Memory region descriptor to validate.
+ * \return true if the memory region descriptor is valid, false otherwise.
+ */
+bool rosidl_memory_region_is_valid(const rosidl_memory_region_t * region);
 
 #ifdef __cplusplus
 }

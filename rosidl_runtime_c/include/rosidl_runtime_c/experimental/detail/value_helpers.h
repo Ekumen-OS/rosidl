@@ -29,17 +29,6 @@ extern "C"
 /// @file
 /// @brief Internal helpers shared by experimental C11 value containers.
 
-/// @brief Return a valid allocator, defaulting when invalid.
-static inline rcutils_allocator_t
-rosidl_runtime_c__experimental__detail__allocator_or_default(
-  const rcutils_allocator_t * allocator)
-{
-  if (allocator != NULL && rcutils_allocator_is_valid(allocator)) {
-    return *allocator;
-  }
-  return rcutils_get_default_allocator();
-}
-
 /// @brief Safely multiply `count` by `element_size` and report overflow.
 static inline bool
 rosidl_runtime_c__experimental__detail__compute_bytes(
