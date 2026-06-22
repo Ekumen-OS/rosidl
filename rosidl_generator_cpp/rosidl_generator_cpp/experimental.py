@@ -402,7 +402,10 @@ def experimental_constraint_type(type_):
     - Array<BoundedString, N>: bounded elements, no constraint.
     - Array<UnboundedString, N>: rosidl_runtime_cpp::StringConstraint (shared max chars via .size).
     - Array<NamespacedType, N>: SubMsg::Constraints (shared per-element constraint).
-    - BoundedSequence<any>: bounded, no constraint.
+    - BoundedSequence<T>: no constraint for fully-bounded elements
+      (scalars, bounded strings, nested fully-bounded msgs).
+      SequenceConstraint<elem_type> for element types that need runtime
+      constraints (unbounded strings/wstrings, nested messages with constraints).
     - UnboundedSequence<T>: rosidl_runtime_cpp::SequenceConstraint<elem_type>.
       Primary template (just 'size') covers scalars and bounded-string elements.
       SequenceConstraint<String/WString> adds 'element_size' for unbounded strings.
@@ -425,7 +428,13 @@ def experimental_constraint_type(type_):
         return None
     if isinstance(type_, AbstractSequence):
         if isinstance(type_, BoundedSequence):
-            return None  # sequence bound is implied by the type, no constraint needed
+            # Sequence bound is in the type, but element type may still need
+            # runtime constraints (e.g., unbounded string elements).
+            elem_constraint = experimental_constraint_type(type_.value_type)
+            if elem_constraint is not None:
+                elem = msg_element_type_to_experimental_cpp(type_.value_type)
+                return 'rosidl_runtime_cpp::SequenceConstraint<{}>'.format(elem)
+            return None
         elem = msg_element_type_to_experimental_cpp(type_.value_type)
         return 'rosidl_runtime_cpp::SequenceConstraint<{}>'.format(elem)
     return None

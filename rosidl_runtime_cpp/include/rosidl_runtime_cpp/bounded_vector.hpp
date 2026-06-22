@@ -254,6 +254,32 @@ public:
     return *this;
   }
 
+  /// %BoundedVector assignment from std::vector (copy and move).
+  /**
+   * All the elements of @a x are copied or moved, after checking the
+   * size does not exceed UpperBound.
+   *
+   * This is a forwarding template constrained to match std::vector<Tp, Alloc>
+   * exactly. Braced-init-lists cannot deduce V so they won't match,
+   * avoiding ambiguity with operator=(initializer_list).
+   *
+   * \param x A std::vector of identical element and allocator types
+   */
+  template<typename V,
+    typename std::enable_if<
+      std::is_same<typename std::decay<V>::type,
+        std::vector<Tp, allocator_type>>::value
+    >::type * = nullptr>
+  BoundedVector &
+  operator=(V && x)
+  {
+    if (x.size() > UpperBound) {
+      throw std::length_error("Exceeded upper bound");
+    }
+    Base::operator=(std::forward<V>(x));
+    return *this;
+  }
+
   /// Assign a given value to a %BoundedVector.
   /**
    * This function fills a %BoundedVector with @a n copies of the
@@ -416,28 +442,23 @@ public:
   /// Return a pointer such that [data(), data() + size()) is a valid range.
   /**
    * For a non-empty %BoundedVector, data() == &front().
+   * Only available when Tp is not bool (std::vector<bool> is bit-packed).
+   * Uses a template default to keep SFINAE in deduction context.
    */
-  template<
-    typename T,
-    typename std::enable_if<
-      !std::is_same<T, Tp>::value &&
-      !std::is_same<T, bool>::value
-    >::type * = nullptr
-  >
-  T *
+  template<typename U = Tp>
+  typename std::enable_if<
+    !std::is_same<U, bool>::value, Tp *
+  >::type
   data() noexcept
   {
     return Base::data();
   }
 
-  template<
-    typename T,
-    typename std::enable_if<
-      !std::is_same<T, Tp>::value &&
-      !std::is_same<T, bool>::value
-    >::type * = nullptr
-  >
-  const T *
+  /// @copydoc data()
+  template<typename U = Tp>
+  typename std::enable_if<
+    !std::is_same<U, bool>::value, const Tp *
+  >::type
   data() const noexcept
   {
     return Base::data();

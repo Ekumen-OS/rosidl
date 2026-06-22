@@ -613,9 +613,11 @@ public:
   : BasicSequence(std::pmr::get_default_resource())
   {
     ensure_capacity_or_fail(source_vector.size());
-    if (std::is_trivially_copyable<T>::value && !source_vector.empty()) {
-      std::memmove(data(), source_vector.data(), source_vector.size() * sizeof(T));
-      size_ = source_vector.size();
+    if constexpr (std::is_trivially_copyable<T>::value && !std::is_same<T, bool>::value) {
+      if (!source_vector.empty()) {
+        std::memmove(data(), source_vector.data(), source_vector.size() * sizeof(T));
+        size_ = source_vector.size();
+      }
     } else {
       for (size_type position = 0; position < source_vector.size(); ++position) {
         emplace_back(std::move(source_vector[position]));
