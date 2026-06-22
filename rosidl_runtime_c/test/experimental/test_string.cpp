@@ -37,21 +37,24 @@ struct StringWrapper;
     static constexpr size_t bound = BOUND; \
     static bool init(STR_T * s, const rcutils_allocator_t * a) \
     { \
-      STR_T ## __InitOptions opts = {.allocator = a, .external_storage = NULL, .reserved = {NULL, NULL, NULL, NULL}}; \
+      STR_T ## __InitOptions opts = {a, NULL, {NULL, NULL, NULL, NULL}}; \
       return STR_T ## __init_with_options(s, &opts); \
     } \
     static bool init_from_region(STR_T * s, rosidl_memory_region_t r) \
     { \
-      STR_T ## __InitOptions opts = {.allocator = NULL, .external_storage = &r, .reserved = {NULL, NULL, NULL, NULL}}; \
+      STR_T ## __InitOptions opts = {NULL, &r, {NULL, NULL, NULL, NULL}}; \
       return STR_T ## __init_with_options(s, &opts); \
     } \
     static void fini(STR_T * s) \
     {STR_T ## __fini(s);} \
-    static bool assignn(STR_T * s, const auto * v, size_t n) \
+    template<typename CharT_> \
+    static bool assignn(STR_T * s, const CharT_ * v, size_t n) \
     {return STR_T ## __assignn(s, v, n);} \
-    static bool assign(STR_T * s, const auto * v) \
+    template<typename CharT_> \
+    static bool assign(STR_T * s, const CharT_ * v) \
     {return STR_T ## __assign(s, v);} \
-    static bool appendn(STR_T * s, const auto * v, size_t n) \
+    template<typename CharT_> \
+    static bool appendn(STR_T * s, const CharT_ * v, size_t n) \
     {return STR_T ## __appendn(s, v, n);} \
     static bool resize(STR_T * s, size_t n) \
     {return STR_T ## __resize(s, n);} \
@@ -61,21 +64,24 @@ struct StringWrapper;
     {return STR_T ## __copy(in, out);} \
     static bool bounded_init(BOUNDED_T * s, const rcutils_allocator_t * a) \
     { \
-      BOUNDED_T ## __InitOptions opts = {.allocator = a, .external_storage = NULL, .reserved = {NULL, NULL, NULL, NULL}}; \
+      BOUNDED_T ## __InitOptions opts = {a, NULL, {NULL, NULL, NULL, NULL}}; \
       return BOUNDED_T ## __init_with_options(s, BOUND, &opts); \
     } \
     static bool bounded_init_from_region(BOUNDED_T * s, rosidl_memory_region_t r) \
     { \
-      BOUNDED_T ## __InitOptions opts = {.allocator = NULL, .external_storage = &r, .reserved = {NULL, NULL, NULL, NULL}}; \
+      BOUNDED_T ## __InitOptions opts = {NULL, &r, {NULL, NULL, NULL, NULL}}; \
       return BOUNDED_T ## __init_with_options(s, BOUND, &opts); \
     } \
     static void bounded_fini(BOUNDED_T * s) \
     {BOUNDED_T ## __fini(s);} \
-    static bool bounded_assignn(BOUNDED_T * s, const auto * v, size_t n) \
+    template<typename CharT_> \
+    static bool bounded_assignn(BOUNDED_T * s, const CharT_ * v, size_t n) \
     {return BOUNDED_T ## __assignn(s, v, n);} \
-    static bool bounded_assign(BOUNDED_T * s, const auto * v) \
+    template<typename CharT_> \
+    static bool bounded_assign(BOUNDED_T * s, const CharT_ * v) \
     {return BOUNDED_T ## __assign(s, v);} \
-    static bool bounded_appendn(BOUNDED_T * s, const auto * v, size_t n) \
+    template<typename CharT_> \
+    static bool bounded_appendn(BOUNDED_T * s, const CharT_ * v, size_t n) \
     {return BOUNDED_T ## __appendn(s, v, n);} \
     static bool bounded_resize(BOUNDED_T * s, size_t n) \
     {return BOUNDED_T ## __resize(s, n);} \

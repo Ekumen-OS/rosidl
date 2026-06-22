@@ -190,7 +190,8 @@ typedef struct rosidl_primitive_sequence_init_options_s
     const STRUCT_NAME ## __InitOptions * options) \
   { \
     if (options != NULL && options->external_storage != NULL) { \
-      return STRUCT_NAME ## __init_with_region(_sequence, upper_bound, *options->external_storage); \
+      return STRUCT_NAME ## __init_with_region( \
+        _sequence, upper_bound, *options->external_storage); \
     } \
     const rcutils_allocator_t * allocator = options != NULL ? options->allocator : NULL; \
     return STRUCT_NAME ## __init_with_allocator(_sequence, upper_bound, allocator); \
@@ -315,7 +316,7 @@ typedef struct rosidl_primitive_sequence_init_options_s
     if (input == NULL || output == NULL) { \
       return false; \
     } \
-    if (input->value == NULL || output->value == NULL) { \
+    if (input->value == NULL && input->size > 0U) { \
       return false; \
     } \
     if (input == output) { \
@@ -491,7 +492,7 @@ typedef struct rosidl_primitive_sequence_init_options_s
     if (input == NULL || output == NULL) { \
       return false; \
     } \
-    if (input->value == NULL || output->value == NULL) { \
+    if (input->value == NULL && input->size > 0U) { \
       return false; \
     } \
     if (input == output) { \
@@ -512,7 +513,8 @@ typedef struct rosidl_primitive_sequence_init_options_s
 
 /// @brief Create a type alias for an unbounded primitive sequence type with function forwarding.
 /// Generates a typedef and static inline forwarding functions for all sequence operations.
-#define ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_SEQUENCE_ALIAS(ALIAS_NAME, BASE_TYPE, VALUE_TYPE) \
+#define ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_SEQUENCE_ALIAS( \
+    ALIAS_NAME, BASE_TYPE, VALUE_TYPE) \
   typedef BASE_TYPE ALIAS_NAME; \
   typedef BASE_TYPE ## __InitOptions ALIAS_NAME ## __InitOptions; \
   static inline bool ALIAS_NAME ## __init(ALIAS_NAME * _sequence) \
@@ -566,7 +568,8 @@ typedef struct rosidl_primitive_sequence_init_options_s
 
 /// @brief Create a type alias for a bounded primitive sequence type with function forwarding.
 /// Generates a typedef and static inline forwarding functions including upper_bound parameter.
-#define ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_BOUNDED_SEQUENCE_ALIAS(ALIAS_NAME, BASE_TYPE, VALUE_TYPE) \
+#define ROSIDL_RUNTIME_C__EXPERIMENTAL__PRIMITIVE_BOUNDED_SEQUENCE_ALIAS(ALIAS_NAME, BASE_TYPE, \
+    VALUE_TYPE) \
   typedef BASE_TYPE ALIAS_NAME; \
   typedef BASE_TYPE ## __InitOptions ALIAS_NAME ## __InitOptions; \
   static inline bool ALIAS_NAME ## __init(ALIAS_NAME * _sequence, size_t upper_bound) \
@@ -765,7 +768,8 @@ typedef struct rosidl_primitive_sequence_init_options_s
       _sequence->capacity = 0U; \
       _sequence->size = 0U; \
     } \
-    _sequence->_impl.prototype.storage = options != NULL ? options->external_element_storage : NULL; \
+    _sequence->_impl.prototype.storage = options != \
+      NULL ? options->external_element_storage : NULL; \
     return true; \
   } \
   bool STRUCT_NAME ## __init( \
@@ -786,8 +790,7 @@ typedef struct rosidl_primitive_sequence_init_options_s
       } \
     } \
     if (_sequence->_impl.kind == ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__MANAGED && \
-      _sequence->_impl.storage.data != NULL) \
-    { \
+      _sequence->_impl.storage.data != NULL) { \
       _sequence->_impl.allocator.deallocate( \
         _sequence->_impl.storage.data, _sequence->_impl.allocator.state); \
       _sequence->_impl.storage.data = NULL; \
@@ -880,8 +883,7 @@ typedef struct rosidl_primitive_sequence_init_options_s
         if (_sequence->_impl.prototype.storage != NULL) { \
           _element_options.external_storage = &_sequence->_impl.prototype.storage[_i]; \
         } \
-        if (!ELEMENT_TYPE ## __init_with_options(&_sequence->value[_i], &_element_options)) \
-        { \
+        if (!ELEMENT_TYPE ## __init_with_options(&_sequence->value[_i], &_element_options)) { \
           for (size_t _j = _i - 1; _j > _sequence->size; --_j) { \
             ELEMENT_TYPE ## __fini(&_sequence->value[_j]); \
           } \
@@ -1011,8 +1013,7 @@ typedef struct rosidl_primitive_sequence_init_options_s
       } \
     } \
     if (_sequence->_impl.kind == ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__MANAGED && \
-      _sequence->_impl.storage.data != NULL) \
-    { \
+      _sequence->_impl.storage.data != NULL) { \
       _sequence->_impl.allocator.deallocate( \
         _sequence->_impl.storage.data, _sequence->_impl.allocator.state); \
       _sequence->_impl.storage.data = NULL; \
@@ -1108,8 +1109,7 @@ typedef struct rosidl_primitive_sequence_init_options_s
         if (_sequence->_impl.prototype.storage != NULL) { \
           _element_options.external_storage = &_sequence->_impl.prototype.storage[_i]; \
         } \
-        if (!ELEMENT_TYPE ## __init_with_options(&_sequence->value[_i], &_element_options)) \
-        { \
+        if (!ELEMENT_TYPE ## __init_with_options(&_sequence->value[_i], &_element_options)) { \
           for (size_t _j = _i - 1; _j > _sequence->size; --_j) { \
             ELEMENT_TYPE ## __fini(&_sequence->value[_j]); \
           } \
@@ -1247,7 +1247,8 @@ typedef struct rosidl_primitive_sequence_init_options_s
 /// @brief Create a type alias for a bounded sequence type with function forwarding.
 /// Generates a typedef and static inline forwarding functions including upper_bound parameter.
 /// This version includes init_region_storage for complex element sequences.
-#define ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_SEQUENCE_ALIAS(ALIAS_NAME, BASE_TYPE, ELEMENT_TYPE) \
+#define ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_SEQUENCE_ALIAS( \
+    ALIAS_NAME, BASE_TYPE, ELEMENT_TYPE) \
   typedef BASE_TYPE ALIAS_NAME; \
   typedef BASE_TYPE ## __InitOptions ALIAS_NAME ## __InitOptions; \
   static inline bool ALIAS_NAME ## __init(ALIAS_NAME * _sequence, size_t upper_bound) \
@@ -1470,8 +1471,7 @@ typedef struct rosidl_primitive_sequence_init_options_s
       } \
     } \
     if (_sequence->_impl.kind == ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__MANAGED && \
-      _sequence->_impl.storage.data != NULL) \
-    { \
+      _sequence->_impl.storage.data != NULL) { \
       _sequence->_impl.allocator.deallocate( \
         _sequence->_impl.storage.data, _sequence->_impl.allocator.state); \
       _sequence->_impl.storage.data = NULL; \
@@ -1564,8 +1564,7 @@ typedef struct rosidl_primitive_sequence_init_options_s
           _element_options.external_storage = &_sequence->_impl.prototype.storage[_i]; \
         } \
         if (!ELEMENT_TYPE ## __init_with_options( \
-            &_sequence->value[_i], _sequence->_impl.prototype.upper_bound, &_element_options)) \
-        { \
+            &_sequence->value[_i], _sequence->_impl.prototype.upper_bound, &_element_options)) { \
           for (size_t _j = _i - 1; _j > _sequence->size; --_j) { \
             ELEMENT_TYPE ## __fini(&_sequence->value[_j]); \
           } \
@@ -1677,7 +1676,8 @@ typedef struct rosidl_primitive_sequence_init_options_s
       _sequence->capacity = 0U; \
       _sequence->size = 0U; \
     } \
-    _sequence->_impl.prototype.storage = options != NULL ? options->external_element_storage : NULL; \
+    _sequence->_impl.prototype.storage = options != \
+      NULL ? options->external_element_storage : NULL; \
     _sequence->_impl.prototype.upper_bound = element_upper_bound; \
     return true; \
   } \
@@ -1700,11 +1700,10 @@ typedef struct rosidl_primitive_sequence_init_options_s
       } \
     } \
     if (_sequence->_impl.kind == ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__MANAGED && \
-      _sequence->_impl.storage.data != NULL) \
-    { \
+      _sequence->_impl.storage.data != NULL) { \
       _sequence->_impl.allocator.deallocate( \
         _sequence->_impl.storage.data, _sequence->_impl.allocator.state); \
-        _sequence->_impl.storage.data = NULL; \
+      _sequence->_impl.storage.data = NULL; \
     } \
     _sequence->value = NULL; \
     _sequence->size = 0U; \
@@ -1790,8 +1789,7 @@ typedef struct rosidl_primitive_sequence_init_options_s
           _element_options.external_storage = &_sequence->_impl.prototype.storage[_i]; \
         } \
         if (!ELEMENT_TYPE ## __init_with_options( \
-            &_sequence->value[_i], _sequence->_impl.prototype.upper_bound, &_element_options)) \
-        { \
+            &_sequence->value[_i], _sequence->_impl.prototype.upper_bound, &_element_options)) { \
           for (size_t _j = _i - 1; _j > _sequence->size; --_j) { \
             ELEMENT_TYPE ## __fini(&_sequence->value[_j]); \
           } \

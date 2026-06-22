@@ -466,7 +466,8 @@ rosidl_runtime_c_type_description_utils_copy_init_sequence_from_referenced_type_
 
   if (sort) {
     rcutils_ret_t ret =
-      rosidl_runtime_c_type_description_utils_sort_referenced_type_descriptions_in_place(*sequence);
+      rosidl_runtime_c_type_description_utils_sort_referenced_type_descriptions_in_place(
+      *sequence);
     if (ret != RCUTILS_RET_OK) {
       RCUTILS_SET_ERROR_MSG("Could not sort copy of referenced type descriptions for validation");
       return ret;
@@ -700,7 +701,8 @@ rosidl_runtime_c_type_description_utils_individual_type_description_is_valid(
 
   if (description->fields.size != map_length) {
     RCUTILS_SET_ERROR_MSG_WITH_FORMAT_STRING(
-      "Individual type description `%s` is invalid: Duplicate fields", description->type_name.data);
+      "Individual type description `%s` is invalid: Duplicate fields",
+      description->type_name.data);
     ret = RCUTILS_RET_INVALID_ARGUMENT;
     goto end;
   }
@@ -875,7 +877,8 @@ rosidl_runtime_c_type_description_utils_type_description_is_valid(
   ret = RCUTILS_RET_OK;
 
 end_sequence:
-  rosidl_runtime_c__type_description__IndividualTypeDescription__Sequence__destroy(sorted_sequence);
+  rosidl_runtime_c__type_description__IndividualTypeDescription__Sequence__destroy(
+    sorted_sequence);
 
 end_necessary:
   if (rcutils_hash_map_fini(necessary_types_map) != RCUTILS_RET_OK) {
@@ -1009,7 +1012,8 @@ rosidl_runtime_c_type_description_utils_create_individual_type_description(
     return RCUTILS_RET_INVALID_ARGUMENT;
   }
 
-  *individual_description = rosidl_runtime_c__type_description__IndividualTypeDescription__create();
+  *individual_description =
+    rosidl_runtime_c__type_description__IndividualTypeDescription__create();
   if (*individual_description == NULL) {
     RCUTILS_SET_ERROR_MSG(
       "Could not create individual description");
@@ -1021,7 +1025,8 @@ rosidl_runtime_c_type_description_utils_create_individual_type_description(
   {
     RCUTILS_SET_ERROR_MSG(
       "Could not assign individual description type name");
-    rosidl_runtime_c__type_description__IndividualTypeDescription__destroy(*individual_description);
+    rosidl_runtime_c__type_description__IndividualTypeDescription__destroy(
+      *individual_description);
     *individual_description = NULL;
     return RCUTILS_RET_BAD_ALLOC;
   }
@@ -1150,7 +1155,9 @@ rosidl_runtime_c_type_description_utils_append_referenced_individual_type_descri
   type_description->referenced_type_descriptions.size += 1;
   type_description->referenced_type_descriptions.capacity += 1;
 
-  if (!rosidl_runtime_c__type_description__IndividualTypeDescription__init(&next_ptr[last_index])) {
+  if (!rosidl_runtime_c__type_description__IndividualTypeDescription__init(
+    &next_ptr[last_index]))
+  {
     RCUTILS_SET_ERROR_MSG(
       "Could not init new type description referenced type descriptions element");
     ret = RCUTILS_RET_BAD_ALLOC;

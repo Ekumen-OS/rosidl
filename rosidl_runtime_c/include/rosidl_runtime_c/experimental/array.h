@@ -128,7 +128,10 @@ typedef struct rosidl_primitive_array_init_options_s
     if (size > (SIZE_MAX / sizeof(ELEMENT_TYPE))) { \
       return false; \
     } \
-    if (options != NULL && rosidl_memory_region_is_valid(options->external_storage)) { \
+    if (options != NULL && options->external_storage != NULL) { \
+      if (!rosidl_memory_region_is_valid(options->external_storage)) { \
+        return false; \
+      } \
       if (options->external_storage->size < (size * sizeof(ELEMENT_TYPE))) { \
         return false; \
       } \
@@ -152,7 +155,9 @@ typedef struct rosidl_primitive_array_init_options_s
     if (array == NULL) { \
       return; \
     } \
-    array->value = NULL; \
+    if (array->_impl.kind != ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__LOCAL) { \
+      array->value = NULL; \
+    } \
   } \
   bool STRUCT_NAME ## __are_equal( \
     const STRUCT_NAME * lhs, const STRUCT_NAME * rhs, size_t size) \
@@ -261,7 +266,10 @@ typedef struct rosidl_primitive_array_init_options_s
     if (size > (SIZE_MAX / sizeof(ELEMENT_TYPE))) { \
       return false; \
     } \
-    if (options != NULL && rosidl_memory_region_is_valid(options->external_storage)) { \
+    if (options != NULL && options->external_storage != NULL) { \
+      if (!rosidl_memory_region_is_valid(options->external_storage)) { \
+        return false; \
+      } \
       if (options->external_storage->size < (size * sizeof(ELEMENT_TYPE))) { \
         return false; \
       } \
@@ -305,7 +313,9 @@ typedef struct rosidl_primitive_array_init_options_s
         ELEMENT_TYPE ## __fini(&_data[_i]); \
       } \
     } \
-    array->value = NULL; \
+    if (array->_impl.kind != ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__LOCAL) { \
+      array->value = NULL; \
+    } \
   } \
   bool STRUCT_NAME ## __are_equal( \
     const STRUCT_NAME * lhs, const STRUCT_NAME * rhs, size_t size) \
@@ -358,8 +368,11 @@ typedef struct rosidl_primitive_array_init_options_s
     ROSIDL_RUNTIME_C__EXPERIMENTAL__COUNT(__VA_ARGS__))(__VA_ARGS__)
 
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_ARRAY_STRUCTURE_DECLARE_1(ELEMENT_TYPE) \
-  ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_ARRAY_STRUCTURE_DECLARE_2(ELEMENT_TYPE ## __Array, ELEMENT_TYPE)
-#define ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_ARRAY_STRUCTURE_DECLARE_2(STRUCT_NAME, ELEMENT_TYPE) \
+  ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_ARRAY_STRUCTURE_DECLARE_2( \
+    ELEMENT_TYPE ## __Array, \
+    ELEMENT_TYPE)
+#define ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_ARRAY_STRUCTURE_DECLARE_2(STRUCT_NAME, \
+    ELEMENT_TYPE) \
   typedef struct STRUCT_NAME ## __InitOptions_s \
   { \
     const rcutils_allocator_t * element_allocator; \
@@ -405,9 +418,11 @@ typedef struct rosidl_primitive_array_init_options_s
     ROSIDL_RUNTIME_C__EXPERIMENTAL__COUNT(__VA_ARGS__))(__VA_ARGS__)
 
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_ARRAY_STRUCTURE_DEFINE_1(ELEMENT_TYPE) \
-  ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_ARRAY_STRUCTURE_DEFINE_2(ELEMENT_TYPE ## __Array, ELEMENT_TYPE)
+  ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_ARRAY_STRUCTURE_DEFINE_2( \
+    ELEMENT_TYPE ## __Array, ELEMENT_TYPE)
 
-#define ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_ARRAY_STRUCTURE_DEFINE_2(STRUCT_NAME, ELEMENT_TYPE) \
+#define ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_ARRAY_STRUCTURE_DEFINE_2(STRUCT_NAME, \
+    ELEMENT_TYPE) \
   bool STRUCT_NAME ## __init_with_options( \
     STRUCT_NAME * array, \
     size_t size, \
@@ -420,7 +435,10 @@ typedef struct rosidl_primitive_array_init_options_s
     if (size > (SIZE_MAX / sizeof(ELEMENT_TYPE))) { \
       return false; \
     } \
-    if (options != NULL && rosidl_memory_region_is_valid(options->external_storage)) { \
+    if (options != NULL && options->external_storage != NULL) { \
+      if (!rosidl_memory_region_is_valid(options->external_storage)) { \
+        return false; \
+      } \
       if (options->external_storage->size < (size * sizeof(ELEMENT_TYPE))) { \
         return false; \
       } \
@@ -464,7 +482,9 @@ typedef struct rosidl_primitive_array_init_options_s
         ELEMENT_TYPE ## __fini(&_data[_i]); \
       } \
     } \
-    array->value = NULL; \
+    if (array->_impl.kind != ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__LOCAL) { \
+      array->value = NULL; \
+    } \
   } \
   bool STRUCT_NAME ## __are_equal( \
     const STRUCT_NAME * lhs, const STRUCT_NAME * rhs, size_t size) \
@@ -847,8 +867,10 @@ typedef struct rosidl_primitive_array_init_options_s
 #define ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_DISPATCH_1(ELEMENT_TYPE, OPERATION, ARRAY_PTR, ...) \
   ELEMENT_TYPE ## __Array__ ## OPERATION((ELEMENT_TYPE ## __Array *)(ARRAY_PTR), __VA_ARGS__)
 
-#define ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_DISPATCH_2(ELEMENT_TYPE, OPERATION, LHS_ARRAY_PTR, RHS_ARRAY_PTR, ...) \
-  ELEMENT_TYPE ## __Array__ ## OPERATION((ELEMENT_TYPE ## __Array *)(LHS_ARRAY_PTR), (ELEMENT_TYPE ## __Array *)(RHS_ARRAY_PTR), __VA_ARGS__)
+#define ROSIDL_RUNTIME_C__EXPERIMENTAL__ARRAY_DISPATCH_2(ELEMENT_TYPE, OPERATION, LHS_ARRAY_PTR, \
+    RHS_ARRAY_PTR, ...) \
+  ELEMENT_TYPE ## __Array__ ## OPERATION((ELEMENT_TYPE ## __Array *)(LHS_ARRAY_PTR), \
+    (ELEMENT_TYPE ## __Array *)(RHS_ARRAY_PTR), __VA_ARGS__)
 
 /// @brief Declare a fixed-size typed array of objects, dispatching to
 /// ELEMENT_TYPE ## Array structure operations.
@@ -906,7 +928,8 @@ typedef struct rosidl_primitive_array_init_options_s
 /// @brief Declare a fixed-size typed array of objects, dispatching to
 /// ELEMENT_TYPE ## Array structure operations.
 /// Requires ELEMENT_TYPE ## Array to be declared with ARRAY_STRUCTURE_DECLARE.
-#define ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_ARRAY_DECLARE(STRUCT_NAME, ELEMENT_TYPE, SIZE) \
+#define ROSIDL_RUNTIME_C__EXPERIMENTAL__BOUNDED_ELEMENT_ARRAY_DECLARE(STRUCT_NAME, ELEMENT_TYPE, \
+    SIZE) \
   typedef ELEMENT_TYPE ## __Array__InitOptions STRUCT_NAME ## __InitOptions; \
   typedef struct STRUCT_NAME ## _s \
   { \

@@ -36,12 +36,12 @@ struct SequenceWrapper;
     static constexpr size_t bound = BOUND; \
     static bool init(SEQ_T * s, const rcutils_allocator_t * a) \
     { \
-      SEQ_T ## __InitOptions opts = {.allocator = a, .external_storage = NULL, .reserved = {NULL, NULL, NULL, NULL}}; \
+      SEQ_T ## __InitOptions opts = {a, NULL, {NULL, NULL, NULL, NULL}}; \
       return SEQ_T ## __init_with_options(s, &opts); \
     } \
     static bool init_from_region(SEQ_T * s, rosidl_memory_region_t r) \
     { \
-      SEQ_T ## __InitOptions opts = {.allocator = NULL, .external_storage = &r, .reserved = {NULL, NULL, NULL, NULL}}; \
+      SEQ_T ## __InitOptions opts = {NULL, &r, {NULL, NULL, NULL, NULL}}; \
       return SEQ_T ## __init_with_options(s, &opts); \
     } \
     static void fini(SEQ_T * s) \
@@ -58,12 +58,12 @@ struct SequenceWrapper;
     {return SEQ_T ## __copy(in, out);} \
     static bool bounded_init(BOUNDED_T * s, const rcutils_allocator_t * a) \
     { \
-      BOUNDED_T ## __InitOptions opts = {.allocator = a, .external_storage = NULL, .reserved = {NULL, NULL, NULL, NULL}}; \
+      BOUNDED_T ## __InitOptions opts = {a, NULL, {NULL, NULL, NULL, NULL}}; \
       return BOUNDED_T ## __init_with_options(s, BOUND, &opts); \
     } \
     static bool bounded_init_from_region(BOUNDED_T * s, rosidl_memory_region_t r) \
     { \
-      BOUNDED_T ## __InitOptions opts = {.allocator = NULL, .external_storage = &r, .reserved = {NULL, NULL, NULL, NULL}}; \
+      BOUNDED_T ## __InitOptions opts = {NULL, &r, {NULL, NULL, NULL, NULL}}; \
       return BOUNDED_T ## __init_with_options(s, BOUND, &opts); \
     } \
     static void bounded_fini(BOUNDED_T * s) \
@@ -126,7 +126,8 @@ struct SequenceTestTraits;
 // clang-format off
 DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__Float__Sequence, float, 1.0f, 2.0f)
 DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__Double__Sequence, double, 1.0, 2.0)
-DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__LongDouble__Sequence, long double, 1.0L,
+DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__LongDouble__Sequence, long double,
+  1.0L,
   2.0L)
 DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__Char__Sequence, char, 'a', 'b')
 DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__WChar__Sequence, char16_t, u'a', u'b')
@@ -135,7 +136,8 @@ DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__UInt8__Sequence, uin
 DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__Int8__Sequence, int8_t, 10, 20)
 DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__UInt16__Sequence, uint16_t, 100u, 200u)
 DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__Int16__Sequence, int16_t, -100, 200)
-DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__UInt32__Sequence, uint32_t, 1000u, 2000u)
+DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__UInt32__Sequence, uint32_t, 1000u,
+  2000u)
 DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__Int32__Sequence, int32_t, -1000, 2000)
 DEFINE_SEQUENCE_TEST_TRAITS(rosidl_runtime_c__experimental__UInt64__Sequence, uint64_t, 100000ULL,
   200000ULL)

@@ -41,7 +41,7 @@ struct ScalarWrapper;
     {return T ## __init(s);} \
     static bool init_from_memory(T * s, rosidl_memory_t m) \
     { \
-      T ## __InitOptions opts = {.external_memory = &m, .reserved = {NULL, NULL, NULL, NULL}}; \
+      T ## __InitOptions opts = {&m, {NULL, NULL, NULL, NULL}}; \
       return T ## __init_with_options(s, &opts); \
     } \
     static void fini(T * s) \

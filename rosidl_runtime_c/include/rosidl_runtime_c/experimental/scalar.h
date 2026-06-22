@@ -79,7 +79,10 @@ typedef struct rosidl_scalar_init_options_s
     if (_scalar == NULL) { \
       return false; \
     } \
-    if (options != NULL && rosidl_memory_is_valid(options->external_memory)) { \
+    if (options != NULL && options->external_memory != NULL) { \
+      if (!rosidl_memory_is_valid(options->external_memory)) { \
+        return false; \
+      } \
       _scalar->_impl.kind = ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__EXTERNAL; \
       _scalar->_impl.storage.memory = *options->external_memory; \
       _scalar->value = (void *)_scalar->_impl.storage.memory.address; \
@@ -99,7 +102,11 @@ typedef struct rosidl_scalar_init_options_s
     if (_scalar == NULL) { \
       return; \
     } \
-    _scalar->value = NULL; \
+    if (_scalar->_impl.kind == ROSIDL_RUNTIME_C__EXPERIMENTAL__STORAGE_KIND__LOCAL) { \
+      _scalar->_impl.storage.local.data = (VALUE_TYPE)0; \
+    } else { \
+      _scalar->value = NULL; \
+    } \
   }
 
 /// @brief Convenience macro declaring and defining a scalar in one place.

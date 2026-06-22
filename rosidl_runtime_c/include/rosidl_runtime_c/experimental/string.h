@@ -43,10 +43,10 @@ typedef struct rosidl_string_init_options_s
 {
   /// Optional allocator (NULL to use default allocator).
   const rcutils_allocator_t * allocator;
-  
+
   /// Optional external storage region (NULL for heap allocation).
   const rosidl_memory_region_t * external_storage;
-  
+
   /// Reserved for future expansion (must be NULL).
   void * reserved[4];
 } rosidl_string_init_options_t;

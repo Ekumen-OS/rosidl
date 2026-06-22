@@ -165,6 +165,14 @@ struct has_bounded_size : std::false_type {};
 template<typename T>
 struct is_message : std::false_type {};
 
+// Traits for message member access - used by rosidl_generator_cpp experimental traits.
+// Primary template (default) is empty; specializations are generated per-message.
+template<typename T>
+struct MessageTraits
+{
+  static constexpr std::size_t member_count = 0;
+};
+
 template<typename T>
 struct is_service : std::false_type {};
 
