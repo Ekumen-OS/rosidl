@@ -216,7 +216,15 @@ submsg_members = [
   {
   }
 
-  @(message.structure.namespaced_type.name)(@(message.structure.namespaced_type.name) && other) = default;
+  @(message.structure.namespaced_type.name)(@(message.structure.namespaced_type.name) && other) noexcept
+@[if message.structure.members]@
+  : @(',\n    '.join('{name}(std::move(other.{name}))'.format(name=member.name) for member in message.structure.members)),
+    _external_storage(std::move(other._external_storage))
+@[else]@
+  : _external_storage(std::move(other._external_storage))
+@[end if]@
+  {
+  }
 
   @(message.structure.namespaced_type.name) & operator=(const @(message.structure.namespaced_type.name) & other)
   {

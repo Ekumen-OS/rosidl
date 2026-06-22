@@ -129,7 +129,8 @@ private:
 
     /// @brief Tag for uninitialized storage (used by the piecewise constructor).
     struct uninit_t {};
-    explicit InternalStorage(uninit_t) noexcept {}
+    explicit InternalStorage(uninit_t) noexcept : raw{}
+    {}
   };
 
 public:
@@ -223,7 +224,6 @@ public:
         },
         std::forward<ArgTuples>(arg_tuples)));
   }
-
   Array & operator=(const Array & array)
   {
     if constexpr (std::is_trivially_copyable_v<T>) {
