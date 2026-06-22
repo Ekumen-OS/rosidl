@@ -108,6 +108,21 @@ public:
     size_(0)
   {}
 
+  /// @brief Construct with per-element storage and explicit initial size.
+  /// @param element_storage_pool Vector of storage for each element.
+  /// @param initial_size Number of initially valid elements.
+  /// Use when the pool already contains prepopulated storage regions
+  /// (e.g. after zero-copy deserialization with prepopulated == true).
+  explicit BasicSequence(
+    std::vector<ElementStorage> element_storage_pool,
+    size_type initial_size)
+  : shared_storage_pool_(std::pmr::get_default_resource()),
+    storage_(),
+    element_storage_pool_(std::move(element_storage_pool)),
+    capacity_(element_storage_pool_.size()),
+    size_(std::min(initial_size, element_storage_pool_.size()))
+  {}
+
   /// @brief Construct over fixed external storage with per-element storage.
   /// @param storage_region External memory region for element objects.
   /// @param element_storage_pool Vector of storage for each element.
@@ -546,6 +561,18 @@ public:
     storage_(storage_region),
     capacity_(clamp_to_upper_bound(storage_region.capacity())),
     size_(0)
+  {}
+
+  /// @brief Construct over fixed external storage with explicit initial size.
+  /// @param storage_region External memory region.
+  /// @param initial_size Number of initially valid elements in the region.
+  /// Use when the region already contains prepopulated data (e.g. after
+  /// zero-copy deserialization with prepopulated == true).
+  explicit BasicSequence(MemoryRegion<T> storage_region, size_type initial_size)
+  : shared_storage_pool_(nullptr),
+    storage_(storage_region),
+    capacity_(clamp_to_upper_bound(storage_region.capacity())),
+    size_(std::min(initial_size, capacity_))
   {}
 
   explicit BasicSequence(

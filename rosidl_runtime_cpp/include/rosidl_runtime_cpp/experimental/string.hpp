@@ -129,6 +129,11 @@ public:
                 "BasicString storage region has no room for null terminator");
       }
       capacity_ = total_slots - 1;
+      // Auto-detect size from the null terminator in the backing buffer.
+      // XCDR ensures strings are null-terminated, so this is safe.
+      // For freshly-zeroed buffers (construct_message_at) this yields 0.
+      // For serialized buffers (cast_message_at) this yields the correct length.
+      size_ = std::char_traits<CharT>::length(data());
     }
     null_terminate();
   }

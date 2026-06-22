@@ -377,6 +377,14 @@ def experimental_storage_init_expr(member_name, type_):
     if isinstance(type_, NamespacedType):
         return '{}(storage.members.{}, rosidl_runtime_cpp::MessageInitialization::SKIP)'.format(
             member_name, member_name)
+    if isinstance(type_, AbstractSequence) and isinstance(type_.value_type, BasicType):
+        # Primitive sequence: prepopulated ? capacity (element count) : 0
+        return '{}(storage.members.{}, storage.prepopulated ? storage.members.{}.capacity() : 0)'.format(
+            member_name, member_name, member_name)
+    if isinstance(type_, AbstractSequence):
+        # Non-primitive sequence: prepopulated ? vector size : 0
+        return '{}(storage.members.{}, storage.prepopulated ? storage.members.{}.size() : 0)'.format(
+            member_name, member_name, member_name)
     return '{}(storage.members.{})'.format(member_name, member_name)
 
 

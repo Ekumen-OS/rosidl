@@ -118,9 +118,14 @@ storage_fields = [
 @[end for]@
     } members;
 
+    bool prepopulated{false};
+
     bool operator==(const ExternalStorage & other) const
     {
       if (this->block != other.block) {
+        return false;
+      }
+      if (this->prepopulated != other.prepopulated) {
         return false;
       }
 @[for field_name, _ in storage_fields]@
