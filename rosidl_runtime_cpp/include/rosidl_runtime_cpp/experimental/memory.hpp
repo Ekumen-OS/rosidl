@@ -109,7 +109,10 @@ public:
   }
 
   pointer data() noexcept {return static_cast<pointer>(region_.location.address);}
-  const_pointer data() const noexcept {return static_cast<const_pointer>(region_.location.address);}
+  const_pointer data() const noexcept
+  {
+    return static_cast<const_pointer>(region_.location.address);
+  }
   int attributes() const noexcept {return region_.location.attributes;}
   size_type size() const noexcept {return region_.size;}
   size_type capacity() const noexcept {return region_.size / sizeof(T);}

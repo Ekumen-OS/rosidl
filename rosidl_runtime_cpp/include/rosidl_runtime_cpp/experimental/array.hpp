@@ -129,7 +129,8 @@ private:
 
     /// @brief Tag for uninitialized storage (used by the piecewise constructor).
     struct uninit_t {};
-    explicit InternalStorage(uninit_t) noexcept : raw{}
+    explicit InternalStorage(uninit_t) noexcept
+    : raw{}
     {}
   };
 

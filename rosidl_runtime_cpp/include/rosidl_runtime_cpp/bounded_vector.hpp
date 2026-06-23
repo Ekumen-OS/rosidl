@@ -268,7 +268,7 @@ public:
   template<typename V,
     typename std::enable_if<
       std::is_same<typename std::decay<V>::type,
-        std::vector<Tp, allocator_type>>::value
+      std::vector<Tp, allocator_type>>::value
     >::type * = nullptr>
   BoundedVector &
   operator=(V && x)
