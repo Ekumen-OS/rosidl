@@ -59,8 +59,8 @@ template<typename CharT>
 struct inline_string_capacity
 {
   static constexpr std::size_t bytes = 64;
-  static constexpr std::size_t slots = bytes / sizeof(CharT);
-  static constexpr std::size_t value = slots > 1 ? slots - 1 : 1;
+  static constexpr std::size_t characters = bytes / sizeof(CharT);
+  static constexpr std::size_t value = characters > 1 ? characters - 1 : 1;
 };
 
 template<typename CharT>
@@ -123,12 +123,12 @@ public:
   : storage_pool_(nullptr), storage_(storage_region), capacity_(0), size_(0)
   {
     if (storage_region) {
-      const size_type total_slots = storage_region.capacity();
-      if (total_slots == 0) {
+      const size_type total_characters = storage_region.capacity();
+      if (total_characters == 0) {
         throw std::invalid_argument(
                 "BasicString storage region has no room for null terminator");
       }
-      capacity_ = total_slots - 1;
+      capacity_ = total_characters - 1;
       // Auto-detect size from the null terminator in the backing buffer.
       // XCDR ensures strings are null-terminated, so this is safe.
       // For freshly-zeroed buffers (construct_message_at) this yields 0.
