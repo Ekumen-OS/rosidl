@@ -57,6 +57,30 @@ struct rosidl_message_type_support_t
   rosidl_message_get_type_description_sources_function get_type_description_sources_func;
 };
 
+/// Constraints on a message type, used when creating publishers/subscriptions.
+/**
+ * Provides bounds for variable-length members and blanket limits.
+ * Zero-initialization (or rosidl_get_zero_initialized_message_type_constraints())
+ * means "no constraints", equivalent to passing NULL for the type_specific pointer.
+ */
+typedef struct rosidl_message_type_constraints_s
+{
+  /// Per-message-type constraints (e.g., per-member bounds from generated Constraints struct).
+  /// NULL if no per-member constraints are needed.
+  void * type_specific;
+
+  /// Blanket maximum length for any string member (characters, 0 = unlimited).
+  size_t max_string_length;
+
+  /// Blanket maximum total serialized size in bytes (0 = unlimited).
+  size_t max_total_size;
+} rosidl_message_type_constraints_t;
+
+/// Return a zero-initialized rosidl_message_type_constraints_t.
+ROSIDL_GENERATOR_C_PUBLIC
+rosidl_message_type_constraints_t
+rosidl_get_zero_initialized_message_type_constraints(void);
+
 /// Return a rosidl_message_type_support_t struct with members set to `NULL`.
 ROSIDL_GENERATOR_C_PUBLIC
 rosidl_message_type_support_t rosidl_get_zero_initialized_message_type_support_handle(void);

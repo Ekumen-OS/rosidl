@@ -20,6 +20,13 @@
 #include <type_traits>
 #include <string>
 
+#include <cstddef>
+#include <cstdint>
+#include <iostream>
+#include <type_traits>
+#include <string>
+
+#include "rosidl_runtime_c/message_type_support_struct.h"
 #include "rosidl_runtime_cpp/traits.hpp"
 #include "rosidl_runtime_cpp/experimental/string.hpp"
 
@@ -41,6 +48,66 @@ struct external_storage_type<T, std::void_t<typename T::ExternalStorage>>
 
 template<typename T>
 using external_storage_type_t = typename external_storage_type<T>::type;
+
+// Detect whether T has a Constraints type (experimental messages).
+template<typename T, typename = void>
+struct has_constraints : std::false_type {};
+
+template<typename T>
+struct has_constraints<T, std::void_t<typename T::Constraints>> : std::true_type {};
+
+template<typename T>
+inline constexpr bool has_constraints_v = has_constraints<T>::value;
+
+// Message constraints with type-specific and blanket limits.
+// Primary template: non-experimental messages (no type_specific field).
+template<typename T, typename = void>
+struct MessageConstraints
+{
+  /// Blanket maximum string length in characters (0 = unlimited).
+  size_t max_string_length{0};
+  /// Blanket maximum total serialized size in bytes (0 = unlimited).
+  size_t max_total_size{0};
+
+  MessageConstraints() = default;
+
+  /// Convert to the C struct for passing to rmw/rcl.
+  rosidl_message_type_constraints_t
+  to_rosidl_message_type_constraints() const
+  {
+    return {nullptr, max_string_length, max_total_size};
+  }
+};
+
+// Specialization: experimental messages (has T::Constraints).
+template<typename T>
+struct MessageConstraints<T, std::void_t<typename T::Constraints>>
+{
+  /// Per-member constraints for this message type.
+  typename T::Constraints type_specific{};
+  /// Blanket maximum string length in characters (0 = unlimited).
+  size_t max_string_length{0};
+  /// Blanket maximum total serialized size in bytes (0 = unlimited).
+  size_t max_total_size{0};
+
+  MessageConstraints() = default;
+
+  /// Implicit conversion from type-specific constraints.
+  MessageConstraints(const typename T::Constraints & ts)
+  : type_specific(ts) {}
+
+  /// Convert to the C struct for passing to rmw/rcl.
+  rosidl_message_type_constraints_t
+  to_rosidl_message_type_constraints() const
+  {
+    return {
+      // Cast away constness to match C struct (and conventions)
+      const_cast<void *>(static_cast<const void *>(&type_specific)),
+      max_string_length,
+      max_total_size
+    };
+  }
+};
 
 }  // namespace rosidl_runtime_cpp
 
