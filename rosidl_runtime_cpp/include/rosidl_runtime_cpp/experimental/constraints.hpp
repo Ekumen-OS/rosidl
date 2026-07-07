@@ -22,6 +22,16 @@
 namespace rosidl_runtime_cpp
 {
 
+/// @brief Callback sink for reporting constraint incompatibilities.
+///
+/// Called by CheckCompatible when a constraint is found to be looser
+/// than its baseline counterpart.
+///
+/// @param user_data  Opaque pointer forwarded from the check caller.
+/// @param field_path Dot-separated path to the field that fails (e.g. "payload.size").
+/// @param reason_code Reason code (0 = looser bound, 1 = type-specific mismatch).
+using ConstraintReportCallback = void (*)(void * user_data, const char * field_path, int reason_code);
+
 /// @brief Constraints for a string member.
 ///
 /// Carries the maximum character length for an unbounded string (narrow or wide).
@@ -40,6 +50,24 @@ struct StringConstraint
   bool operator!=(const StringConstraint & other) const
   {
     return !(*this == other);
+  }
+
+  /// Check compatibility against a baseline.
+  /// @return true if compatible (not looser), false if looser.
+  /// Reports failures through the callback sink when provided.
+  bool CheckCompatible(
+    const StringConstraint & baseline,
+    ConstraintReportCallback report_cb,
+    void * user_data,
+    const char * field_path) const
+  {
+    if (baseline.size != 0 && size > baseline.size) {
+      if (report_cb) {
+        report_cb(user_data, field_path, 0);
+      }
+      return false;
+    }
+    return true;
   }
 };
 
@@ -67,6 +95,22 @@ struct SequenceConstraint
   {
     return !(*this == other);
   }
+
+  /// Check compatibility against a baseline.
+  bool CheckCompatible(
+    const SequenceConstraint & baseline,
+    ConstraintReportCallback report_cb,
+    void * user_data,
+    const char * field_path) const
+  {
+    if (baseline.size != 0 && size > baseline.size) {
+      if (report_cb) {
+        report_cb(user_data, field_path, 0);
+      }
+      return false;
+    }
+    return true;
+  }
 };
 
 /// @brief Constraints for a sequence of (unbounded) narrow strings.
@@ -91,6 +135,22 @@ struct SequenceConstraint<String>
   {
     return !(*this == other);
   }
+
+  /// Check compatibility against a baseline (checks size, not element).
+  bool CheckCompatible(
+    const SequenceConstraint & baseline,
+    ConstraintReportCallback report_cb,
+    void * user_data,
+    const char * field_path) const
+  {
+    if (baseline.size != 0 && size > baseline.size) {
+      if (report_cb) {
+        report_cb(user_data, field_path, 0);
+      }
+      return false;
+    }
+    return true;
+  }
 };
 
 /// @brief Constraints for a sequence of (unbounded) wide strings.
@@ -114,6 +174,22 @@ struct SequenceConstraint<WString>
   bool operator!=(const SequenceConstraint & other) const
   {
     return !(*this == other);
+  }
+
+  /// Check compatibility against a baseline (checks size, not element).
+  bool CheckCompatible(
+    const SequenceConstraint & baseline,
+    ConstraintReportCallback report_cb,
+    void * user_data,
+    const char * field_path) const
+  {
+    if (baseline.size != 0 && size > baseline.size) {
+      if (report_cb) {
+        report_cb(user_data, field_path, 0);
+      }
+      return false;
+    }
+    return true;
   }
 };
 

@@ -440,6 +440,42 @@ constraint_fields = [
     {
       return !this->operator==(other);
     }
+
+    /// Check compatibility against baseline constraints.
+    /// Reports incompatibilities through the callback sink.
+    /// \param baseline  Reference constraints to check against.
+    /// \param report_cb Callback invoked for each incompatible field (may be null).
+    /// \param user_data Opaque pointer forwarded to the callback.
+    /// \param prefix    Dot-separated path prefix for field reporting (empty or "." for top-level).
+    /// \return true if all fields are compatible, false if any field is looser.
+    bool CheckCompatible(
+      const Constraints & baseline,
+      rosidl_runtime_cpp::ConstraintReportCallback report_cb,
+      void * user_data,
+      const char * prefix) const
+    {
+      char path_buf[256];
+@[if constraint_fields]@
+      (void)path_buf;
+@[  for field_name, _ in constraint_fields]@
+      if (prefix && prefix[0]) {
+        snprintf(path_buf, sizeof(path_buf), "%s.%s", prefix, "@(field_name)");
+      } else {
+        snprintf(path_buf, sizeof(path_buf), "@(field_name)");
+      }
+      if (!this->@(field_name).CheckCompatible(baseline.@(field_name), report_cb, user_data, path_buf)) {
+        return false;
+      }
+@[  end for]@
+@[else]@
+      (void)baseline;
+      (void)report_cb;
+      (void)user_data;
+      (void)prefix;
+      (void)path_buf;
+@[end if]@
+      return true;
+    }
   };  // struct Constraints
 };  // struct @(message.structure.namespaced_type.name)
 
@@ -475,6 +511,21 @@ struct SequenceConstraint<@(message_typename)>
   bool operator!=(const SequenceConstraint & other) const
   {
     return !(*this == other);
+  }
+
+  bool CheckCompatible(
+    const SequenceConstraint & baseline,
+    rosidl_runtime_cpp::ConstraintReportCallback report_cb,
+    void * user_data,
+    const char * field_path) const
+  {
+    if (baseline.size != 0 && size > baseline.size) {
+      if (report_cb) {
+        report_cb(user_data, field_path, 0);
+      }
+      return false;
+    }
+    return element.CheckCompatible(baseline.element, report_cb, user_data, field_path);
   }
 };
 
