@@ -16,6 +16,8 @@
 #define ROSIDL_RUNTIME_CPP__EXPERIMENTAL__CONSTRAINTS_HPP_
 
 #include <cstddef>
+#include <functional>
+#include <string_view>
 
 #include "rosidl_runtime_cpp/experimental/string.hpp"
 
@@ -27,10 +29,12 @@ namespace rosidl_runtime_cpp
 /// Called by CheckCompatible when a constraint is found to be looser
 /// than its baseline counterpart.
 ///
-/// @param user_data  Opaque pointer forwarded from the check caller.
+/// The std::function wraps any callable (lambda, function pointer, etc.)
+/// and subsumes the separate user_data parameter that the C API requires.
+///
 /// @param field_path Dot-separated path to the field that fails (e.g. "payload.size").
 /// @param reason_code Reason code (0 = looser bound, 1 = type-specific mismatch).
-using ConstraintReportCallback = void (*)(void * user_data, const char * field_path, int reason_code);
+using ConstraintReportCallback = std::function<void(std::string_view field_path, int reason_code)>;
 
 /// @brief Constraints for a string member.
 ///
@@ -55,15 +59,17 @@ struct StringConstraint
   /// Check compatibility against a baseline.
   /// @return true if compatible (not looser), false if looser.
   /// Reports failures through the callback sink when provided.
+  /// @param baseline  Reference constraints to check against.
+  /// @param report_cb Callback invoked for each incompatible field (may be null).
+  /// @param field_path Dot-separated path prefix for field reporting (default empty).
   bool CheckCompatible(
     const StringConstraint & baseline,
-    ConstraintReportCallback report_cb,
-    void * user_data,
-    const char * field_path) const
+    ConstraintReportCallback report_cb = nullptr,
+    std::string_view field_path = "") const
   {
     if (baseline.size != 0 && size > baseline.size) {
       if (report_cb) {
-        report_cb(user_data, field_path, 0);
+        report_cb(field_path, 0);
       }
       return false;
     }
@@ -97,15 +103,17 @@ struct SequenceConstraint
   }
 
   /// Check compatibility against a baseline.
+  /// @param baseline  Reference constraints to check against.
+  /// @param report_cb Callback for each incompatible field (may be null).
+  /// @param field_path Dot-separated path prefix (default empty).
   bool CheckCompatible(
     const SequenceConstraint & baseline,
-    ConstraintReportCallback report_cb,
-    void * user_data,
-    const char * field_path) const
+    ConstraintReportCallback report_cb = nullptr,
+    std::string_view field_path = "") const
   {
     if (baseline.size != 0 && size > baseline.size) {
       if (report_cb) {
-        report_cb(user_data, field_path, 0);
+        report_cb(field_path, 0);
       }
       return false;
     }
@@ -136,16 +144,18 @@ struct SequenceConstraint<String>
     return !(*this == other);
   }
 
-  /// Check compatibility against a baseline (checks size, not element).
+  /// Check compatibility against a baseline (checks size + element string length).
+  /// @param baseline  Reference constraints to check against.
+  /// @param report_cb Callback for each incompatible field (may be null).
+  /// @param field_path Dot-separated path prefix (default empty).
   bool CheckCompatible(
     const SequenceConstraint & baseline,
-    ConstraintReportCallback report_cb,
-    void * user_data,
-    const char * field_path) const
+    ConstraintReportCallback report_cb = nullptr,
+    std::string_view field_path = "") const
   {
     if (baseline.size != 0 && size > baseline.size) {
       if (report_cb) {
-        report_cb(user_data, field_path, 0);
+        report_cb(field_path, 0);
       }
       return false;
     }
@@ -176,16 +186,18 @@ struct SequenceConstraint<WString>
     return !(*this == other);
   }
 
-  /// Check compatibility against a baseline (checks size, not element).
+  /// Check compatibility against a baseline (checks size + element string length).
+  /// @param baseline  Reference constraints to check against.
+  /// @param report_cb Callback for each incompatible field (may be null).
+  /// @param field_path Dot-separated path prefix (default empty).
   bool CheckCompatible(
     const SequenceConstraint & baseline,
-    ConstraintReportCallback report_cb,
-    void * user_data,
-    const char * field_path) const
+    ConstraintReportCallback report_cb = nullptr,
+    std::string_view field_path = "") const
   {
     if (baseline.size != 0 && size > baseline.size) {
       if (report_cb) {
-        report_cb(user_data, field_path, 0);
+        report_cb(field_path, 0);
       }
       return false;
     }

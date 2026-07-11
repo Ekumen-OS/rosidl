@@ -58,7 +58,8 @@ rosidl_message_type_constraints_t rosidl_get_zero_initialized_message_type_const
   static rosidl_message_type_constraints_t null_constraints = {
     .type_specific = NULL,
     .max_string_length = 0u,
-    .max_total_size = 0u
+    .max_total_size = 0u,
+    .strict = false
   };
   return null_constraints;
 }

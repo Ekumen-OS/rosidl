@@ -445,34 +445,197 @@ constraint_fields = [
     /// Reports incompatibilities through the callback sink.
     /// \param baseline  Reference constraints to check against.
     /// \param report_cb Callback invoked for each incompatible field (may be null).
-    /// \param user_data Opaque pointer forwarded to the callback.
-    /// \param prefix    Dot-separated path prefix for field reporting (empty or "." for top-level).
+    /// \param prefix    Dot-separated path prefix for field reporting (default empty).
     /// \return true if all fields are compatible, false if any field is looser.
     bool CheckCompatible(
       const Constraints & baseline,
-      rosidl_runtime_cpp::ConstraintReportCallback report_cb,
-      void * user_data,
-      const char * prefix) const
+      rosidl_runtime_cpp::ConstraintReportCallback report_cb = nullptr,
+      std::string_view prefix = "") const
     {
-      char path_buf[256];
 @[if constraint_fields]@
-      (void)path_buf;
+      std::string field_path;
 @[  for field_name, _ in constraint_fields]@
-      if (prefix && prefix[0]) {
-        snprintf(path_buf, sizeof(path_buf), "%s.%s", prefix, "@(field_name)");
+      field_path.clear();
+      if (!prefix.empty()) {
+        field_path = prefix;
+        field_path += '.';
+        field_path += "@(field_name)";
       } else {
-        snprintf(path_buf, sizeof(path_buf), "@(field_name)");
+        field_path = "@(field_name)";
       }
-      if (!this->@(field_name).CheckCompatible(baseline.@(field_name), report_cb, user_data, path_buf)) {
+      if (!this->@(field_name).CheckCompatible(baseline.@(field_name), report_cb, field_path)) {
         return false;
       }
 @[  end for]@
 @[else]@
       (void)baseline;
       (void)report_cb;
-      (void)user_data;
       (void)prefix;
-      (void)path_buf;
+@[end if]@
+      return true;
+    }
+
+    /// Validate a message instance against these constraints.
+    /** Walks the message fields and compares each against the
+     *  corresponding constraint bound.  Reports violating fields
+     *  through the optional callback with dot-separated field paths.
+     *  \param message    Message instance to validate.
+     *  \param report_cb  Callback invoked for each violating field (may be null).
+     *  \param prefix     Dot-separated path prefix for field reporting (default empty).
+     *  \return true if the message satisfies all constraints,
+     *          false if any field violates its constraint. */
+    bool CheckCompatible(
+      const @(message.structure.namespaced_type.name) & message,
+      rosidl_runtime_cpp::ConstraintReportCallback report_cb = nullptr,
+      std::string_view prefix = "") const
+    {
+@[if constraint_fields]@
+      std::string field_path;
+@[  for field_name, field_type in constraint_fields]@
+@# Find the member with this field_name to get its type for nested/array handling
+@{
+from rosidl_parser.definition import AbstractString, AbstractWString, AbstractSequence, Array, NamespacedType
+member_obj = None
+has_element = False
+for m in message.structure.members:
+    if m.name == field_name:
+        member_obj = m
+        break
+if member_obj:
+    mt = member_obj.type
+    if isinstance(mt, (AbstractSequence, Array)):
+        has_element = True
+        vt = mt.value_type
+    else:
+        vt = None
+}@
+@[    if field_type == 'rosidl_runtime_cpp::StringConstraint']@
+      // StringConstraint: message->@(field_name).size() <= this->@(field_name).size
+      if (this->@(field_name).size != 0 && message.@(field_name).size() > this->@(field_name).size) {
+        field_path.clear();
+        if (!prefix.empty()) {
+          field_path = prefix;
+          field_path += '.';
+          field_path += "@(field_name).size";
+        } else {
+          field_path = "@(field_name).size";
+        }
+        if (report_cb) {
+          report_cb(field_path, 0);
+        }
+        return false;
+      }
+@[    elif field_type.startswith('rosidl_runtime_cpp::SequenceConstraint<')]@
+@{
+# Extract element type from SequenceConstraint<ElemType>
+sequence_element = field_type[len('rosidl_runtime_cpp::SequenceConstraint<'):-1]
+}@
+      // Sequence constraint: check size.
+      if (this->@(field_name).size != 0 && message.@(field_name).size() > this->@(field_name).size) {
+        field_path.clear();
+        if (!prefix.empty()) {
+          field_path = prefix;
+          field_path += '.';
+          field_path += "@(field_name).size";
+        } else {
+          field_path = "@(field_name).size";
+        }
+        if (report_cb) {
+          report_cb(field_path, 0);
+        }
+        return false;
+      }
+@# Per-element check based on element type
+@{
+is_sequence_of_msgs = False
+if has_element:
+    from rosidl_parser.definition import NamespacedType
+    is_sequence_of_msgs = isinstance(vt, NamespacedType)
+}@
+@[      if sequence_element == 'rosidl_runtime_cpp::String' or sequence_element == 'rosidl_runtime_cpp::WString']@
+      // Per-element string length check.
+      if (this->@(field_name).element.size != 0) {
+        for (size_t _vi = 0; _vi < message.@(field_name).size(); ++_vi) {
+          if (message.@(field_name)[_vi].size() > this->@(field_name).element.size) {
+            field_path.clear();
+            if (!prefix.empty()) {
+              field_path = prefix;
+              field_path += '.';
+              field_path += "@(field_name)[";
+              field_path += std::to_string(_vi);
+              field_path += "].size";
+            } else {
+              field_path = "@(field_name)[";
+              field_path += std::to_string(_vi);
+              field_path += "].size";
+            }
+            if (report_cb) {
+              report_cb(field_path, 0);
+            }
+            return false;
+          }
+        }
+      }
+@[      elif is_sequence_of_msgs]@
+      // Sequence of nested messages: validate each element.
+      for (size_t _vi = 0; _vi < message.@(field_name).size(); ++_vi) {
+        field_path.clear();
+        if (!prefix.empty()) {
+          field_path = prefix;
+          field_path += '.';
+          field_path += "@(field_name)[";
+          field_path += std::to_string(_vi);
+          field_path += ']';
+        } else {
+          field_path = "@(field_name)[";
+          field_path += std::to_string(_vi);
+          field_path += ']';
+        }
+        if (!this->@(field_name).element.CheckCompatible(message.@(field_name)[_vi], report_cb, field_path)) {
+          return false;
+        }
+      }
+@[      end if]@
+@[    else]@
+@[      if has_element]@
+      // Array/sequence of nested messages: validate each element.
+      for (size_t _vi = 0; _vi < message.@(field_name).size(); ++_vi) {
+        field_path.clear();
+        if (!prefix.empty()) {
+          field_path = prefix;
+          field_path += '.';
+          field_path += "@(field_name)[";
+          field_path += std::to_string(_vi);
+          field_path += ']';
+        } else {
+          field_path = "@(field_name)[";
+          field_path += std::to_string(_vi);
+          field_path += ']';
+        }
+        if (!this->@(field_name).CheckCompatible(message.@(field_name)[_vi], report_cb, field_path)) {
+          return false;
+        }
+      }
+@[      else]@
+      // Nested message: validate recursively.
+      field_path.clear();
+      if (!prefix.empty()) {
+        field_path = prefix;
+        field_path += '.';
+        field_path += "@(field_name)";
+      } else {
+        field_path = "@(field_name)";
+      }
+      if (!this->@(field_name).CheckCompatible(message.@(field_name), report_cb, field_path)) {
+        return false;
+      }
+@[      end if]@
+@[    end if]@
+@[  end for]@
+@[else]@
+      (void)message;
+      (void)report_cb;
+      (void)prefix;
 @[end if]@
       return true;
     }
@@ -515,17 +678,16 @@ struct SequenceConstraint<@(message_typename)>
 
   bool CheckCompatible(
     const SequenceConstraint & baseline,
-    rosidl_runtime_cpp::ConstraintReportCallback report_cb,
-    void * user_data,
-    const char * field_path) const
+    rosidl_runtime_cpp::ConstraintReportCallback report_cb = nullptr,
+    std::string_view field_path = "") const
   {
     if (baseline.size != 0 && size > baseline.size) {
       if (report_cb) {
-        report_cb(user_data, field_path, 0);
+        report_cb(field_path, 0);
       }
       return false;
     }
-    return element.CheckCompatible(baseline.element, report_cb, user_data, field_path);
+    return element.CheckCompatible(baseline.element, report_cb, field_path);
   }
 };
 

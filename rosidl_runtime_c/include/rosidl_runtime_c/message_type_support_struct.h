@@ -15,6 +15,8 @@
 #ifndef ROSIDL_RUNTIME_C__MESSAGE_TYPE_SUPPORT_STRUCT_H_
 #define ROSIDL_RUNTIME_C__MESSAGE_TYPE_SUPPORT_STRUCT_H_
 
+#include <stdbool.h>
+
 #include "rosidl_runtime_c/type_description/type_description__struct.h"
 #include "rosidl_runtime_c/type_description/type_source__struct.h"
 #include "rosidl_runtime_c/type_hash.h"
@@ -62,6 +64,15 @@ struct rosidl_message_type_support_t
  * Provides bounds for variable-length members and blanket limits.
  * Zero-initialization (or rosidl_get_zero_initialized_message_type_constraints())
  * means "no constraints", equivalent to passing NULL for the type_specific pointer.
+ *
+ * Validation policy:
+ *   - When `strict` is false (default), the implementation performs cheap
+ *     payload-size checks for constrained types.  If the payload-size check
+ *     fails, a full per-field validation is triggered automatically so that
+ *     the caller receives a diagnostic indicating which field(s) violated
+ *     their constraints (the failure is likely a logic error).
+ *   - When `strict` is true, a full per-field validation is always
+ *     performed after the payload-size check.
  */
 typedef struct rosidl_message_type_constraints_s
 {
@@ -74,6 +85,9 @@ typedef struct rosidl_message_type_constraints_s
 
   /// Blanket maximum total serialized size in bytes (0 = unlimited).
   size_t max_total_size;
+
+  /// Request full per-field validation (see struct docs for policy).
+  bool strict;
 } rosidl_message_type_constraints_t;
 
 /// Return a zero-initialized rosidl_message_type_constraints_t.

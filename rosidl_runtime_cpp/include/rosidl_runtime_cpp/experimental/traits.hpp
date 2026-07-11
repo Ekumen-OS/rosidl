@@ -68,6 +68,8 @@ struct MessageConstraints
   size_t max_string_length{0};
   /// Blanket maximum total serialized size in bytes (0 = unlimited).
   size_t max_total_size{0};
+  /// Request full per-field validation (false = cheap payload-size checks).
+  bool strict{false};
 
   MessageConstraints() = default;
 
@@ -75,7 +77,7 @@ struct MessageConstraints
   rosidl_message_type_constraints_t
   to_rosidl_message_type_constraints() const
   {
-    return {nullptr, max_string_length, max_total_size};
+    return {nullptr, max_string_length, max_total_size, strict};
   }
 };
 
@@ -89,6 +91,8 @@ struct MessageConstraints<T, std::void_t<typename T::Constraints>>
   size_t max_string_length{0};
   /// Blanket maximum total serialized size in bytes (0 = unlimited).
   size_t max_total_size{0};
+  /// Request full per-field validation (false = cheap payload-size checks).
+  bool strict{false};
 
   MessageConstraints() = default;
 
@@ -104,7 +108,8 @@ struct MessageConstraints<T, std::void_t<typename T::Constraints>>
       // Cast away constness to match C struct (and conventions)
       const_cast<void *>(static_cast<const void *>(&type_specific)),
       max_string_length,
-      max_total_size
+      max_total_size,
+      strict
     };
   }
 };
