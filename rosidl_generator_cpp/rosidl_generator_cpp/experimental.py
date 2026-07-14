@@ -57,7 +57,8 @@ def experimental_namespaced_type_name(type_):
 
 
 def msg_element_type_to_experimental_cpp(type_):
-    """Return the experimental C++ element type for sequence and array members.
+    """
+    Return the experimental C++ element type for sequence and array members.
 
     BasicType members use raw scalars (not Scalar<T>) as sequence/array elements,
     preserving the contiguous-storage fast paths in BasicSequence.
@@ -79,7 +80,8 @@ def msg_element_type_to_experimental_cpp(type_):
 
 
 def msg_type_only_to_experimental_cpp(type_):
-    """Convert a top-level message member type to its experimental C++ type.
+    """
+    Convert a top-level message member type to its experimental C++ type.
 
     BasicType top-level members are wrapped in Scalar<T>.
     """
@@ -123,7 +125,8 @@ def msg_type_to_experimental_cpp(type_):
 
 
 def create_experimental_member_list(message):
-    """Return (init_list, member_list) for experimental message constructors.
+    """
+    Return (init_list, member_list) for experimental message constructors.
 
     Like create_init_alloc_and_member_lists but for experimental types:
     - No allocator constructor; alloc_list is not produced.
@@ -137,7 +140,9 @@ def create_experimental_member_list(message):
     from rosidl_generator_cpp import primitive_value_to_cpp
 
     class Member:
+
         def __init__(self, name):
+
             self.name = name
             self.default_value = None
             self.zero_value = None
@@ -148,6 +153,7 @@ def create_experimental_member_list(message):
                     self.zero_value == other.zero_value)
 
     class CommonMemberSet:
+
         def __init__(self):
             self.members = []
 
@@ -221,7 +227,8 @@ def experimental_member_needs_pmr(type_):
 
 
 def experimental_pmr_init_expr(member_name, type_):
-    """Return the member-initializer list expression for the PMR constructor.
+    """
+    Return the member-initializer list expression for the PMR constructor.
 
     Sub-messages (NamespacedType) are constructed with SKIP so that _initialize()
     can propagate the actual MessageInitialization value afterwards.
@@ -261,7 +268,8 @@ def generate_experimental_default_string(membset: list) -> list[str]:
 
 
 def generate_experimental_zero_string(membset):
-    """Like generate_zero_string but uses experimental C++ type names for array fill.
+    """
+    Like generate_zero_string but uses experimental C++ type names for array fill.
 
     For Array<NamespacedType, N> members the fill element type is the experimental
     message name (e.g. pkg::ns::experimental::Sub) rather than the standard
@@ -281,7 +289,8 @@ def generate_experimental_zero_string(membset):
 
 
 def experimental_storage_type(type_):
-    """Return the C++ type for a member's field in the ExternalStorage nested struct.
+    """
+    Return the C++ type for a member's field in the ExternalStorage nested struct.
 
     Each field holds the memory descriptor(s) needed to initialise the
     corresponding message member to point to externally managed memory.
@@ -354,7 +363,8 @@ def experimental_storage_type(type_):
 
 
 def experimental_storage_init_expr(member_name, type_):
-    """Return the initializer-list expression for the ExternalStorage constructor.
+    """
+    Return the initializer-list expression for the ExternalStorage constructor.
 
     For scalar arrays and all non-array types the member is directly constructible
     from its storage field via a single-argument constructor.  For Array<non-scalar, N>
@@ -366,9 +376,10 @@ def experimental_storage_init_expr(member_name, type_):
     """
     if isinstance(type_, Array) and not isinstance(type_.value_type, BasicType):
         if isinstance(type_.value_type, NamespacedType):
-            tuples = ', '.join(
-                ['std::make_tuple(storage.members.{}[{}], rosidl_runtime_cpp::MessageInitialization::SKIP)'
-                 .format(member_name, i) for i in range(type_.size)])
+            tuples = ', '.join([(
+                'std::make_tuple(storage.members.{}[{}], ' +
+                'rosidl_runtime_cpp::MessageInitialization::SKIP)'
+            ).format(member_name, i) for i in range(type_.size)])
         else:
             tuples = ', '.join(
                 ['std::make_tuple(storage.members.{}[{}])'.format(member_name, i)
@@ -379,17 +390,20 @@ def experimental_storage_init_expr(member_name, type_):
             member_name, member_name)
     if isinstance(type_, AbstractSequence) and isinstance(type_.value_type, BasicType):
         # Primitive sequence: prepopulated ? capacity (element count) : 0
-        return '{}(storage.members.{}, storage.prepopulated ? storage.members.{}.capacity() : 0)'.format(
-            member_name, member_name, member_name)
+        return (
+            '{}(storage.members.{}, storage.prepopulated ? storage.members.{}.capacity() : 0)'
+        ).format(member_name, member_name, member_name)
     if isinstance(type_, AbstractSequence):
         # Non-primitive sequence: prepopulated ? vector size : 0
-        return '{}(storage.members.{}, storage.prepopulated ? storage.members.{}.size() : 0)'.format(
-            member_name, member_name, member_name)
+        return (
+            '{}(storage.members.{}, storage.prepopulated ? storage.members.{}.size() : 0)'
+        ).format(member_name, member_name, member_name)
     return '{}(storage.members.{})'.format(member_name, member_name)
 
 
 def experimental_constraint_type(type_):
-    """Return the C++ constraint type string for a member, or None if none is needed.
+    """
+    Return the C++ constraint type string for a member, or None if none is needed.
 
     Bounded types carry their limit in the type itself; no constraint is generated for them.
 

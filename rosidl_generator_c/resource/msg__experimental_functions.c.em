@@ -66,7 +66,7 @@ for member in message.structure.members:
 @[    end for]@
 @[end if]@
 @{
-define_macros = [] 
+define_macros = []
 for member in message.structure.members:
     macro_call = experimental_field_define_macro(message_typename, member)
     if macro_call:
@@ -388,10 +388,10 @@ for member in message.structure.members:
     field_tn = experimental_field_typename(message_typename, member.name, member.type)
     type_ = member.type
     has_default = member.has_annotation('default')
-    
+
     reset_lines.append('')
     reset_lines.append('// ' + member.name)
-    
+
     if isinstance(type_, BasicType):
         # BasicType fields
         if has_default:
@@ -410,10 +410,11 @@ for member in message.structure.members:
         else:
             # No default: ALL and ZERO set to zero
             reset_lines.append('if (init_mode == ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_ALL ||')
-            reset_lines.append('    init_mode == ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_ZERO) {')
+            reset_lines.append('  init_mode == ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_ZERO)')
+            reset_lines.append('{')
             reset_lines.append('  msg->{}.value->data = 0;'.format(member.name))
             reset_lines.append('}')
-    
+
     elif isinstance(type_, (AbstractString, AbstractWString)):
         # String fields
         if has_default:
@@ -435,18 +436,19 @@ for member in message.structure.members:
         else:
             # No default: ALL and ZERO set to empty string
             reset_lines.append('if (init_mode == ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_ALL ||')
-            reset_lines.append('    init_mode == ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_ZERO) {')
+            reset_lines.append('  init_mode == ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_ZERO)')
+            reset_lines.append('{')
             reset_lines.append('  msg->{}.value[0] = \'\\0\';'.format(member.name))
             reset_lines.append('  msg->{}.size = 0;'.format(member.name))
             reset_lines.append('}')
-    
+
     elif isinstance(type_, NamespacedType):
         # Sub-message: always propagate init_mode recursively
         sub_tn = idl_structure_type_to_experimental_c_typename(type_)
         reset_lines.append('if (!{}__reset(&msg->{}, init_mode)) {{'.format(sub_tn, member.name))
         reset_lines.append('  return false;')
         reset_lines.append('}')
-    
+
     elif isinstance(type_, Array):
         vt = type_.value_type
         if isinstance(vt, BasicType):
@@ -471,7 +473,8 @@ for member in message.structure.members:
             else:
                 # No default
                 reset_lines.append('if (init_mode == ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_ALL ||')
-                reset_lines.append('    init_mode == ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_ZERO) {')
+                reset_lines.append('  init_mode == ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_ZERO)')
+                reset_lines.append('{')
                 reset_lines.append('  for (size_t i = 0; i < {}U; ++i) {{'.format(type_.size))
                 reset_lines.append('    msg->{}.value->data[i] = 0;'.format(member.name))
                 reset_lines.append('  }')
@@ -502,7 +505,8 @@ for member in message.structure.members:
             else:
                 # No default
                 reset_lines.append('if (init_mode == ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_ALL ||')
-                reset_lines.append('    init_mode == ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_ZERO) {')
+                reset_lines.append('  init_mode == ROSIDL_RUNTIME_C__EXPERIMENTAL__MESSAGE_INITIALIZATION_ZERO)')
+                reset_lines.append('{')
                 reset_lines.append('  for (size_t i = 0; i < {}U; ++i) {{'.format(type_.size))
                 reset_lines.append('    msg->{}.value->data[i].value[0] = \'\\0\';'.format(member.name))
                 reset_lines.append('    msg->{}.value->data[i].size = 0;'.format(member.name))
@@ -516,7 +520,7 @@ for member in message.structure.members:
             reset_lines.append('    return false;')
             reset_lines.append('  }')
             reset_lines.append('}')
-    
+
     elif isinstance(type_, AbstractSequence):
         vt = type_.value_type
         if isinstance(vt, BasicType):
@@ -604,12 +608,12 @@ bool
     // Copy external storage into message (embedded copy)
     msg->_external_storage = *options->external_storage;
     msg->_has_external_storage = true;
-    
+
     // Initialize from the embedded copy
     success = @(message_typename)__init_from_storage(msg, &msg->_external_storage);
   } else {
     // Otherwise use allocator-based initialization
-    const rcutils_allocator_t * allocator = 
+    const rcutils_allocator_t * allocator =
       (options && options->allocator) ? options->allocator : NULL;
     success = @(message_typename)__init_with_allocator(msg, allocator);
   }

@@ -148,7 +148,7 @@ enum
 @[  end for]@
 @[end if]@
 @{
-declare_macros = [] 
+declare_macros = []
 for member in message.structure.members:
     macro_call = experimental_field_declare_macro(message_typename, member)
     if macro_call:

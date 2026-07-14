@@ -15,11 +15,6 @@
 #ifndef ROSIDL_RUNTIME_CPP__EXPERIMENTAL__TRAITS_HPP_
 #define ROSIDL_RUNTIME_CPP__EXPERIMENTAL__TRAITS_HPP_
 
-#include <cstdint>
-#include <iostream>
-#include <type_traits>
-#include <string>
-
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
@@ -54,7 +49,7 @@ template<typename T, typename = void>
 struct has_constraints : std::false_type {};
 
 template<typename T>
-struct has_constraints<T, std::void_t<typename T::Constraints>> : std::true_type {};
+struct has_constraints<T, std::void_t<typename T::Constraints>>: std::true_type {};
 
 template<typename T>
 inline constexpr bool has_constraints_v = has_constraints<T>::value;
@@ -97,7 +92,7 @@ struct MessageConstraints<T, std::void_t<typename T::Constraints>>
   MessageConstraints() = default;
 
   /// Implicit conversion from type-specific constraints.
-  MessageConstraints(const typename T::Constraints & ts)
+  explicit MessageConstraints(const typename T::Constraints & ts)
   : type_specific(ts) {}
 
   /// Convert to the C struct for passing to rmw/rcl.

@@ -77,6 +77,7 @@ MSG_TYPE_TO_CPP = {
                'std::allocator_traits<ContainerAllocator>::template rebind_alloc<char16_t>>',
 }
 
+
 def msg_type_only_to_cpp(type_):
     """
     Convert a message type into the C++ declaration, ignoring array types.

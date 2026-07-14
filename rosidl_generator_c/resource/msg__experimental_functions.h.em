@@ -16,14 +16,14 @@ typedef struct @(message_typename)__InitOptions_s
 {
   /// Initialization mode (default: ALL).
   rosidl_runtime_c__experimental__message_initialization_t init_mode;
-  
+
   /// Optional allocator (NULL to use default allocator).
   const rcutils_allocator_t * allocator;
-  
+
   /// Optional external storage (NULL for heap allocation).
   /// If provided, the storage is copied into the message's embedded _external_storage.
   const @(message_typename)__ExternalStorage * external_storage;
-  
+
   /// Reserved for future expansion (must be NULL).
   void * reserved[4];
 } @(message_typename)__InitOptions;

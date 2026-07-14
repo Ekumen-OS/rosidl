@@ -73,7 +73,7 @@ struct ArrayWrapper;
     {return T ## __init(a);} \
     static bool init_from_region(T * a, rosidl_memory_region_t r) \
     { \
-      T ## __InitOptions opts = {0}; \
+      T ## __InitOptions opts{}; \
       opts.external_storage = &r; \
       return T ## __init_with_options(a, &opts); \
     } \
