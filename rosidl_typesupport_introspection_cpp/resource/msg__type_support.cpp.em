@@ -290,19 +290,21 @@ static const ::rosidl_typesupport_introspection_cpp::MessageMembers @(message.st
 
 @[if is_experimental]@
 // Default fallbacks for experimental types that lack generated type hash/description.
+// The symbol name carries the interface kind so a message and a service with
+// the same name (e.g. msg/Empty and srv/Empty) do not collide at link time.
 extern "C" const rosidl_type_hash_t *
-@(message.structure.namespaced_type.name)_default_get_type_hash(const rosidl_message_type_support_t *)
+@(message.structure.namespaced_type.name)_message_default_get_type_hash(const rosidl_message_type_support_t *)
 {
   static const rosidl_type_hash_t zero_hash = {0, {0}};
   return &zero_hash;
 }
 extern "C" const rosidl_runtime_c__type_description__TypeDescription *
-@(message.structure.namespaced_type.name)_default_get_type_description(const rosidl_message_type_support_t *)
+@(message.structure.namespaced_type.name)_message_default_get_type_description(const rosidl_message_type_support_t *)
 {
   return nullptr;
 }
 extern "C" const rosidl_runtime_c__type_description__TypeSource__Sequence *
-@(message.structure.namespaced_type.name)_default_get_type_description_sources(const rosidl_message_type_support_t *)
+@(message.structure.namespaced_type.name)_message_default_get_type_description_sources(const rosidl_message_type_support_t *)
 {
   return nullptr;
 }
@@ -312,9 +314,9 @@ static const rosidl_message_type_support_t @(message.structure.namespaced_type.n
   &@(message.structure.namespaced_type.name)_message_members,
   get_message_typesupport_handle_function,
 @[if is_experimental]@
-  &@(message.structure.namespaced_type.name)_default_get_type_hash,
-  &@(message.structure.namespaced_type.name)_default_get_type_description,
-  &@(message.structure.namespaced_type.name)_default_get_type_description_sources,
+  &@(message.structure.namespaced_type.name)_message_default_get_type_hash,
+  &@(message.structure.namespaced_type.name)_message_default_get_type_description,
+  &@(message.structure.namespaced_type.name)_message_default_get_type_description_sources,
 @[else]@
   &@(idl_structure_type_to_c_typename(message.structure.namespaced_type))__@(GET_HASH_FUNC),
   &@(idl_structure_type_to_c_typename(message.structure.namespaced_type))__@(GET_DESCRIPTION_FUNC),

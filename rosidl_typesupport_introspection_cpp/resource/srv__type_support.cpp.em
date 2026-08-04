@@ -100,18 +100,18 @@ static ::rosidl_typesupport_introspection_cpp::ServiceMembers @(service.namespac
 @[if force_experimental]@
 // Default fallbacks for experimental types that lack generated type hash/description.
 extern "C" const rosidl_type_hash_t *
-@(service.namespaced_type.name)_default_get_type_hash(const rosidl_service_type_support_t *)
+@(service.namespaced_type.name)_service_default_get_type_hash(const rosidl_service_type_support_t *)
 {
   static const rosidl_type_hash_t zero_hash = {0, {0}};
   return &zero_hash;
 }
 extern "C" const rosidl_runtime_c__type_description__TypeDescription *
-@(service.namespaced_type.name)_default_get_type_description(const rosidl_service_type_support_t *)
+@(service.namespaced_type.name)_service_default_get_type_description(const rosidl_service_type_support_t *)
 {
   return nullptr;
 }
 extern "C" const rosidl_runtime_c__type_description__TypeSource__Sequence *
-@(service.namespaced_type.name)_default_get_type_description_sources(const rosidl_service_type_support_t *)
+@(service.namespaced_type.name)_service_default_get_type_description_sources(const rosidl_service_type_support_t *)
 {
   return nullptr;
 }
@@ -134,9 +134,9 @@ static const rosidl_service_type_support_t @(service.namespaced_type.name)_servi
   &::rosidl_typesupport_cpp::service_destroy_event_message<@('::'.join(srv_namespace_parts + [service.namespaced_type.name]))>,
 @[end if]@
 @[if force_experimental]@
-  &@(service.namespaced_type.name)_default_get_type_hash,
-  &@(service.namespaced_type.name)_default_get_type_description,
-  &@(service.namespaced_type.name)_default_get_type_description_sources,
+  &@(service.namespaced_type.name)_service_default_get_type_hash,
+  &@(service.namespaced_type.name)_service_default_get_type_description,
+  &@(service.namespaced_type.name)_service_default_get_type_description_sources,
 @[else]@
   &@(idl_structure_type_to_c_typename(service.namespaced_type))__@(GET_HASH_FUNC),
   &@(idl_structure_type_to_c_typename(service.namespaced_type))__@(GET_DESCRIPTION_FUNC),
