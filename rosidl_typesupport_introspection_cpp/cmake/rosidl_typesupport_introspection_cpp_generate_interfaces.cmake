@@ -27,6 +27,8 @@ set(_output_path
   "${CMAKE_CURRENT_BINARY_DIR}/rosidl_typesupport_introspection_cpp/${PROJECT_NAME}")
 set(_generated_header_files "")
 set(_generated_source_files "")
+set(_experimental_generated_header_files "")
+set(_experimental_generated_source_files "")
 foreach(_abs_idl_file ${rosidl_generate_interfaces_ABS_IDL_FILES})
   get_filename_component(_parent_folder "${_abs_idl_file}" DIRECTORY)
   get_filename_component(_parent_folder "${_parent_folder}" NAME)
@@ -36,6 +38,11 @@ foreach(_abs_idl_file ${rosidl_generate_interfaces_ABS_IDL_FILES})
     "${_output_path}/${_parent_folder}/detail/${_header_name}__rosidl_typesupport_introspection_cpp.hpp")
   list(APPEND _generated_source_files
     "${_output_path}/${_parent_folder}/detail/${_header_name}__type_support.cpp")
+  # Experimental introspection variant (always generated alongside standard)
+  list(APPEND _experimental_generated_header_files
+    "${_output_path}/${_parent_folder}/experimental/detail/${_header_name}__rosidl_typesupport_introspection_cpp.hpp")
+  list(APPEND _experimental_generated_source_files
+    "${_output_path}/${_parent_folder}/experimental/detail/${_header_name}__type_support.cpp")
 endforeach()
 
 set(_dependency_files "")
@@ -52,7 +59,9 @@ set(target_dependencies
   "${rosidl_typesupport_introspection_cpp_BIN}"
   ${rosidl_typesupport_introspection_cpp_GENERATOR_FILES}
   "${rosidl_typesupport_introspection_cpp_TEMPLATE_DIR}/idl__rosidl_typesupport_introspection_cpp.hpp.em"
+  "${rosidl_typesupport_introspection_cpp_TEMPLATE_DIR}/idl__experimental_rosidl_typesupport_introspection_cpp.hpp.em"
   "${rosidl_typesupport_introspection_cpp_TEMPLATE_DIR}/idl__type_support.cpp.em"
+  "${rosidl_typesupport_introspection_cpp_TEMPLATE_DIR}/idl__experimental_type_support.cpp.em"
   "${rosidl_typesupport_introspection_cpp_TEMPLATE_DIR}/msg__rosidl_typesupport_introspection_cpp.hpp.em"
   "${rosidl_typesupport_introspection_cpp_TEMPLATE_DIR}/msg__type_support.cpp.em"
   "${rosidl_typesupport_introspection_cpp_TEMPLATE_DIR}/srv__rosidl_typesupport_introspection_cpp.hpp.em"
@@ -96,6 +105,7 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
 add_custom_command(
   OUTPUT ${_generated_header_files} ${_generated_source_files}
+    ${_experimental_generated_header_files} ${_experimental_generated_source_files}
   COMMAND Python3::Interpreter
   ARGS ${rosidl_typesupport_introspection_cpp_BIN}
   --generator-arguments-file "${generator_arguments_file}"
@@ -107,7 +117,8 @@ add_custom_command(
 set(_target_suffix "__rosidl_typesupport_introspection_cpp")
 
 add_library(${rosidl_generate_interfaces_TARGET}${_target_suffix} ${rosidl_typesupport_introspection_cpp_LIBRARY_TYPE}
-  ${_generated_header_files} ${_generated_source_files})
+  ${_generated_header_files} ${_generated_source_files}
+  ${_experimental_generated_header_files} ${_experimental_generated_source_files})
 add_library(${PROJECT_NAME}::${rosidl_generate_interfaces_TARGET}${_target_suffix} ALIAS
   ${rosidl_generate_interfaces_TARGET}${_target_suffix})
 if(rosidl_generate_interfaces_LIBRARY_NAME)

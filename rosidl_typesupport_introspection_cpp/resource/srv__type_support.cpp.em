@@ -1,23 +1,29 @@
 @# Included from rosidl_typesupport_introspection_c/resource/idl__type_support.c.em
 @{
+# Get optional force_experimental flag (set by experimental wrapper templates).
+try:
+    force_experimental
+except NameError:
+    force_experimental = False
+
 TEMPLATE(
     'msg__type_support.cpp.em',
     package_name=package_name, interface_path=interface_path, message=service.request_message,
-    include_directives=include_directives)
+    include_directives=include_directives, force_experimental=force_experimental)
 }@
 
 @{
 TEMPLATE(
     'msg__type_support.cpp.em',
     package_name=package_name, interface_path=interface_path, message=service.response_message,
-    include_directives=include_directives)
+    include_directives=include_directives, force_experimental=force_experimental)
 }@
 
 @{
 TEMPLATE(
     'msg__type_support.cpp.em',
     package_name=package_name, interface_path=interface_path, message=service.event_message,
-    include_directives=include_directives)
+    include_directives=include_directives, force_experimental=force_experimental)
 }@
 
 @{
@@ -29,8 +35,24 @@ from rosidl_parser.definition import SERVICE_EVENT_MESSAGE_SUFFIX
 from rosidl_parser.definition import SERVICE_REQUEST_MESSAGE_SUFFIX
 from rosidl_parser.definition import SERVICE_RESPONSE_MESSAGE_SUFFIX
 from rosidl_pycommon import convert_camel_case_to_lower_case_underscore
+
+# Determine the service namespace (includes 'experimental' when forced)
+srv_namespace_parts = list(service.namespaced_type.namespaces)
+if force_experimental and 'experimental' not in srv_namespace_parts:
+    srv_namespace_parts.append('experimental')
+srv_namespace = '::'.join(srv_namespace_parts)
+full_srv_typename = '::'.join(srv_namespace_parts + [service.namespaced_type.name])
+
+# Effective parent parts for C symbol names.
+effective_parent_parts = list(interface_path.parents[0].parts)
+if force_experimental:
+    effective_parent_parts = [effective_parent_parts[0] + '_experimental']
+
+# Build include base (insert 'experimental' before 'detail' when forced)
 include_parts = [package_name] + list(interface_path.parents[0].parts) + [
     'detail', convert_camel_case_to_lower_case_underscore(interface_path.stem)]
+if force_experimental:
+    include_parts.insert(-2, 'experimental')
 include_base = '/'.join(include_parts)
 
 header_files = [
@@ -55,7 +77,7 @@ header_files = [
 @[    end if]@
 #include "@(header_file)"
 @[end for]@
-@[for ns in service.namespaced_type.namespaces]@
+@[for ns in srv_namespace_parts]@
 
 namespace @(ns)
 {
@@ -66,31 +88,64 @@ namespace rosidl_typesupport_introspection_cpp
 
 // this is intentionally not const to allow initialization later to prevent an initialization race
 static ::rosidl_typesupport_introspection_cpp::ServiceMembers @(service.namespaced_type.name)_service_members = {
-  "@('::'.join([package_name] + list(interface_path.parents[0].parts)))",  // service namespace
+  "@(srv_namespace)",  // service namespace
   "@(service.namespaced_type.name)",  // service name
   // the following fields are initialized below on first access
-  // see get_service_type_support_handle<@('::'.join([package_name] + list(interface_path.parents[0].parts) + [service.namespaced_type.name]))>()
+  // see get_service_type_support_handle<@(full_srv_typename)>()
   nullptr,  // request message
   nullptr,  // response message
   nullptr,  // event message
 };
 
+@[if force_experimental]@
+// Default fallbacks for experimental types that lack generated type hash/description.
+extern "C" const rosidl_type_hash_t *
+@(service.namespaced_type.name)_default_get_type_hash(const rosidl_service_type_support_t *)
+{
+  static const rosidl_type_hash_t zero_hash = {0, {0}};
+  return &zero_hash;
+}
+extern "C" const rosidl_runtime_c__type_description__TypeDescription *
+@(service.namespaced_type.name)_default_get_type_description(const rosidl_service_type_support_t *)
+{
+  return nullptr;
+}
+extern "C" const rosidl_runtime_c__type_description__TypeSource__Sequence *
+@(service.namespaced_type.name)_default_get_type_description_sources(const rosidl_service_type_support_t *)
+{
+  return nullptr;
+}
+@[end if]@
 static const rosidl_service_type_support_t @(service.namespaced_type.name)_service_type_support_handle = {
   ::rosidl_typesupport_introspection_cpp::typesupport_identifier,
   &@(service.namespaced_type.name)_service_members,
   get_service_typesupport_handle_function,
-  ::rosidl_typesupport_introspection_cpp::get_message_type_support_handle<@('::'.join([package_name, *interface_path.parents[0].parts, service.namespaced_type.name]))@(SERVICE_REQUEST_MESSAGE_SUFFIX)>(),
-  ::rosidl_typesupport_introspection_cpp::get_message_type_support_handle<@('::'.join([package_name, *interface_path.parents[0].parts, service.namespaced_type.name]))@(SERVICE_RESPONSE_MESSAGE_SUFFIX)>(),
-  ::rosidl_typesupport_introspection_cpp::get_message_type_support_handle<@('::'.join([package_name, *interface_path.parents[0].parts, service.namespaced_type.name]))@(SERVICE_EVENT_MESSAGE_SUFFIX)>(),
-  &::rosidl_typesupport_cpp::service_create_event_message<@('::'.join([package_name, *interface_path.parents[0].parts, service.namespaced_type.name]))>,
-  &::rosidl_typesupport_cpp::service_destroy_event_message<@('::'.join([package_name, *interface_path.parents[0].parts, service.namespaced_type.name]))>,
+  ::rosidl_typesupport_introspection_cpp::get_message_type_support_handle<@('::'.join(srv_namespace_parts + [service.namespaced_type.name]))@(SERVICE_REQUEST_MESSAGE_SUFFIX)>(),
+  ::rosidl_typesupport_introspection_cpp::get_message_type_support_handle<@('::'.join(srv_namespace_parts + [service.namespaced_type.name]))@(SERVICE_RESPONSE_MESSAGE_SUFFIX)>(),
+  ::rosidl_typesupport_introspection_cpp::get_message_type_support_handle<@('::'.join(srv_namespace_parts + [service.namespaced_type.name]))@(SERVICE_EVENT_MESSAGE_SUFFIX)>(),
+@[if force_experimental]@
+  // The generic service_create_event_message template is not compatible with
+  // experimental message structs (Scalar<T> members); service event messages
+  // are not needed for the type-object registration path.
+  nullptr,
+  nullptr,
+@[else]@
+  &::rosidl_typesupport_cpp::service_create_event_message<@('::'.join(srv_namespace_parts + [service.namespaced_type.name]))>,
+  &::rosidl_typesupport_cpp::service_destroy_event_message<@('::'.join(srv_namespace_parts + [service.namespaced_type.name]))>,
+@[end if]@
+@[if force_experimental]@
+  &@(service.namespaced_type.name)_default_get_type_hash,
+  &@(service.namespaced_type.name)_default_get_type_description,
+  &@(service.namespaced_type.name)_default_get_type_description_sources,
+@[else]@
   &@(idl_structure_type_to_c_typename(service.namespaced_type))__@(GET_HASH_FUNC),
   &@(idl_structure_type_to_c_typename(service.namespaced_type))__@(GET_DESCRIPTION_FUNC),
   &@(idl_structure_type_to_c_typename(service.namespaced_type))__@(GET_SOURCES_FUNC),
+@[end if]@
 };
 
 }  // namespace rosidl_typesupport_introspection_cpp
-@[  for ns in reversed(service.namespaced_type.namespaces)]@
+@[  for ns in reversed(srv_namespace_parts)]@
 
 }  // namespace @(ns)
 @[  end for]@
@@ -102,11 +157,11 @@ namespace rosidl_typesupport_introspection_cpp
 template<>
 ROSIDL_TYPESUPPORT_INTROSPECTION_CPP_PUBLIC
 const rosidl_service_type_support_t *
-get_service_type_support_handle<@('::'.join([package_name] + list(interface_path.parents[0].parts) + [service.namespaced_type.name]))>()
+get_service_type_support_handle<@(full_srv_typename)>()
 {
   // get a handle to the value to be returned
   auto service_type_support =
-    &::@('::'.join([package_name] + list(interface_path.parents[0].parts)))::rosidl_typesupport_introspection_cpp::@(service.namespaced_type.name)_service_type_support_handle;
+    &::@(srv_namespace)::rosidl_typesupport_introspection_cpp::@(service.namespaced_type.name)_service_type_support_handle;
   // get a non-const and properly typed version of the data void *
   auto service_members = const_cast<::rosidl_typesupport_introspection_cpp::ServiceMembers *>(
     static_cast<const ::rosidl_typesupport_introspection_cpp::ServiceMembers *>(
@@ -123,7 +178,7 @@ get_service_type_support_handle<@('::'.join([package_name] + list(interface_path
       const ::rosidl_typesupport_introspection_cpp::MessageMembers *
       >(
       ::rosidl_typesupport_introspection_cpp::get_message_type_support_handle<
-        ::@('::'.join([package_name] + list(interface_path.parents[0].parts)))::@(service.request_message.structure.namespaced_type.name)
+        ::@('::'.join(srv_namespace_parts))::@(service.request_message.structure.namespaced_type.name)
       >()->data
       );
     // initialize the response_members_ with the static function from the external library
@@ -131,7 +186,7 @@ get_service_type_support_handle<@('::'.join([package_name] + list(interface_path
       const ::rosidl_typesupport_introspection_cpp::MessageMembers *
       >(
       ::rosidl_typesupport_introspection_cpp::get_message_type_support_handle<
-        ::@('::'.join([package_name] + list(interface_path.parents[0].parts)))::@(service.response_message.structure.namespaced_type.name)
+        ::@('::'.join(srv_namespace_parts))::@(service.response_message.structure.namespaced_type.name)
       >()->data
       );
     // initialize the event_members_ with the static function from the external library
@@ -139,7 +194,7 @@ get_service_type_support_handle<@('::'.join([package_name] + list(interface_path
       const ::rosidl_typesupport_introspection_cpp::MessageMembers *
       >(
       ::rosidl_typesupport_introspection_cpp::get_message_type_support_handle<
-        ::@('::'.join([package_name] + list(interface_path.parents[0].parts)))::@(service.event_message.structure.namespaced_type.name)
+        ::@('::'.join(srv_namespace_parts))::@(service.event_message.structure.namespaced_type.name)
       >()->data
       );
   }
@@ -156,8 +211,8 @@ extern "C"
 
 ROSIDL_TYPESUPPORT_INTROSPECTION_CPP_PUBLIC
 const rosidl_service_type_support_t *
-ROSIDL_TYPESUPPORT_INTERFACE__SERVICE_SYMBOL_NAME(rosidl_typesupport_introspection_cpp, @(', '.join([package_name] + list(interface_path.parents[0].parts) + [service.namespaced_type.name])))() {
-  return ::rosidl_typesupport_introspection_cpp::get_service_type_support_handle<@('::'.join([package_name] + list(interface_path.parents[0].parts) + [service.namespaced_type.name]))>();
+ROSIDL_TYPESUPPORT_INTERFACE__SERVICE_SYMBOL_NAME(rosidl_typesupport_introspection_cpp, @(', '.join([package_name] + effective_parent_parts + [service.namespaced_type.name])))() {
+  return ::rosidl_typesupport_introspection_cpp::get_service_type_support_handle<@(full_srv_typename)>();
 }
 
 #ifdef __cplusplus

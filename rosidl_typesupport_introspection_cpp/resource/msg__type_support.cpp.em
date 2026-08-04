@@ -15,9 +15,45 @@ from rosidl_parser.definition import BoundedSequence
 from rosidl_parser.definition import NamespacedType
 from rosidl_pycommon import convert_camel_case_to_lower_case_underscore
 
+# Get optional force_experimental flag (set by experimental wrapper templates).
+# When True, always generate experimental-message code paths regardless of namespace.
+try:
+    force_experimental
+except NameError:
+    force_experimental = False
+
+# Check if this is an experimental message
+is_experimental = force_experimental or 'experimental' in '/'.join(message.structure.namespaced_type.namespaces)
+
+# Determine the message type name and namespace (includes 'experimental' when forced)
+msg_typename = message.structure.namespaced_type.name
+msg_namespace_parts = list(message.structure.namespaced_type.namespaces)
+if force_experimental and 'experimental' not in msg_namespace_parts:
+    msg_namespace_parts.append('experimental')
+msg_namespace = '::'.join(msg_namespace_parts)
+full_msg_typename = '::'.join(msg_namespace_parts + [msg_typename])
+
+# Effective parent parts for C symbol names.
+# Experimental messages use a single token (e.g., 'msg_experimental') to avoid
+# breaking the 4-argument ROSIDL_TYPESUPPORT_INTERFACE__MESSAGE_SYMBOL_NAME macro.
+effective_parent_parts = list(interface_path.parents[0].parts)
+if force_experimental:
+    effective_parent_parts = [effective_parent_parts[0] + '_experimental']
+
+# Build include base (insert 'experimental' before 'detail' when forced)
 include_parts = [package_name] + list(interface_path.parents[0].parts) + [
     'detail', convert_camel_case_to_lower_case_underscore(interface_path.stem)]
+if force_experimental:
+    # Insert 'experimental' before 'detail'
+    include_parts.insert(-2, 'experimental')
 include_base = '/'.join(include_parts)
+
+# Helper: experimental qualified name for a nested NamespacedType.
+from rosidl_typesupport_introspection_cpp.template_helpers import (
+    accessor_container_type,
+    accessor_element_type,
+    experimental_type_name,
+)
 
 header_files = [
     'array',
@@ -45,7 +81,7 @@ header_files = [
 @[    end if]@
 #include "@(header_file)"
 @[end for]@
-@[for ns in message.structure.namespaced_type.namespaces]@
+@[for ns in msg_namespace_parts]@
 
 namespace @(ns)
 {
@@ -57,33 +93,31 @@ namespace rosidl_typesupport_introspection_cpp
 void @(message.structure.namespaced_type.name)_init_function(
   void * message_memory, rosidl_runtime_cpp::MessageInitialization _init)
 {
-  new (message_memory) @('::'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name]))(_init);
+  new (message_memory) @(full_msg_typename)(_init);
 }
 
 void @(message.structure.namespaced_type.name)_fini_function(void * message_memory)
 {
-  auto typed_message = static_cast<@('::'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name])) *>(message_memory);
+  auto typed_message = static_cast<@(full_msg_typename) *>(message_memory);
   typed_message->~@(message.structure.namespaced_type.name)();
 }
 
 @{
-def is_vector_bool(member):
+def is_vector_bool(member, _is_exp=is_experimental):
     from rosidl_parser.definition import BasicType
     from rosidl_parser.definition import AbstractSequence
+    # std::vector<bool> is a bitset specialization without a usable data();
+    # rosidl_runtime_cpp::Sequence<bool> stores bools directly, so the
+    # experimental variant can use the standard accessor functions.
+    if _is_exp:
+        return False
     return isinstance(member.type, AbstractSequence) and isinstance(member.type.value_type, BasicType) and member.type.value_type.typename == 'boolean'
 }@
 @[for member in message.structure.members]@
 @[  if isinstance(member.type, AbstractNestedType)]@
 @{
-from rosidl_generator_cpp import  MSG_TYPE_TO_CPP
-if isinstance(member.type.value_type, BasicType):
-    type_ = MSG_TYPE_TO_CPP[member.type.value_type.typename]
-elif isinstance(member.type.value_type, AbstractString):
-    type_ = 'std::string'
-elif isinstance(member.type.value_type, AbstractWString):
-    type_ = 'std::u16string'
-elif isinstance(member.type.value_type, NamespacedType):
-    type_ = '::'.join(member.type.value_type.namespaced_name())
+type_ = accessor_element_type(member.type, is_experimental)
+container_type_ = accessor_container_type(member.type, is_experimental)
 }@
 size_t size_function__@(message.structure.namespaced_type.name)__@(member.name)(const void * untyped_member)
 {
@@ -91,7 +125,7 @@ size_t size_function__@(message.structure.namespaced_type.name)__@(member.name)(
   (void)untyped_member;
   return @(member.type.size);
 @[    else]@
-  const auto * member = reinterpret_cast<const std::vector<@(type_)> *>(untyped_member);
+  const auto * member = reinterpret_cast<const @(container_type_) *>(untyped_member);
   return member->size();
 @[    end if]@
 }
@@ -101,10 +135,10 @@ const void * get_const_function__@(message.structure.namespaced_type.name)__@(me
 {
 @[      if isinstance(member.type, Array)]@
   const auto & member =
-    *reinterpret_cast<const std::array<@(type_), @(member.type.size)> *>(untyped_member);
+    *reinterpret_cast<const @(container_type_) *>(untyped_member);
 @[      else]@
   const auto & member =
-    *reinterpret_cast<const std::vector<@(type_)> *>(untyped_member);
+    *reinterpret_cast<const @(container_type_) *>(untyped_member);
 @[      end if]@
   return &member[index];
 }
@@ -113,10 +147,10 @@ void * get_function__@(message.structure.namespaced_type.name)__@(member.name)(v
 {
 @[      if isinstance(member.type, Array)]@
   auto & member =
-    *reinterpret_cast<std::array<@(type_), @(member.type.size)> *>(untyped_member);
+    *reinterpret_cast<@(container_type_) *>(untyped_member);
 @[      else]@
   auto & member =
-    *reinterpret_cast<std::vector<@(type_)> *>(untyped_member);
+    *reinterpret_cast<@(container_type_) *>(untyped_member);
 @[      end if]@
   return &member[index];
 }
@@ -142,7 +176,7 @@ void assign_function__@(message.structure.namespaced_type.name)__@(member.name)(
 void fetch_function__@(message.structure.namespaced_type.name)__@(member.name)(
   const void * untyped_member, size_t index, void * untyped_value)
 {
-  const auto & member = *reinterpret_cast<const std::vector<@(type_)> *>(untyped_member);
+  const auto & member = *reinterpret_cast<const @(container_type_) *>(untyped_member);
   auto & value = *reinterpret_cast<@(type_) *>(untyped_value);
   value = member[index];
 }
@@ -150,7 +184,7 @@ void fetch_function__@(message.structure.namespaced_type.name)__@(member.name)(
 void assign_function__@(message.structure.namespaced_type.name)__@(member.name)(
   void * untyped_member, size_t index, const void * untyped_value)
 {
-  auto & member = *reinterpret_cast<std::vector<@(type_)> *>(untyped_member);
+  auto & member = *reinterpret_cast<@(container_type_) *>(untyped_member);
   const auto & value = *reinterpret_cast<const @(type_) *>(untyped_value);
   member[index] = value;
 }
@@ -160,7 +194,7 @@ void assign_function__@(message.structure.namespaced_type.name)__@(member.name)(
 void resize_function__@(message.structure.namespaced_type.name)__@(member.name)(void * untyped_member, size_t size)
 {
   auto * member =
-    reinterpret_cast<std::vector<@(type_)> *>(untyped_member);
+    reinterpret_cast<@(container_type_) *>(untyped_member);
   member->resize(size);
 }
 
@@ -203,7 +237,7 @@ for index, member in enumerate(message.structure.members):
         # size_t string_upper_bound
         print('    0,  // upper bound of string')
         # const rosidl_message_type_support_t * members_
-        print('    ::rosidl_typesupport_introspection_cpp::get_message_type_support_handle<%s>(),  // members of sub message' % '::'.join(type_.namespaced_name()))
+        print('    ::rosidl_typesupport_introspection_cpp::get_message_type_support_handle<%s>(),  // members of sub message' % experimental_type_name(type_, is_experimental))
     # bool is_key_
     print('    %s,  // is key' % ('true' if member.has_annotation('key') else 'false'))
     # bool is_array_
@@ -213,7 +247,7 @@ for index, member in enumerate(message.structure.members):
     # bool is_upper_bound_
     print('    %s,  // is upper bound' % ('true' if isinstance(member.type, BoundedSequence) else 'false'))
     # unsigned long offset_
-    print('    offsetof(%s::%s, %s),  // bytes offset in struct' % ('::'.join([package_name] + list(interface_path.parents[0].parts)), message.structure.namespaced_type.name, member.name))
+    print('    offsetof(%s, %s),  // bytes offset in struct' % (full_msg_typename, member.name))
     # void * default_value_
     print('    nullptr,  // default value')  # TODO default value to be set
 
@@ -240,10 +274,10 @@ for index, member in enumerate(message.structure.members):
 };
 
 static const ::rosidl_typesupport_introspection_cpp::MessageMembers @(message.structure.namespaced_type.name)_message_members = {
-  "@('::'.join([package_name] + list(interface_path.parents[0].parts)))",  // message namespace
+  "@(msg_namespace)",  // message namespace
   "@(message.structure.namespaced_type.name)",  // message name
   @(len(message.structure.members)),  // number of fields
-  sizeof(@('::'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name]))),
+  sizeof(@(full_msg_typename)),
 @[  if message.structure.has_any_member_with_annotation('key') ]@
   true,  // has_any_key_member_
 @[  else]@
@@ -254,17 +288,42 @@ static const ::rosidl_typesupport_introspection_cpp::MessageMembers @(message.st
   @(message.structure.namespaced_type.name)_fini_function  // function to terminate message instance (will not free memory)
 };
 
+@[if is_experimental]@
+// Default fallbacks for experimental types that lack generated type hash/description.
+extern "C" const rosidl_type_hash_t *
+@(message.structure.namespaced_type.name)_default_get_type_hash(const rosidl_message_type_support_t *)
+{
+  static const rosidl_type_hash_t zero_hash = {0, {0}};
+  return &zero_hash;
+}
+extern "C" const rosidl_runtime_c__type_description__TypeDescription *
+@(message.structure.namespaced_type.name)_default_get_type_description(const rosidl_message_type_support_t *)
+{
+  return nullptr;
+}
+extern "C" const rosidl_runtime_c__type_description__TypeSource__Sequence *
+@(message.structure.namespaced_type.name)_default_get_type_description_sources(const rosidl_message_type_support_t *)
+{
+  return nullptr;
+}
+@[end if]@
 static const rosidl_message_type_support_t @(message.structure.namespaced_type.name)_message_type_support_handle = {
   ::rosidl_typesupport_introspection_cpp::typesupport_identifier,
   &@(message.structure.namespaced_type.name)_message_members,
   get_message_typesupport_handle_function,
+@[if is_experimental]@
+  &@(message.structure.namespaced_type.name)_default_get_type_hash,
+  &@(message.structure.namespaced_type.name)_default_get_type_description,
+  &@(message.structure.namespaced_type.name)_default_get_type_description_sources,
+@[else]@
   &@(idl_structure_type_to_c_typename(message.structure.namespaced_type))__@(GET_HASH_FUNC),
   &@(idl_structure_type_to_c_typename(message.structure.namespaced_type))__@(GET_DESCRIPTION_FUNC),
   &@(idl_structure_type_to_c_typename(message.structure.namespaced_type))__@(GET_SOURCES_FUNC),
+@[end if]@
 };
 
 }  // namespace rosidl_typesupport_introspection_cpp
-@[  for ns in reversed(message.structure.namespaced_type.namespaces)]@
+@[  for ns in reversed(msg_namespace_parts)]@
 
 }  // namespace @(ns)
 @[  end for]@
@@ -276,9 +335,9 @@ namespace rosidl_typesupport_introspection_cpp
 template<>
 ROSIDL_TYPESUPPORT_INTROSPECTION_CPP_PUBLIC
 const rosidl_message_type_support_t *
-get_message_type_support_handle<@('::'.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name]))>()
+get_message_type_support_handle<@(full_msg_typename)>()
 {
-  return &::@('::'.join([package_name] + list(interface_path.parents[0].parts)))::rosidl_typesupport_introspection_cpp::@(message.structure.namespaced_type.name)_message_type_support_handle;
+  return &::@(msg_namespace)::rosidl_typesupport_introspection_cpp::@(message.structure.namespaced_type.name)_message_type_support_handle;
 }
 
 }  // namespace rosidl_typesupport_introspection_cpp
@@ -290,8 +349,8 @@ extern "C"
 
 ROSIDL_TYPESUPPORT_INTROSPECTION_CPP_PUBLIC
 const rosidl_message_type_support_t *
-ROSIDL_TYPESUPPORT_INTERFACE__MESSAGE_SYMBOL_NAME(rosidl_typesupport_introspection_cpp, @(', '.join([package_name] + list(interface_path.parents[0].parts) + [message.structure.namespaced_type.name])))() {
-  return &::@('::'.join([package_name] + list(interface_path.parents[0].parts)))::rosidl_typesupport_introspection_cpp::@(message.structure.namespaced_type.name)_message_type_support_handle;
+ROSIDL_TYPESUPPORT_INTERFACE__MESSAGE_SYMBOL_NAME(rosidl_typesupport_introspection_cpp, @(', '.join([package_name] + effective_parent_parts + [message.structure.namespaced_type.name])))() {
+  return &::@(msg_namespace)::rosidl_typesupport_introspection_cpp::@(message.structure.namespaced_type.name)_message_type_support_handle;
 }
 
 #ifdef __cplusplus

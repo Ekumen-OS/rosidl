@@ -27,5 +27,12 @@ def generate_cpp(generator_arguments_file: str):
         'idl__rosidl_typesupport_introspection_cpp.hpp.em':
         'detail/%s__rosidl_typesupport_introspection_cpp.hpp',
         'idl__type_support.cpp.em': 'detail/%s__type_support.cpp',
+        # Experimental message variants — always generated alongside standard ones.
+        # The output path goes under experimental/ to match the expected namespace
+        # (msg::experimental::MessageName).
+        'idl__experimental_rosidl_typesupport_introspection_cpp.hpp.em':
+        'experimental/detail/%s__rosidl_typesupport_introspection_cpp.hpp',
+        'idl__experimental_type_support.cpp.em':
+        'experimental/detail/%s__type_support.cpp',
     }
     return generate_files(generator_arguments_file, mapping)

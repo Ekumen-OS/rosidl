@@ -43,6 +43,9 @@ ament_export_targets(${PROJECT_NAME})
 ament_index_register_resource("rosidl_typesupport_cpp")
 ament_index_register_resource("rosidl_runtime_packages")
 
+# Register as experimental-capable (supports experimental message namespaces)
+ament_index_register_resource("available_experimental_typesupports")
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
