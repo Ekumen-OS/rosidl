@@ -14,15 +14,6 @@
 
 """Helper functions for rosidl_typesupport_introspection_cpp templates."""
 
-from rosidl_parser.definition import (
-    AbstractNestedType,
-    AbstractString,
-    AbstractWString,
-    Array,
-    BasicType,
-    NamespacedType,
-)
-
 
 def experimental_type_name(namespaced_type, experimental_context=False):
     """
@@ -46,11 +37,17 @@ def accessor_element_type(member_type, experimental_context=False):
     it mirrors the rosidl_runtime_cpp experimental containers
     (Sequence<T> / Array<T, N>), so the casts in the generated accessors match
     the actual member types of the experimental message struct.
+
+    Bounded strings in experimental context resolve to their bounded runtime
+    variants (BoundedString<N> / BoundedWString<N>), which are distinct C++
+    types from the unbounded String / WString aliases.
     """
     from rosidl_parser.definition import AbstractNestedType  # noqa: F401
     from rosidl_parser.definition import AbstractString  # noqa: F401
     from rosidl_parser.definition import AbstractWString  # noqa: F401
     from rosidl_parser.definition import BasicType  # noqa: F401
+    from rosidl_parser.definition import BoundedString  # noqa: F401
+    from rosidl_parser.definition import BoundedWString  # noqa: F401
     from rosidl_parser.definition import NamespacedType  # noqa: F401
     vt = member_type.value_type if isinstance(member_type, AbstractNestedType) else member_type
     if isinstance(vt, BasicType):
@@ -60,9 +57,17 @@ def accessor_element_type(member_type, experimental_context=False):
         from rosidl_generator_cpp import MSG_TYPE_TO_CPP
         return MSG_TYPE_TO_CPP[vt.typename]
     if isinstance(vt, AbstractString):
-        return 'rosidl_runtime_cpp::String' if experimental_context else 'std::string'
+        if experimental_context:
+            if isinstance(vt, BoundedString):
+                return 'rosidl_runtime_cpp::BoundedString<{0}>'.format(vt.maximum_size)
+            return 'rosidl_runtime_cpp::String'
+        return 'std::string'
     if isinstance(vt, AbstractWString):
-        return 'rosidl_runtime_cpp::WString' if experimental_context else 'std::u16string'
+        if experimental_context:
+            if isinstance(vt, BoundedWString):
+                return 'rosidl_runtime_cpp::BoundedWString<{0}>'.format(vt.maximum_size)
+            return 'rosidl_runtime_cpp::WString'
+        return 'std::u16string'
     if isinstance(vt, NamespacedType):
         return experimental_type_name(vt, experimental_context)
     assert False, vt
@@ -76,13 +81,21 @@ def accessor_container_type(member_type, experimental_context=False):
     messages use rosidl_runtime_cpp::Sequence<T> / rosidl_runtime_cpp::Array<T, N>,
     which provide the same size()/resize()/operator[]/data() API used by the
     generated introspection accessor functions.
+
+    Bounded sequences in experimental context resolve to their bounded runtime
+    variant (BoundedSequence<T, N>), which is a distinct C++ type from the
+    unbounded Sequence<T> alias and enforces the bound in resize().
     """
     from rosidl_parser.definition import Array  # noqa: F401
+    from rosidl_parser.definition import BoundedSequence  # noqa: F401
     elem = accessor_element_type(member_type, experimental_context)
     if isinstance(member_type, Array):
         if experimental_context:
             return 'rosidl_runtime_cpp::Array<{0}, {1}>'.format(elem, member_type.size)
         return 'std::array<{0}, {1}>'.format(elem, member_type.size)
     if experimental_context:
+        if isinstance(member_type, BoundedSequence):
+            return 'rosidl_runtime_cpp::BoundedSequence<{0}, {1}>'.format(
+                elem, member_type.maximum_size)
         return 'rosidl_runtime_cpp::Sequence<{0}>'.format(elem)
     return 'std::vector<{0}>'.format(elem)
