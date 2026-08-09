@@ -31,6 +31,23 @@ rosidl_message_type_support_t rosidl_get_zero_initialized_message_type_support_h
   return null_message_type_support;
 }
 
+bool
+rosidl_runtime_c_typesupport_identifier_matches(
+  const char * identifier, const char * pattern)
+{
+  assert(identifier);
+  assert(pattern);
+
+  // A trailing '*' makes the pattern a prefix match (used by middleware to
+  // select any typesupport of a family, e.g. "rosidl_typesupport_xcdr*").
+  // Without it, the match is exact — identical to strcmp.
+  const size_t pattern_length = strlen(pattern);
+  if (pattern_length > 0 && pattern[pattern_length - 1] == '*') {
+    return strncmp(identifier, pattern, pattern_length - 1) == 0;
+  }
+  return strcmp(identifier, pattern) == 0;
+}
+
 const rosidl_message_type_support_t * get_message_typesupport_handle(
   const rosidl_message_type_support_t * handle, const char * identifier)
 {
@@ -47,7 +64,9 @@ const rosidl_message_type_support_t * get_message_typesupport_handle_function(
   assert(handle);
   assert(handle->typesupport_identifier);
   assert(identifier);
-  if (strcmp(handle->typesupport_identifier, identifier) == 0) {
+  if (rosidl_runtime_c_typesupport_identifier_matches(
+      handle->typesupport_identifier, identifier))
+  {
     return handle;
   }
   return 0;

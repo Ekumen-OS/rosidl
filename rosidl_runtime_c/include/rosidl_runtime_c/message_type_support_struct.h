@@ -16,6 +16,7 @@
 #define ROSIDL_RUNTIME_C__MESSAGE_TYPE_SUPPORT_STRUCT_H_
 
 #include <stdbool.h>
+#include <stddef.h>
 
 #include "rosidl_runtime_c/type_description/type_description__struct.h"
 #include "rosidl_runtime_c/type_description/type_source__struct.h"
@@ -125,6 +126,27 @@ const rosidl_message_type_support_t * get_message_typesupport_handle(
 ROSIDL_GENERATOR_C_PUBLIC
 const rosidl_message_type_support_t * get_message_typesupport_handle_function(
   const rosidl_message_type_support_t * handle, const char * identifier);
+
+/// Match a typesupport identifier against a pattern with optional trailing '*'.
+/**
+ * If `pattern` ends with '*', the match is a prefix comparison over
+ * `strlen(pattern) - 1` characters (so "rosidl_typesupport_xcdr*" matches any
+ * xcdr-family identifier: C, C++, CPython).  Otherwise the match is exact
+ * (identical to `strcmp`).
+ *
+ * Used by the typesupport dispatch functions so middleware can select a
+ * typesupport by family without hardcoding any specific language identifier,
+ * and by `get_message_typesupport_handle_function` so an already-resolved
+ * concrete handle matches a family pattern too.
+ *
+ * \param identifier  Candidate typesupport identifier (e.g. "rosidl_typesupport_xcdr_cpython").
+ * \param pattern     Requested identifier, optionally ending in '*'.
+ * \return true if `identifier` matches `pattern`.
+ */
+ROSIDL_GENERATOR_C_PUBLIC
+bool
+rosidl_runtime_c_typesupport_identifier_matches(
+  const char * identifier, const char * pattern);
 
 /// Get the message type support given a provided message and package.
 /*

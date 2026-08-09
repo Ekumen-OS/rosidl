@@ -38,3 +38,45 @@ TEST(message_typesupport, get_message_typesupport_handle) {
       &message_typesupport,
       "different identifier"), nullptr);
 }
+
+TEST(message_typesupport, identifier_matches) {
+  // Exact match (no trailing '*').
+  EXPECT_TRUE(rosidl_runtime_c_typesupport_identifier_matches(
+      "rosidl_typesupport_xcdr_cpython", "rosidl_typesupport_xcdr_cpython"));
+  EXPECT_FALSE(rosidl_runtime_c_typesupport_identifier_matches(
+      "rosidl_typesupport_xcdr_cpython", "rosidl_typesupport_xcdr_cpp"));
+
+  // Trailing '*' is a prefix match.
+  EXPECT_TRUE(rosidl_runtime_c_typesupport_identifier_matches(
+      "rosidl_typesupport_xcdr_cpython", "rosidl_typesupport_xcdr*"));
+  EXPECT_TRUE(rosidl_runtime_c_typesupport_identifier_matches(
+      "rosidl_typesupport_xcdr_cpp", "rosidl_typesupport_xcdr*"));
+  EXPECT_TRUE(rosidl_runtime_c_typesupport_identifier_matches(
+      "rosidl_typesupport_xcdr_c", "rosidl_typesupport_xcdr*"));
+  EXPECT_FALSE(rosidl_runtime_c_typesupport_identifier_matches(
+      "rosidl_typesupport_introspection_cpp", "rosidl_typesupport_xcdr*"));
+  // The family prefix itself also matches the family pattern.
+  EXPECT_TRUE(rosidl_runtime_c_typesupport_identifier_matches(
+      "rosidl_typesupport_xcdr", "rosidl_typesupport_xcdr*"));
+
+  // A bare '*' matches everything.
+  EXPECT_TRUE(rosidl_runtime_c_typesupport_identifier_matches(
+      "anything", "*"));
+}
+
+TEST(message_typesupport, handle_function_matches_pattern) {
+  rosidl_message_type_support_t message_typesupport;
+
+  constexpr char identifier[] = "rosidl_typesupport_xcdr_cpython";
+  message_typesupport.typesupport_identifier = &identifier[0];
+  message_typesupport.func = dummy_message_typesupport_handle_function;
+
+  // The family pattern resolves an already-concrete handle.
+  EXPECT_EQ(
+    get_message_typesupport_handle_function(
+      &message_typesupport, "rosidl_typesupport_xcdr*"), &message_typesupport);
+  // A non-matching family returns nullptr.
+  EXPECT_EQ(
+    get_message_typesupport_handle_function(
+      &message_typesupport, "rosidl_typesupport_fastrtps*"), nullptr);
+}
