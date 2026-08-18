@@ -33,6 +33,12 @@ if force_experimental and 'experimental' not in msg_namespace_parts:
 msg_namespace = '::'.join(msg_namespace_parts)
 full_msg_typename = '::'.join(msg_namespace_parts + [msg_typename])
 
+# DDS type identity: experimental messages are alternate runtime
+# representations of the same payload as their standard counterparts, so the
+# introspection message_namespace_ (which feeds the DDS type name) must NOT
+# carry the experimental namespace component.
+dds_namespace = '::'.join(message.structure.namespaced_type.namespaces)
+
 # Effective parent parts for C symbol names.
 # Experimental messages use a single token (e.g., 'msg_experimental') to avoid
 # breaking the 4-argument ROSIDL_TYPESUPPORT_INTERFACE__MESSAGE_SYMBOL_NAME macro.
@@ -274,7 +280,7 @@ for index, member in enumerate(message.structure.members):
 };
 
 static const ::rosidl_typesupport_introspection_cpp::MessageMembers @(message.structure.namespaced_type.name)_message_members = {
-  "@(msg_namespace)",  // message namespace
+  "@(dds_namespace)",  // message namespace (no experimental in DDS type names)
   "@(message.structure.namespaced_type.name)",  // message name
   @(len(message.structure.members)),  // number of fields
   sizeof(@(full_msg_typename)),
