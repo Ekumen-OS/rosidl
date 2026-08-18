@@ -135,7 +135,6 @@ public:
       // For serialized buffers (cast_message_at) this yields the correct length.
       size_ = std::char_traits<CharT>::length(data());
     }
-    null_terminate();
   }
 
   BasicString(const CharT * value)  // NOLINT(runtime/explicit)
