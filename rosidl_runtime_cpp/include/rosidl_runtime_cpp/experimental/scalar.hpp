@@ -15,6 +15,7 @@
 #ifndef ROSIDL_RUNTIME_CPP__EXPERIMENTAL__SCALAR_HPP_
 #define ROSIDL_RUNTIME_CPP__EXPERIMENTAL__SCALAR_HPP_
 
+#include <cmath>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -127,6 +128,245 @@ public:
   friend bool operator!=(const Scalar & lhs, const Scalar & rhs) noexcept
   {
     return !(lhs == rhs);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Arithmetic operators
+  // ---------------------------------------------------------------------------
+  //
+  // Binary operators return a new Scalar, keeping scalars scalar for
+  // arithmetic.  The (Scalar, Scalar) overload handles same-type operands
+  // exactly; the templated overloads accept any arithmetic operand type U
+  // (e.g. Scalar<double> * 2), computing with C++ usual arithmetic rules and
+  // narrowing the result back to T.  Mixing two different Scalar<T> types is
+  // intentionally not supported — convert one operand explicitly.
+
+  friend Scalar operator+(const Scalar & lhs, const Scalar & rhs) noexcept
+  {
+    return Scalar(lhs.get() + rhs.get());
+  }
+  template<typename U, typename = std::enable_if_t<std::is_arithmetic_v<U>>>
+  friend Scalar operator+(const Scalar & lhs, const U & rhs) noexcept
+  {
+    return Scalar(lhs.get() + rhs);
+  }
+  template<typename U, typename = std::enable_if_t<std::is_arithmetic_v<U>>>
+  friend Scalar operator+(const U & lhs, const Scalar & rhs) noexcept
+  {
+    return Scalar(lhs + rhs.get());
+  }
+
+  friend Scalar operator-(const Scalar & lhs, const Scalar & rhs) noexcept
+  {
+    return Scalar(lhs.get() - rhs.get());
+  }
+  template<typename U, typename = std::enable_if_t<std::is_arithmetic_v<U>>>
+  friend Scalar operator-(const Scalar & lhs, const U & rhs) noexcept
+  {
+    return Scalar(lhs.get() - rhs);
+  }
+  template<typename U, typename = std::enable_if_t<std::is_arithmetic_v<U>>>
+  friend Scalar operator-(const U & lhs, const Scalar & rhs) noexcept
+  {
+    return Scalar(lhs - rhs.get());
+  }
+
+  friend Scalar operator*(const Scalar & lhs, const Scalar & rhs) noexcept
+  {
+    return Scalar(lhs.get() * rhs.get());
+  }
+  template<typename U, typename = std::enable_if_t<std::is_arithmetic_v<U>>>
+  friend Scalar operator*(const Scalar & lhs, const U & rhs) noexcept
+  {
+    return Scalar(lhs.get() * rhs);
+  }
+  template<typename U, typename = std::enable_if_t<std::is_arithmetic_v<U>>>
+  friend Scalar operator*(const U & lhs, const Scalar & rhs) noexcept
+  {
+    return Scalar(lhs * rhs.get());
+  }
+
+  friend Scalar operator/(const Scalar & lhs, const Scalar & rhs) noexcept
+  {
+    return Scalar(lhs.get() / rhs.get());
+  }
+  template<typename U, typename = std::enable_if_t<std::is_arithmetic_v<U>>>
+  friend Scalar operator/(const Scalar & lhs, const U & rhs) noexcept
+  {
+    return Scalar(lhs.get() / rhs);
+  }
+  template<typename U, typename = std::enable_if_t<std::is_arithmetic_v<U>>>
+  friend Scalar operator/(const U & lhs, const Scalar & rhs) noexcept
+  {
+    return Scalar(lhs / rhs.get());
+  }
+
+  friend Scalar operator%(const Scalar & lhs, const Scalar & rhs) noexcept
+  {
+    return Scalar(lhs.get() % rhs.get());
+  }
+  template<typename U, typename = std::enable_if_t<std::is_arithmetic_v<U>>>
+  friend Scalar operator%(const Scalar & lhs, const U & rhs) noexcept
+  {
+    return Scalar(lhs.get() % rhs);
+  }
+  template<typename U, typename = std::enable_if_t<std::is_arithmetic_v<U>>>
+  friend Scalar operator%(const U & lhs, const Scalar & rhs) noexcept
+  {
+    return Scalar(lhs % rhs.get());
+  }
+
+  friend Scalar operator&(const Scalar & lhs, const Scalar & rhs) noexcept
+  {
+    return Scalar(lhs.get() & rhs.get());
+  }
+  template<typename U, typename = std::enable_if_t<std::is_arithmetic_v<U>>>
+  friend Scalar operator&(const Scalar & lhs, const U & rhs) noexcept
+  {
+    return Scalar(lhs.get() & rhs);
+  }
+  template<typename U, typename = std::enable_if_t<std::is_arithmetic_v<U>>>
+  friend Scalar operator&(const U & lhs, const Scalar & rhs) noexcept
+  {
+    return Scalar(lhs & rhs.get());
+  }
+
+  friend Scalar operator|(const Scalar & lhs, const Scalar & rhs) noexcept
+  {
+    return Scalar(lhs.get() | rhs.get());
+  }
+  template<typename U, typename = std::enable_if_t<std::is_arithmetic_v<U>>>
+  friend Scalar operator|(const Scalar & lhs, const U & rhs) noexcept
+  {
+    return Scalar(lhs.get() | rhs);
+  }
+  template<typename U, typename = std::enable_if_t<std::is_arithmetic_v<U>>>
+  friend Scalar operator|(const U & lhs, const Scalar & rhs) noexcept
+  {
+    return Scalar(lhs | rhs.get());
+  }
+
+  friend Scalar operator^(const Scalar & lhs, const Scalar & rhs) noexcept
+  {
+    return Scalar(lhs.get() ^ rhs.get());
+  }
+  template<typename U, typename = std::enable_if_t<std::is_arithmetic_v<U>>>
+  friend Scalar operator^(const Scalar & lhs, const U & rhs) noexcept
+  {
+    return Scalar(lhs.get() ^ rhs);
+  }
+  template<typename U, typename = std::enable_if_t<std::is_arithmetic_v<U>>>
+  friend Scalar operator^(const U & lhs, const Scalar & rhs) noexcept
+  {
+    return Scalar(lhs ^ rhs.get());
+  }
+
+  friend Scalar operator<<(const Scalar & lhs, const Scalar & rhs) noexcept
+  {
+    return Scalar(lhs.get() << rhs.get());
+  }
+  template<typename U, typename = std::enable_if_t<std::is_arithmetic_v<U>>>
+  friend Scalar operator<<(const Scalar & lhs, const U & rhs) noexcept
+  {
+    return Scalar(lhs.get() << rhs);
+  }
+  template<typename U, typename = std::enable_if_t<std::is_arithmetic_v<U>>>
+  friend Scalar operator<<(const U & lhs, const Scalar & rhs) noexcept
+  {
+    return Scalar(lhs << rhs.get());
+  }
+
+  friend Scalar operator>>(const Scalar & lhs, const Scalar & rhs) noexcept
+  {
+    return Scalar(lhs.get() >> rhs.get());
+  }
+  template<typename U, typename = std::enable_if_t<std::is_arithmetic_v<U>>>
+  friend Scalar operator>>(const Scalar & lhs, const U & rhs) noexcept
+  {
+    return Scalar(lhs.get() >> rhs);
+  }
+  template<typename U, typename = std::enable_if_t<std::is_arithmetic_v<U>>>
+  friend Scalar operator>>(const U & lhs, const Scalar & rhs) noexcept
+  {
+    return Scalar(lhs >> rhs.get());
+  }
+
+  // Unary operators
+  friend Scalar operator-(const Scalar & s) noexcept
+  {
+    return Scalar(-s.get());
+  }
+  friend Scalar operator+(const Scalar & s) noexcept
+  {
+    return Scalar(+s.get());
+  }
+  friend Scalar operator~(const Scalar & s) noexcept
+  {
+    return Scalar(~s.get());
+  }
+
+  /// @brief Absolute value, returning a Scalar.
+  /// @param s Scalar operand.
+  /// @return New Scalar with the absolute value.
+  ///
+  /// Found via ADL for unqualified `abs(s)`; `std::abs(s)` (qualified) cannot
+  /// be overloaded and returns T through the implicit conversion instead.
+  friend Scalar abs(const Scalar & s) noexcept
+  {
+    return Scalar(std::abs(s.get()));
+  }
+
+  // In-place operators write through to the backing storage (inline or
+  // external) and return *this.
+  Scalar & operator+=(const T & rhs) noexcept
+  {
+    get() += rhs;
+    return *this;
+  }
+  Scalar & operator-=(const T & rhs) noexcept
+  {
+    get() -= rhs;
+    return *this;
+  }
+  Scalar & operator*=(const T & rhs) noexcept
+  {
+    get() *= rhs;
+    return *this;
+  }
+  Scalar & operator/=(const T & rhs) noexcept
+  {
+    get() /= rhs;
+    return *this;
+  }
+  Scalar & operator%=(const T & rhs) noexcept
+  {
+    get() %= rhs;
+    return *this;
+  }
+  Scalar & operator&=(const T & rhs) noexcept
+  {
+    get() &= rhs;
+    return *this;
+  }
+  Scalar & operator|=(const T & rhs) noexcept
+  {
+    get() |= rhs;
+    return *this;
+  }
+  Scalar & operator^=(const T & rhs) noexcept
+  {
+    get() ^= rhs;
+    return *this;
+  }
+  Scalar & operator<<=(const T & rhs) noexcept
+  {
+    get() <<= rhs;
+    return *this;
+  }
+  Scalar & operator>>=(const T & rhs) noexcept
+  {
+    get() >>= rhs;
+    return *this;
   }
 
 private:
