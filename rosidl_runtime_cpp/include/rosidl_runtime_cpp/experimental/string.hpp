@@ -305,6 +305,17 @@ public:
     if (!suffix.empty()) {
       const size_type old_size = size_;
       const size_type new_size = size_ + suffix.size();
+      // If suffix aliases this string's own data, growth may reallocate and
+      // dangle the source; copy it first (std::less for well-defined pointer
+      // comparison across allocations).
+      std::basic_string<CharT> tmp;
+      const CharT * d = data();
+      if (!std::less<const CharT *>()(suffix.data(), d) &&
+        std::less<const CharT *>()(suffix.data(), d + size_))
+      {
+        tmp.assign(suffix.data(), suffix.size());
+        suffix = tmp;
+      }
       ensure_capacity_or_fail(new_size);
       std::memmove(data() + old_size, suffix.data(), suffix.size() * sizeof(CharT));
       size_ = new_size;

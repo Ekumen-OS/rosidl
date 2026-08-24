@@ -59,6 +59,17 @@ TEST(rosidl_runtime_cpp_experimental_string, assign_overwrite_grows)
   EXPECT_STREQ(string.c_str() + 3, "Jane");
 }
 
+TEST(rosidl_runtime_cpp_experimental_string, append_aliases_own_data)
+{
+  // Self-append beyond the inline capacity must not dangle the source:
+  // growth reallocates, so the aliasing suffix is copied first.
+  rosidl_runtime_cpp::String string;
+  string.assign(std::string(100, 'a'));
+  string.append(std::string_view(string.data(), string.size()));
+  EXPECT_EQ(string.size(), 200u);
+  EXPECT_EQ(std::string_view(string.data(), 200), std::string(200, 'a'));
+}
+
 TEST(rosidl_runtime_cpp_experimental_string, assign_overwrite_aliases_own_data)
 {
   // Overwriting with a view of the string's own data must work: the memmove
