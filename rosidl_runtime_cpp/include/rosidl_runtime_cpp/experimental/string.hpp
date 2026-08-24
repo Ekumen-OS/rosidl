@@ -315,12 +315,47 @@ public:
 
   BasicString & assign(std::basic_string_view<CharT> value)
   {
-    clear();
+    // Copy BEFORE clearing so the source may alias this string's own data
+    // (e.g. assign(data(), n)): clear() null-terminates, which would clobber
+    // data()[0] before the memmove. For in-contents aliasing sources,
+    // value.size() <= size_ <= capacity_, so ensure_capacity_or_fail never
+    // reallocates and the source pointer stays valid.
     ensure_capacity_or_fail(value.size());
     if (!value.empty()) {
       std::memmove(data(), value.data(), value.size() * sizeof(CharT));
     }
     size_ = value.size();
+    null_terminate();
+    return *this;
+  }
+
+  /// @brief Overwrite the content at offset *pos* with *value*, in place.
+  ///        The string grows to `max(size(), pos + value.size())`; any gap
+  ///        between the old size and *pos* is zero-filled.
+  /// @param value Characters to write.
+  /// @param pos Destination offset in this string.
+  /// @throws std::length_error if `pos + value.size()` overflows size_type.
+  /// @note Aliasing: *value* may alias this string's data only when the write
+  ///       does not require growth (`pos + value.size() <= size()`); growth
+  ///       reallocates and would dangle the source.
+  /// @note This two-argument overload intentionally supersedes the removed
+  ///       pointer+count form (assign(const CharT*, size_type)); callers
+  ///       build a string_view in place instead.
+  BasicString & assign(std::basic_string_view<CharT> value, size_type pos)
+  {
+    if (pos > std::numeric_limits<size_type>::max() - value.size()) {
+      throw std::length_error("BasicString::assign: pos + value.size() overflows");
+    }
+    const size_type new_size = std::max(size_, pos + value.size());
+    ensure_capacity_or_fail(new_size);
+    if (pos > size_) {
+      // Zero-fill the gap between the old size and pos.
+      std::fill_n(data() + size_, pos - size_, CharT{});
+    }
+    if (!value.empty()) {
+      std::memmove(data() + pos, value.data(), value.size() * sizeof(CharT));
+    }
+    size_ = new_size;
     null_terminate();
     return *this;
   }

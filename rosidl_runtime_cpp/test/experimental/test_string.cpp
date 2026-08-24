@@ -39,6 +39,37 @@ TEST(rosidl_runtime_cpp_experimental_string, null_termination_and_basic_operatio
   EXPECT_STREQ(string.c_str(), "");
 }
 
+TEST(rosidl_runtime_cpp_experimental_string, assign_overwrite_at_pos)
+{
+  rosidl_runtime_cpp::String string;
+  string.assign("Hi John");
+  string.assign("Jane", 3);
+  EXPECT_EQ(string.size(), 7u);
+  EXPECT_STREQ(string.c_str(), "Hi Jane");
+}
+
+TEST(rosidl_runtime_cpp_experimental_string, assign_overwrite_grows)
+{
+  rosidl_runtime_cpp::String string;
+  string.assign("Hi");
+  // Overwrite at pos 3 grows the string; the gap [2, 3) is zero-filled.
+  string.assign("Jane", 3);
+  EXPECT_EQ(string.size(), 7u);
+  EXPECT_EQ(string[2], '\0');
+  EXPECT_STREQ(string.c_str() + 3, "Jane");
+}
+
+TEST(rosidl_runtime_cpp_experimental_string, assign_overwrite_aliases_own_data)
+{
+  // Overwriting with a view of the string's own data must work: the memmove
+  // handles the overlap, and no growth is required (new size <= capacity).
+  rosidl_runtime_cpp::String string;
+  string.assign("hello");
+  string.assign(std::string_view(string.data(), 3), 2);
+  EXPECT_EQ(string.size(), 5u);
+  EXPECT_STREQ(string.c_str(), "hehel");
+}
+
 TEST(rosidl_runtime_cpp_experimental_string, upper_bound_is_enforced)
 {
   rosidl_runtime_cpp::BoundedString<3> string;
