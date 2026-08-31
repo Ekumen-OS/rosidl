@@ -152,3 +152,75 @@ TEST(rosidl_runtime_cpp_experimental_string, basic_string_supports_other_code_un
   EXPECT_EQ(string.size(), 4u);
   EXPECT_EQ(std::u16string(string), u"abcd");
 }
+
+TEST(rosidl_runtime_cpp_experimental_string, insert_erase_replace)
+{
+  rosidl_runtime_cpp::String s;
+  s.assign("hello world");
+  s.insert(5, " cruel");
+  EXPECT_EQ(s.view(), std::string_view("hello cruel world"));
+  s.erase(5, 6);
+  EXPECT_EQ(s.view(), std::string_view("hello world"));
+  s.replace(0, 5, "goodbye");
+  EXPECT_EQ(s.view(), std::string_view("goodbye world"));
+}
+
+TEST(rosidl_runtime_cpp_experimental_string, find_rfind_substr)
+{
+  rosidl_runtime_cpp::String s;
+  s.assign("hello world, hello");
+  EXPECT_EQ(s.find("hello"), 0u);
+  EXPECT_EQ(s.find("hello", 1), 13u);
+  EXPECT_EQ(s.find("xyz"), std::string_view::npos);
+  EXPECT_EQ(s.rfind("hello"), 13u);
+  EXPECT_EQ(s.rfind("hello", 12), 0u);
+  EXPECT_EQ(s.substr(6, 5), std::string("world"));
+  EXPECT_EQ(s.substr(6), std::string("world, hello"));
+}
+
+TEST(rosidl_runtime_cpp_experimental_string, compare_and_ordering)
+{
+  rosidl_runtime_cpp::String a;
+  a.assign("abc");
+  rosidl_runtime_cpp::String b;
+  b.assign("abd");
+  rosidl_runtime_cpp::String c;
+  c.assign("abc");
+  EXPECT_LT(a.compare(b.view()), 0);
+  EXPECT_GT(b.compare(a.view()), 0);
+  EXPECT_EQ(a.compare(c.view()), 0);
+  EXPECT_TRUE(a < b);
+  EXPECT_TRUE(a <= c);
+  EXPECT_TRUE(b > a);
+  EXPECT_TRUE(c >= a);
+}
+
+TEST(rosidl_runtime_cpp_experimental_string, concatenation)
+{
+  rosidl_runtime_cpp::String a;
+  a.assign("foo");
+  rosidl_runtime_cpp::String b;
+  b.assign("bar");
+  rosidl_runtime_cpp::String c = a + b;
+  EXPECT_EQ(c.view(), std::string_view("foobar"));
+  a += std::string_view("baz");
+  EXPECT_EQ(a.view(), std::string_view("foobaz"));
+}
+
+TEST(TestBasicString, FindFirstOfFamily)
+{
+  rosidl_runtime_cpp::String s("hello world");
+  EXPECT_EQ(s.find_first_of("aeiou"), 1u);  // 'e'
+  EXPECT_EQ(s.find_first_of("xyz"), std::string::npos);
+  EXPECT_EQ(s.find_first_of("aeiou", 2), 4u);  // 'o'
+  EXPECT_EQ(s.find_last_of("aeiou"), 7u);  // 'o'
+  EXPECT_EQ(s.find_last_of("aeiou", 3), 1u);  // scan 0..3 -> 'e' at 1
+  EXPECT_EQ(s.find_first_not_of("helo "), 6u);  // 'w'
+  EXPECT_EQ(s.find_first_not_of("helo wrd"), std::string::npos);
+  EXPECT_EQ(s.find_last_not_of("d"), 9u);  // 'l'
+  EXPECT_EQ(s.find_first_of(""), std::string::npos);
+  EXPECT_EQ(s.find_last_of(""), std::string::npos);
+  rosidl_runtime_cpp::String empty;
+  EXPECT_EQ(empty.find_last_of("abc"), std::string::npos);
+  EXPECT_EQ(empty.find_last_not_of("abc"), std::string::npos);
+}

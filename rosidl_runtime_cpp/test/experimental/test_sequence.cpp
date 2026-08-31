@@ -231,3 +231,20 @@ TEST(rosidl_runtime_cpp_experimental_sequence, insert_enforces_upper_bound)
   EXPECT_THROW(sequence.insert(1, 1, 9), std::length_error);
   EXPECT_THROW(sequence.insert(1, 2, 9), std::length_error);
 }
+
+TEST(rosidl_runtime_cpp_experimental_sequence, lexicographic_ordering)
+{
+  rosidl_runtime_cpp::Sequence<int> a;
+  a = {1, 2, 3};
+  rosidl_runtime_cpp::Sequence<int> b;
+  b = {1, 2, 4};
+  rosidl_runtime_cpp::Sequence<int> c;
+  c = {1, 2, 3};
+  EXPECT_TRUE(a < b);
+  EXPECT_TRUE(a <= c);
+  EXPECT_TRUE(b > a);
+  EXPECT_TRUE(c >= a);
+  rosidl_runtime_cpp::Sequence<int> longer;
+  longer = {1, 2, 3, 0};
+  EXPECT_TRUE(a < longer);
+}

@@ -412,6 +412,26 @@ public:
     return !(lhs == rhs);
   }
 
+  friend bool operator<(const Array & lhs, const Array & rhs)
+  {
+    return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
+  }
+
+  friend bool operator<=(const Array & lhs, const Array & rhs)
+  {
+    return !(rhs < lhs);
+  }
+
+  friend bool operator>(const Array & lhs, const Array & rhs)
+  {
+    return rhs < lhs;
+  }
+
+  friend bool operator>=(const Array & lhs, const Array & rhs)
+  {
+    return !(lhs < rhs);
+  }
+
 private:
   std::variant<MemoryRegion<T>, InternalStorage> storage_;
 };

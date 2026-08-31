@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstring>
+#include <functional>
 #include <initializer_list>
 #include <iterator>
 #include <limits>
@@ -540,6 +541,26 @@ public:
   friend bool operator!=(const BasicSequence & lhs, const BasicSequence & rhs)
   {
     return !(lhs == rhs);
+  }
+
+  friend bool operator<(const BasicSequence & lhs, const BasicSequence & rhs)
+  {
+    return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
+  }
+
+  friend bool operator<=(const BasicSequence & lhs, const BasicSequence & rhs)
+  {
+    return !(rhs < lhs);
+  }
+
+  friend bool operator>(const BasicSequence & lhs, const BasicSequence & rhs)
+  {
+    return rhs < lhs;
+  }
+
+  friend bool operator>=(const BasicSequence & lhs, const BasicSequence & rhs)
+  {
+    return !(lhs < rhs);
   }
 
 private:
@@ -1129,6 +1150,26 @@ public:
   friend bool operator!=(const BasicSequence & lhs, const BasicSequence & rhs)
   {
     return !(lhs == rhs);
+  }
+
+  friend bool operator<(const BasicSequence & lhs, const BasicSequence & rhs)
+  {
+    return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
+  }
+
+  friend bool operator<=(const BasicSequence & lhs, const BasicSequence & rhs)
+  {
+    return !(rhs < lhs);
+  }
+
+  friend bool operator>(const BasicSequence & lhs, const BasicSequence & rhs)
+  {
+    return rhs < lhs;
+  }
+
+  friend bool operator>=(const BasicSequence & lhs, const BasicSequence & rhs)
+  {
+    return !(lhs < rhs);
   }
 
 private:

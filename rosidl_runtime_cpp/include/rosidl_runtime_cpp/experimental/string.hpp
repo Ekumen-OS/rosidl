@@ -18,6 +18,8 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstring>
+#include <functional>
+#include <limits>
 #include <memory_resource>
 #include <stdexcept>
 #include <string>
@@ -378,6 +380,250 @@ public:
     swap(storage_, other.storage_);
     swap(capacity_, other.capacity_);
     swap(size_, other.size_);
+  }
+
+  /// @brief Insert *str* at position *pos*.
+  /// @throws std::out_of_range if `pos > size()`.
+  BasicString & insert(size_type pos, std::basic_string_view<CharT> str)
+  {
+    if (pos > size_) {
+      throw std::out_of_range("BasicString::insert: pos out of range");
+    }
+    if (str.empty()) {
+      return *this;
+    }
+    // Aliasing safety: growth may reallocate and dangle an aliasing source.
+    std::basic_string<CharT> tmp;
+    const CharT * d = data();
+    if (!std::less<const CharT *>()(str.data(), d) &&
+      std::less<const CharT *>()(str.data(), d + size_))
+    {
+      tmp.assign(str.data(), str.size());
+      str = tmp;
+    }
+    const size_type new_size = size_ + str.size();
+    ensure_capacity_or_fail(new_size);
+    std::memmove(data() + pos + str.size(), data() + pos, (size_ - pos) * sizeof(CharT));
+    std::memmove(data() + pos, str.data(), str.size() * sizeof(CharT));
+    size_ = new_size;
+    null_terminate();
+    return *this;
+  }
+
+  /// @brief Erase *count* characters starting at *pos*.
+  /// @throws std::out_of_range if `pos > size()`.
+  BasicString & erase(size_type pos = 0, size_type count = std::basic_string_view<CharT>::npos)
+  {
+    if (pos > size_) {
+      throw std::out_of_range("BasicString::erase: pos out of range");
+    }
+    count = std::min(count, size_ - pos);
+    std::memmove(data() + pos, data() + pos + count, (size_ - pos - count) * sizeof(CharT));
+    size_ -= count;
+    null_terminate();
+    return *this;
+  }
+
+  /// @brief Replace *count* characters at *pos* with *str*.
+  /// @throws std::out_of_range if `pos > size()`.
+  BasicString & replace(
+    size_type pos, size_type count, std::basic_string_view<CharT> str)
+  {
+    if (pos > size_) {
+      throw std::out_of_range("BasicString::replace: pos out of range");
+    }
+    count = std::min(count, size_ - pos);
+    // Aliasing safety.
+    std::basic_string<CharT> tmp;
+    const CharT * d = data();
+    if (!std::less<const CharT *>()(str.data(), d) &&
+      std::less<const CharT *>()(str.data(), d + size_))
+    {
+      tmp.assign(str.data(), str.size());
+      str = tmp;
+    }
+    const size_type new_size = size_ - count + str.size();
+    ensure_capacity_or_fail(new_size);
+    std::memmove(data() + pos + str.size(), data() + pos + count,
+      (size_ - pos - count) * sizeof(CharT));
+    if (!str.empty()) {
+      std::memmove(data() + pos, str.data(), str.size() * sizeof(CharT));
+    }
+    size_ = new_size;
+    null_terminate();
+    return *this;
+  }
+
+  /// @brief Find the first occurrence of *str* at or after *pos*.
+  size_type find(
+    std::basic_string_view<CharT> str, size_type pos = 0) const
+  {
+    if (str.empty()) {
+      return pos <= size_ ? pos : std::basic_string_view<CharT>::npos;
+    }
+    if (pos > size_ || str.size() > size_ - pos) {
+      return std::basic_string_view<CharT>::npos;
+    }
+    const CharT * result = std::search(data() + pos, data() + size_, str.begin(), str.end());
+    return result == data() + size_ ?
+           std::basic_string_view<CharT>::npos :
+           static_cast<size_type>(result - data());
+  }
+
+  /// @brief Find the last occurrence of *str* ending at or before *pos*.
+  size_type rfind(
+    std::basic_string_view<CharT> str, size_type pos = std::basic_string_view<CharT>::npos) const
+  {
+    if (str.empty()) {
+      return std::min(pos, size_);
+    }
+    if (str.size() > size_) {
+      return std::basic_string_view<CharT>::npos;
+    }
+    pos = std::min(pos, size_ - str.size());
+    for (size_type i = pos + 1; i > 0; --i) {
+      if (std::equal(str.begin(), str.end(), data() + i - 1)) {
+        return i - 1;
+      }
+    }
+    return std::basic_string_view<CharT>::npos;
+  }
+
+  /// @brief Find the first character equal to any in *str* at or after *pos*.
+  size_type find_first_of(
+    std::basic_string_view<CharT> str, size_type pos = 0) const
+  {
+    if (str.empty()) {
+      return std::basic_string_view<CharT>::npos;
+    }
+    for (size_type i = pos; i < size_; ++i) {
+      if (str.find(data()[i]) != std::basic_string_view<CharT>::npos) {
+        return i;
+      }
+    }
+    return std::basic_string_view<CharT>::npos;
+  }
+
+  /// @brief Find the last character equal to any in *str* at or before *pos*.
+  size_type find_last_of(
+    std::basic_string_view<CharT> str,
+    size_type pos = std::basic_string_view<CharT>::npos) const
+  {
+    if (str.empty() || size_ == 0) {
+      return std::basic_string_view<CharT>::npos;
+    }
+    pos = std::min(pos, size_ - 1);
+    for (size_type i = pos + 1; i > 0; --i) {
+      if (str.find(data()[i - 1]) != std::basic_string_view<CharT>::npos) {
+        return i - 1;
+      }
+    }
+    return std::basic_string_view<CharT>::npos;
+  }
+
+  /// @brief Find the first character NOT equal to any in *str* at or after *pos*.
+  size_type find_first_not_of(
+    std::basic_string_view<CharT> str, size_type pos = 0) const
+  {
+    for (size_type i = pos; i < size_; ++i) {
+      if (str.find(data()[i]) == std::basic_string_view<CharT>::npos) {
+        return i;
+      }
+    }
+    return std::basic_string_view<CharT>::npos;
+  }
+
+  /// @brief Find the last character NOT equal to any in *str* at or before *pos*.
+  size_type find_last_not_of(
+    std::basic_string_view<CharT> str,
+    size_type pos = std::basic_string_view<CharT>::npos) const
+  {
+    if (size_ == 0) {
+      return std::basic_string_view<CharT>::npos;
+    }
+    pos = std::min(pos, size_ - 1);
+    for (size_type i = pos + 1; i > 0; --i) {
+      if (str.find(data()[i - 1]) == std::basic_string_view<CharT>::npos) {
+        return i - 1;
+      }
+    }
+    return std::basic_string_view<CharT>::npos;
+  }
+
+  /// @brief Return a substring starting at *pos* of at most *count* chars.
+  /// @throws std::out_of_range if `pos > size()`.
+  std::basic_string<CharT> substr(
+    size_type pos = 0, size_type count = std::basic_string_view<CharT>::npos) const
+  {
+    if (pos > size_) {
+      throw std::out_of_range("BasicString::substr: pos out of range");
+    }
+    count = std::min(count, size_ - pos);
+    return std::basic_string<CharT>(data() + pos, count);
+  }
+
+  /// @brief Lexicographic comparison with *str*.
+  int compare(std::basic_string_view<CharT> str) const
+  {
+    const size_type common = std::min(size_, str.size());
+    const int result = std::char_traits<CharT>::compare(data(), str.data(), common);
+    if (result != 0) {
+      return result;
+    }
+    if (size_ < str.size()) {
+      return -1;
+    }
+    if (size_ > str.size()) {
+      return 1;
+    }
+    return 0;
+  }
+
+  /// @brief Concatenation.
+  friend BasicString operator+(const BasicString & lhs, const BasicString & rhs)
+  {
+    BasicString result(lhs);
+    result.append(rhs.view());
+    return result;
+  }
+
+  friend BasicString operator+(const BasicString & lhs, std::basic_string_view<CharT> rhs)
+  {
+    BasicString result(lhs);
+    result.append(rhs);
+    return result;
+  }
+
+  friend BasicString operator+(std::basic_string_view<CharT> lhs, const BasicString & rhs)
+  {
+    BasicString result(lhs);
+    result.append(rhs.view());
+    return result;
+  }
+
+  BasicString & operator+=(std::basic_string_view<CharT> rhs)
+  {
+    return append(rhs);
+  }
+
+  friend bool operator<(const BasicString & lhs, const BasicString & rhs)
+  {
+    return lhs.compare(rhs.view()) < 0;
+  }
+
+  friend bool operator<=(const BasicString & lhs, const BasicString & rhs)
+  {
+    return !(rhs < lhs);
+  }
+
+  friend bool operator>(const BasicString & lhs, const BasicString & rhs)
+  {
+    return rhs < lhs;
+  }
+
+  friend bool operator>=(const BasicString & lhs, const BasicString & rhs)
+  {
+    return !(lhs < rhs);
   }
 
   friend void swap(BasicString & lhs, BasicString & rhs) noexcept

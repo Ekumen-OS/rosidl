@@ -78,3 +78,17 @@ TEST(rosidl_runtime_cpp_experimental_array, fill_and_swap)
   EXPECT_EQ(lhs[0], 9);
   EXPECT_EQ(rhs[0], 5);
 }
+
+TEST(rosidl_runtime_cpp_experimental_array, lexicographic_ordering)
+{
+  rosidl_runtime_cpp::Array<int, 3> a;
+  a = {1, 2, 3};
+  rosidl_runtime_cpp::Array<int, 3> b;
+  b = {1, 2, 4};
+  rosidl_runtime_cpp::Array<int, 3> c;
+  c = {1, 2, 3};
+  EXPECT_TRUE(a < b);
+  EXPECT_TRUE(a <= c);
+  EXPECT_TRUE(b > a);
+  EXPECT_TRUE(c >= a);
+}
