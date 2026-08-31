@@ -407,6 +407,116 @@ public:
     }
   }
 
+  /// @brief Insert `count` copies of `value` at `index`.
+  /// @throws std::out_of_range if `index > size()`.
+  /// @throws std::length_error if the upper bound / capacity is exceeded.
+  void insert(size_type index, size_type count, const value_type & value)
+  {
+    if (index > size_) {
+      throw std::out_of_range("Sequence::insert: index out of range");
+    }
+    if (count == 0) {
+      return;
+    }
+    // Copy the value out first: it may alias this sequence's own storage.
+    value_type tmp = value;
+    ensure_capacity_or_fail(size_ + count);
+    const size_type old_size = size_;
+    // Shift [index, old_size) right by count.
+    if (index < old_size) {
+      for (size_type position = old_size; position > index; --position) {
+        pointer dst = data() + position - 1 + count;
+        if (dst >= data() + old_size) {
+          ::new (static_cast<void *>(dst)) value_type(std::move(data()[position - 1]));
+        } else {
+          *dst = std::move(data()[position - 1]);
+        }
+      }
+    }
+    // Fill [index, index + count) with copies of tmp.
+    for (size_type position = index; position < index + count; ++position) {
+      pointer dst = data() + position;
+      if (position >= old_size) {
+        ::new (static_cast<void *>(dst)) value_type(tmp);
+      } else {
+        *dst = tmp;
+      }
+    }
+    size_ = old_size + count;
+  }
+
+  /// @brief Insert the range [first, last) at `index`.
+  /// @throws std::out_of_range if `index > size()`.
+  /// @throws std::length_error if the upper bound / capacity is exceeded.
+  template<typename InputIterator,
+    typename = std::void_t<typename std::iterator_traits<InputIterator>::iterator_category>>
+  void insert(size_type index, InputIterator first, InputIterator last)
+  {
+    if (index > size_) {
+      throw std::out_of_range("Sequence::insert: index out of range");
+    }
+    using category = typename std::iterator_traits<InputIterator>::iterator_category;
+    if constexpr (std::is_base_of_v<std::random_access_iterator_tag, category>) {
+      const size_type count = static_cast<size_type>(last - first);
+      if (count == 0) {
+        return;
+      }
+      if constexpr (std::is_pointer_v<InputIterator>) {
+        const value_type * d = data();
+        if (!std::less<const value_type *>()(first, d) &&
+          std::less<const value_type *>()(first, d + size_))
+        {
+          std::vector<value_type> tmp(first, last);
+          insert(index, tmp.begin(), tmp.end());
+          return;
+        }
+      }
+      ensure_capacity_or_fail(size_ + count);
+      const size_type old_size = size_;
+      if (index < old_size) {
+        for (size_type position = old_size; position > index; --position) {
+          pointer dst = data() + position - 1 + count;
+          if (dst >= data() + old_size) {
+            ::new (static_cast<void *>(dst)) value_type(std::move(data()[position - 1]));
+          } else {
+            *dst = std::move(data()[position - 1]);
+          }
+        }
+      }
+      for (size_type position = index; position < index + count; ++position, ++first) {
+        pointer dst = data() + position;
+        if (position >= old_size) {
+          ::new (static_cast<void *>(dst)) value_type(*first);
+        } else {
+          *dst = *first;
+        }
+      }
+      size_ = old_size + count;
+    } else {
+      std::vector<value_type> tmp(first, last);
+      insert(index, tmp.begin(), tmp.end());
+    }
+  }
+
+  /// @brief Erase `count` elements starting at `index`.
+  /// @throws std::out_of_range if `index >= size()`.
+  void erase(size_type index, size_type count = 1)
+  {
+    if (index >= size_) {
+      throw std::out_of_range("Sequence::erase: index out of range");
+    }
+    count = std::min(count, size_ - index);
+    if (count == 0) {
+      return;
+    }
+    const size_type tail = size_ - count;
+    for (size_type position = index; position < tail; ++position) {
+      data()[position] = std::move(data()[position + count]);
+    }
+    destroy_elements(tail, size_);
+    size_ = tail;
+  }
+
   void swap(BasicSequence & other) noexcept
   {
     using std::swap;
@@ -846,6 +956,155 @@ public:
     for (auto current = first; current != last; ++current) {
       emplace_back(*current);
     }
+  }
+
+  /// @brief Insert `count` copies of `value` at `index`.
+  /// @param index Insertion position in [0, size()].
+  /// @param count Number of copies to insert.
+  /// @param value Value to insert.
+  /// @throws std::out_of_range if `index > size()`.
+  /// @throws std::length_error if the upper bound / capacity is exceeded.
+  void insert(size_type index, size_type count, const value_type & value)
+  {
+    if (index > size_) {
+      throw std::out_of_range("Sequence::insert: index out of range");
+    }
+    if (count == 0) {
+      return;
+    }
+    // Copy the value out first: it may alias this sequence's own storage,
+    // which the capacity growth / shift below would invalidate or overwrite.
+    value_type tmp = value;
+    ensure_capacity_or_fail(size_ + count);
+    const size_type old_size = size_;
+    // Shift [index, old_size) right by count.
+    if (index < old_size) {
+      if (std::is_trivially_copyable<T>::value) {
+        std::memmove(data() + index + count, data() + index, (old_size - index) * sizeof(T));
+      } else {
+        for (size_type position = old_size; position > index; --position) {
+          T * dst = data() + position - 1 + count;
+          if (dst >= data() + old_size) {
+            // Uninitialized tail slot: move-construct.
+            ::new (static_cast<void *>(dst)) T(std::move(data()[position - 1]));
+          } else {
+            // Alive slot: move-assign.
+            *dst = std::move(data()[position - 1]);
+          }
+        }
+      }
+    }
+    // Fill [index, index + count) with copies of tmp. Slots at or beyond the
+    // old size are uninitialized (append case) and must be constructed; the
+    // rest are alive (moved-from originals) and are copy-assigned.
+    if (std::is_trivially_copyable<T>::value) {
+      std::fill_n(data() + index, count, tmp);
+    } else {
+      for (size_type position = index; position < index + count; ++position) {
+        T * dst = data() + position;
+        if (position >= old_size) {
+          ::new (static_cast<void *>(dst)) T(tmp);
+        } else {
+          *dst = tmp;
+        }
+      }
+    }
+    size_ = old_size + count;
+  }
+
+  /// @brief Insert the range [first, last) at `index`.
+  /// @param index Insertion position in [0, size()].
+  /// @throws std::out_of_range if `index > size()`.
+  /// @throws std::length_error if the upper bound / capacity is exceeded.
+  template<typename InputIterator,
+    typename = std::void_t<typename std::iterator_traits<InputIterator>::iterator_category>>
+  void insert(size_type index, InputIterator first, InputIterator last)
+  {
+    if (index > size_) {
+      throw std::out_of_range("Sequence::insert: index out of range");
+    }
+    using category = typename std::iterator_traits<InputIterator>::iterator_category;
+    if constexpr (std::is_base_of_v<std::random_access_iterator_tag, category>) {
+      const size_type count = static_cast<size_type>(last - first);
+      if (count == 0) {
+        return;
+      }
+      // If the source range aliases this sequence's own storage, copy it out
+      // first (std::vector::insert semantics).
+      if constexpr (std::is_pointer_v<InputIterator>) {
+        const T * d = data();
+        if (!std::less<const T *>()(first, d) &&
+          std::less<const T *>()(first, d + size_))
+        {
+          std::vector<T> tmp(first, last);
+          insert(index, tmp.begin(), tmp.end());
+          return;
+        }
+      }
+      ensure_capacity_or_fail(size_ + count);
+      const size_type old_size = size_;
+      if (index < old_size) {
+        if (std::is_trivially_copyable<T>::value) {
+          std::memmove(data() + index + count, data() + index, (old_size - index) * sizeof(T));
+        } else {
+          for (size_type position = old_size; position > index; --position) {
+            T * dst = data() + position - 1 + count;
+            if (dst >= data() + old_size) {
+              // Uninitialized tail slot: move-construct.
+              ::new (static_cast<void *>(dst)) T(std::move(data()[position - 1]));
+            } else {
+              // Alive slot: move-assign.
+              *dst = std::move(data()[position - 1]);
+            }
+          }
+        }
+      }
+      // Copy the range into [index, index + count). Slots at or beyond the
+      // old size are uninitialized (append case) and must be constructed;
+      // the rest are alive (moved-from originals) and are copy-assigned.
+      if (std::is_trivially_copyable<T>::value) {
+        std::copy(first, last, data() + index);
+      } else {
+        for (size_type position = index; position < index + count; ++position, ++first) {
+          T * dst = data() + position;
+          if (position >= old_size) {
+            ::new (static_cast<void *>(dst)) T(*first);
+          } else {
+            *dst = *first;
+          }
+        }
+      }
+      size_ = old_size + count;
+    } else {
+      // Single-pass input iterator: materialize, then insert.
+      std::vector<T> tmp(first, last);
+      insert(index, tmp.begin(), tmp.end());
+    }
+  }
+
+  /// @brief Erase `count` elements starting at `index`.
+  /// @param index Erase position in [0, size()).
+  /// @param count Number of elements to erase (clamped to size() - index).
+  /// @throws std::out_of_range if `index >= size()`.
+  void erase(size_type index, size_type count = 1)
+  {
+    if (index >= size_) {
+      throw std::out_of_range("Sequence::erase: index out of range");
+    }
+    count = std::min(count, size_ - index);
+    if (count == 0) {
+      return;
+    }
+    const size_type tail = size_ - count;
+    if (std::is_trivially_copyable<T>::value) {
+      std::memmove(data() + index, data() + index + count, (tail - index) * sizeof(T));
+    } else {
+      for (size_type position = index; position < tail; ++position) {
+        data()[position] = std::move(data()[position + count]);
+      }
+    }
+    destroy_elements(tail, size_);
+    size_ = tail;
   }
 
   void swap(BasicSequence & other) noexcept
