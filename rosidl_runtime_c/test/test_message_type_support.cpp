@@ -42,13 +42,13 @@ TEST(message_typesupport, get_message_typesupport_handle) {
 TEST(message_typesupport, identifier_matches) {
   // Exact match (no trailing '*').
   EXPECT_TRUE(rosidl_runtime_c_typesupport_identifier_matches(
-      "rosidl_typesupport_xcdr_cpython", "rosidl_typesupport_xcdr_cpython"));
+      "rosidl_typesupport_xcdr_cpp", "rosidl_typesupport_xcdr_cpp"));
   EXPECT_FALSE(rosidl_runtime_c_typesupport_identifier_matches(
-      "rosidl_typesupport_xcdr_cpython", "rosidl_typesupport_xcdr_cpp"));
+      "rosidl_typesupport_xcdr_cpp", "rosidl_typesupport_introspection_cpp"));
 
   // Trailing '*' is a prefix match.
   EXPECT_TRUE(rosidl_runtime_c_typesupport_identifier_matches(
-      "rosidl_typesupport_xcdr_cpython", "rosidl_typesupport_xcdr*"));
+      "rosidl_typesupport_xcdr_cpp", "rosidl_typesupport_xcdr*"));
   EXPECT_TRUE(rosidl_runtime_c_typesupport_identifier_matches(
       "rosidl_typesupport_xcdr_cpp", "rosidl_typesupport_xcdr*"));
   EXPECT_TRUE(rosidl_runtime_c_typesupport_identifier_matches(
@@ -67,7 +67,7 @@ TEST(message_typesupport, identifier_matches) {
 TEST(message_typesupport, handle_function_matches_pattern) {
   rosidl_message_type_support_t message_typesupport;
 
-  constexpr char identifier[] = "rosidl_typesupport_xcdr_cpython";
+  constexpr char identifier[] = "rosidl_typesupport_xcdr_cpp";
   message_typesupport.typesupport_identifier = &identifier[0];
   message_typesupport.func = dummy_message_typesupport_handle_function;
 
