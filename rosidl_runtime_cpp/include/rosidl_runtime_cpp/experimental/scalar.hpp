@@ -87,9 +87,13 @@ public:
   T & get() noexcept
   {
     if (std::holds_alternative<Memory<T>>(storage_)) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
       return *std::get<Memory<T>>(storage_).data();
+#pragma GCC diagnostic pop
+    } else {
+      return std::get<T>(storage_);
     }
-    return std::get<T>(storage_);
   }
 
   /// @brief Access the scalar value.
@@ -97,9 +101,13 @@ public:
   const T & get() const noexcept
   {
     if (std::holds_alternative<Memory<T>>(storage_)) {
-      return *std::get<Memory<T>>(storage_).data();
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+    return *std::get<Memory<T>>(storage_).data();
+#pragma GCC diagnostic pop
+    } else {
+      return std::get<T>(storage_);
     }
-    return std::get<T>(storage_);
   }
 
   /// @brief Implicit conversion to value type.
@@ -370,7 +378,9 @@ public:
   }
 
 private:
-  std::variant<Memory<T>, T> storage_;
+  // Value-initialize so the variant always holds a valid alternative,
+  // even when Scalar is constructed via placement new or memcpy.
+  std::variant<Memory<T>, T> storage_{T{}};
 };
 
 }  // namespace rosidl_runtime_cpp

@@ -36,8 +36,7 @@ public:
   using pointer = T *;
   using const_pointer = const T *;
 
-  Memory() noexcept
-  : memory_{nullptr, 0} {}
+  Memory() noexcept = default;
 
   Memory(rosidl_memory_t memory) noexcept  // NOLINT(runtime/explicit)
   : memory_(memory)
@@ -74,7 +73,7 @@ public:
   }
 
 private:
-  rosidl_memory_t memory_;
+  rosidl_memory_t memory_{};
 };
 
 /// @brief Typed memory region descriptor wrapper.
@@ -89,8 +88,7 @@ public:
   using const_pointer = const T *;
   using size_type = std::size_t;
 
-  MemoryRegion() noexcept
-  : region_{{nullptr, 0}, 0} {}
+  MemoryRegion() noexcept = default;
 
   MemoryRegion(rosidl_memory_region_t region) noexcept  // NOLINT(runtime/explicit)
   : region_(region)
@@ -133,7 +131,7 @@ public:
   }
 
 private:
-  rosidl_memory_region_t region_;
+  rosidl_memory_region_t region_{};
 };
 
 /// @brief Untyped memory descriptor wrapper specialization.
@@ -144,8 +142,7 @@ template<>
 class Memory<void>
 {
 public:
-  Memory() noexcept
-  : memory_{nullptr, 0} {}
+  Memory() noexcept = default;
 
   Memory(rosidl_memory_t memory) noexcept  // NOLINT(runtime/explicit)
   : memory_(memory)
@@ -190,7 +187,7 @@ public:
   }
 
 private:
-  rosidl_memory_t memory_;
+  rosidl_memory_t memory_{};
 };
 
 /// @brief Untyped memory region descriptor wrapper specialization.
@@ -203,8 +200,7 @@ class MemoryRegion<void>
 public:
   using size_type = std::size_t;
 
-  MemoryRegion() noexcept
-  : region_{{nullptr, 0}, 0} {}
+  MemoryRegion() noexcept = default;
 
   MemoryRegion(rosidl_memory_region_t region) noexcept  // NOLINT(runtime/explicit)
   : region_(region)
@@ -251,7 +247,7 @@ public:
   }
 
 private:
-  rosidl_memory_region_t region_;
+  rosidl_memory_region_t region_{};
 };
 
 }  // namespace rosidl_runtime_cpp

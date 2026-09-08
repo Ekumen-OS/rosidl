@@ -438,9 +438,9 @@ public:
     for (size_type position = index; position < index + count; ++position) {
       pointer dst = data() + position;
       if (position >= old_size) {
-        ::new (static_cast<void *>(dst)) value_type(tmp);
+        ::new (static_cast<void *>(dst)) value_type(std::move(tmp));
       } else {
-        *dst = tmp;
+        *dst = std::move(tmp);
       }
     }
     size_ = old_size + count;
