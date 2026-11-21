@@ -64,6 +64,11 @@ if(BUILD_TESTING)
     target_link_libraries(test_views ${PROJECT_NAME} ament_cmake_ros_core::ament_ros_cxx_standard)
   endif()
 
+  ament_add_gtest(test_region_views test/test_region_views.cpp)
+  if(TARGET test_region_views)
+    target_link_libraries(test_region_views ${PROJECT_NAME} ament_cmake_ros_core::ament_ros_cxx_standard)
+  endif()
+
   add_performance_test(benchmark_bounded_vector test/benchmark/benchmark_bounded_vector.cpp)
   if(TARGET benchmark_bounded_vector)
     target_link_libraries(benchmark_bounded_vector ${PROJECT_NAME} ament_cmake_ros_core::ament_ros_cxx_standard)

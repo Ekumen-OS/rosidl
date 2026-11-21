@@ -16,11 +16,44 @@
 #define ROSIDL_RUNTIME_CPP__MEMORY_HPP_
 
 #include <cstddef>
+#include <span>  // NOLINT(build/include_order)
 
 #include "rosidl_runtime_c/memory.h"
 
 namespace rosidl_runtime_cpp
 {
+
+template<typename T>
+class Memory
+{
+public:
+  using value_type = T;
+  using pointer = T *;
+  using const_pointer = const T *;
+
+  Memory() noexcept = default;
+
+  Memory(rosidl_memory_t memory) noexcept  // NOLINT(runtime/explicit)
+  : memory_(memory)
+  {}
+
+  explicit Memory(void * address, int attributes = 0) noexcept
+  : memory_{address, attributes}
+  {}
+
+  pointer data() noexcept {return static_cast<pointer>(memory_.address);}
+  const_pointer data() const noexcept
+  {
+    return static_cast<const_pointer>(memory_.address);
+  }
+  int attributes() const noexcept {return memory_.attributes;}
+  const rosidl_memory_t & c_memory() const noexcept {return memory_;}
+
+  explicit operator bool() const noexcept {return memory_.address != nullptr;}
+
+private:
+  rosidl_memory_t memory_{};
+};
 
 template<typename T>
 class MemoryRegion
@@ -48,6 +81,14 @@ public:
   }
   size_type size() const noexcept {return region_.size;}
   size_type capacity() const noexcept {return size() / sizeof(T);}
+  std::span<T> span() noexcept
+  {
+    return std::span<T>(data(), capacity());
+  }
+  std::span<const T> span() const noexcept
+  {
+    return std::span<const T>(data(), capacity());
+  }
   int attributes() const noexcept {return region_.location.attributes;}
   const rosidl_memory_region_t & c_region() const noexcept {return region_;}
 
@@ -76,6 +117,14 @@ public:
   void * data() noexcept {return region_.location.address;}
   const void * data() const noexcept {return region_.location.address;}
   size_type size() const noexcept {return region_.size;}
+  std::span<std::byte> span() noexcept
+  {
+    return std::span<std::byte>(static_cast<std::byte *>(data()), size());
+  }
+  std::span<const std::byte> span() const noexcept
+  {
+    return std::span<const std::byte>(static_cast<const std::byte *>(data()), size());
+  }
   int attributes() const noexcept {return region_.location.attributes;}
   const rosidl_memory_region_t & c_region() const noexcept {return region_;}
 

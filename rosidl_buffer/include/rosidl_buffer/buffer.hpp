@@ -20,6 +20,7 @@
 #include <initializer_list>
 #include <iterator>
 #include <memory>
+#include <span>  // NOLINT(build/include_order)
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -236,6 +237,18 @@ public:
   {
     throw_if_not_cpu_backend();
     return get_cpu_impl()->get_storage().data();
+  }
+
+  std::span<T> span()
+  {
+    throw_if_not_cpu_backend();
+    return get_cpu_impl()->span();
+  }
+
+  std::span<const T> span() const
+  {
+    throw_if_not_cpu_backend();
+    return get_cpu_impl()->span();
   }
 
   // ========== Iterators (CPU only) ==========

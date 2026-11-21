@@ -16,6 +16,7 @@
 #define ROSIDL_BUFFER__CPU_BUFFER_IMPL_HPP_
 
 #include <memory>
+#include <span>  // NOLINT(build/include_order)
 #include <string>
 #include <vector>
 
@@ -37,6 +38,12 @@ public:
 
   /// Get const reference to underlying std::vector.
   const std::vector<T, Allocator> & get_storage() const {return storage_;}
+
+  std::span<T> span() {return std::span<T>(storage_.data(), storage_.size());}
+  std::span<const T> span() const
+  {
+    return std::span<const T>(storage_.data(), storage_.size());
+  }
 
   // ========== BufferImplBase overrides ==========
 
