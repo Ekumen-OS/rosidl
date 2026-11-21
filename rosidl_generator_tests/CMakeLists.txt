@@ -33,6 +33,7 @@ if(BUILD_TESTING)
     msg/BasicIdl.idl
     msg/Comments.msg
     msg/SmallConstant.msg
+    msg/ViewConstraintCases.msg
     ADD_LINTER_TESTS
     SKIP_INSTALL
   )
@@ -66,6 +67,7 @@ if(BUILD_TESTING)
     test_msg_datatype
     test_name
     test_traits
+    test_views
   )
 
   foreach(test_name ${generator_cpp_test_names})

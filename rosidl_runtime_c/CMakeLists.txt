@@ -129,6 +129,14 @@ if(BUILD_TESTING)
     target_link_libraries(test_type_description_utils ${PROJECT_NAME} ament_cmake_ros_core::ament_ros_cxx_standard)
   endif()
 
+  add_executable(test_contracts test/test_contracts.c)
+  target_link_libraries(test_contracts ${PROJECT_NAME})
+  ament_add_test(
+    test_contracts
+    COMMAND "$<TARGET_FILE:test_contracts>"
+    GENERATE_RESULT_FOR_RETURN_CODE_ZERO
+  )
+
   add_performance_test(benchmark_string_conversion test/benchmark/benchmark_string_conversion.cpp)
   if(TARGET benchmark_string_conversion)
     target_link_libraries(benchmark_string_conversion ${PROJECT_NAME} ament_cmake_ros_core::ament_ros_cxx_standard)
