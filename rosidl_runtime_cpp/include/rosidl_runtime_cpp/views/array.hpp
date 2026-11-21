@@ -58,36 +58,68 @@ private:
   struct InternalStorage
   {
     alignas(T) std::byte raw[sizeof(T) * N];
+    std::size_t constructed{0};
     T * data() noexcept {return reinterpret_cast<T *>(raw);}
     const T * data() const noexcept {return reinterpret_cast<const T *>(raw);}
 
+    void destroy() noexcept
+    {
+      if constexpr (!std::is_trivially_destructible_v<T>) {
+        while (constructed > 0) {
+          data()[--constructed].~T();
+        }
+      }
+    }
+
+    struct ConstructionGuard
+    {
+      InternalStorage * storage;
+      ~ConstructionGuard()
+      {
+        if (storage) {
+          storage->destroy();
+        }
+      }
+    };
+
     InternalStorage()
     {
+      ConstructionGuard guard{this};
       for (std::size_t i = 0; i < N; ++i) {
         ::new (data() + i) T();
+        ++constructed;
       }
+      guard.storage = nullptr;
     }
 
     InternalStorage(const InternalStorage & other)
     {
+      ConstructionGuard guard{this};
       if constexpr (std::is_trivially_copyable_v<T>) {
         std::memcpy(raw, other.raw, sizeof(T) * N);
+        constructed = other.constructed;
       } else {
-        for (std::size_t i = 0; i < N; ++i) {
+        for (std::size_t i = 0; i < other.constructed; ++i) {
           ::new (data() + i) T(other.data()[i]);
+          ++constructed;
         }
       }
+      guard.storage = nullptr;
     }
 
-    InternalStorage(InternalStorage && other) noexcept
+    InternalStorage(InternalStorage && other)
     {
+      ConstructionGuard guard{this};
       if constexpr (std::is_trivially_copyable_v<T>) {
         std::memcpy(raw, other.raw, sizeof(T) * N);
+        constructed = other.constructed;
       } else {
-        for (std::size_t i = 0; i < N; ++i) {
+        for (std::size_t i = 0; i < other.constructed; ++i) {
           ::new (data() + i) T(std::move(other.data()[i]));
+          ++constructed;
         }
       }
+      guard.storage = nullptr;
     }
 
     InternalStorage & operator=(const InternalStorage & other)
@@ -104,7 +136,7 @@ private:
       return *this;
     }
 
-    InternalStorage & operator=(InternalStorage && other) noexcept
+    InternalStorage & operator=(InternalStorage && other)
     {
       if (this != &other) {
         if constexpr (std::is_trivially_copyable_v<T>) {
@@ -120,11 +152,7 @@ private:
 
     ~InternalStorage()
     {
-      if constexpr (!std::is_trivially_destructible_v<T>) {
-        for (std::size_t i = 0; i < N; ++i) {
-          data()[i].~T();
-        }
-      }
+      destroy();
     }
 
     /// @brief Tag for uninitialized storage (used by the piecewise constructor).
@@ -158,10 +186,10 @@ public:
 
   /// @brief Move constructor.
   /// @param other Source array.
-  Array(Array && other) noexcept
+  Array(Array && other)
   : storage_(std::move(other.storage_))
   {
-    other.storage_ = InternalStorage{};
+    other.storage_.template emplace<InternalStorage>();
   }
 
   /// @brief Construct from `std::array`.
@@ -218,14 +246,16 @@ public:
     typename ... ArgTuples,
     std::enable_if_t<sizeof...(ArgTuples) == N, int> = 0>
   explicit Array(std::piecewise_construct_t, ArgTuples && ... arg_tuples)
-  : storage_(InternalStorage{typename InternalStorage::uninit_t{}})
+  : storage_(std::in_place_type<InternalStorage>, typename InternalStorage::uninit_t{})
   {
-    T * ptr = std::get<InternalStorage>(storage_).data();
+    auto & internal = std::get<InternalStorage>(storage_);
+    T * ptr = internal.data();
     std::size_t i = 0;
     (..., std::apply(
       [&](auto && ... args) {
         ::new (static_cast<void *>(ptr + i)) T(std::forward<decltype(args)>(args)...);
         ++i;
+        ++internal.constructed;
         },
         std::forward<ArgTuples>(arg_tuples)));
   }

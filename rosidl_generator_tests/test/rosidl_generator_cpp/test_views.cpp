@@ -29,14 +29,160 @@
 #include "rosidl_generator_tests/msg/unbounded_sequences.hpp"
 #include "rosidl_generator_tests/msg/view_constraint_cases.hpp"
 #include "rosidl_generator_tests/msg/views/basic_types.hpp"
+#include "rosidl_generator_tests/msg/views/basic_types__region.hpp"
 #include "rosidl_generator_tests/msg/views/multi_nested.hpp"
+#include "rosidl_generator_tests/msg/views/multi_nested__region.hpp"
 #include "rosidl_generator_tests/msg/views/nested.hpp"
+#include "rosidl_generator_tests/msg/views/nested__region.hpp"
 #include "rosidl_generator_tests/msg/views/strings.hpp"
 #include "rosidl_generator_tests/msg/views/unbounded_sequences.hpp"
+#include "rosidl_generator_tests/msg/views/unbounded_sequences__region.hpp"
 #include "rosidl_generator_tests/msg/views/view_constraint_cases.hpp"
+#include "rosidl_generator_tests/msg/views/view_constraint_cases__region.hpp"
 
 namespace msg = rosidl_generator_tests::msg;
 namespace views = rosidl_generator_tests::msg::views;
+
+TEST(test_views, region_views_own_and_move_nested_fields) {
+  views::RegionNested owned;
+  EXPECT_TRUE(owned.owns_storage());
+  owned.basic_types_value().int32_value(73);
+  EXPECT_EQ(73, owned.basic_types_value().int32_value());
+
+  views::RegionNested moved(std::move(owned));
+  EXPECT_EQ(73, moved.basic_types_value().int32_value());
+  EXPECT_THROW(owned.basic_types_value(), std::logic_error);
+  static_assert(std::is_const_v<std::remove_reference_t<
+      decltype(std::declval<views::ConstRegionNested &>().basic_types_value())>>);
+  static_assert(std::is_same_v<
+      decltype(std::declval<views::ConstRegionNested &>().basic_types_value().int32_value()),
+      const int32_t &>);
+
+  views::RegionMultiNested nested_containers;
+  EXPECT_TRUE(nested_containers.owns_storage());
+
+  views::RegionUnboundedSequences defaulted;
+  msg::UnboundedSequences plain;
+  ASSERT_EQ(defaulted.bool_values_default().size(), plain.bool_values_default.size());
+  EXPECT_EQ(defaulted.bool_values_default()[1], plain.bool_values_default[1]);
+  ASSERT_EQ(defaulted.string_values_default().size(), plain.string_values_default.size());
+  EXPECT_EQ(defaulted.string_values_default()[1].view(), plain.string_values_default[1]);
+}
+
+TEST(test_views, region_views_borrow_nested_scalar_storage) {
+  msg::BasicTypes plain;
+  views::NestedRegionStorage storage;
+  storage.block = {&plain, sizeof(plain)};
+  auto & fields = storage.members.basic_types_value.members;
+  const auto bind = [](auto & value) {
+      return rosidl_runtime_cpp::Memory<std::remove_reference_t<decltype(value)>>(&value);
+    };
+  fields.bool_value = bind(plain.bool_value);
+  fields.byte_value = bind(plain.byte_value);
+  fields.char_value = bind(plain.char_value);
+  fields.float32_value = bind(plain.float32_value);
+  fields.float64_value = bind(plain.float64_value);
+  fields.int8_value = bind(plain.int8_value);
+  fields.uint8_value = bind(plain.uint8_value);
+  fields.int16_value = bind(plain.int16_value);
+  fields.uint16_value = bind(plain.uint16_value);
+  fields.int32_value = bind(plain.int32_value);
+  fields.uint32_value = bind(plain.uint32_value);
+  fields.int64_value = bind(plain.int64_value);
+  fields.uint64_value = bind(plain.uint64_value);
+
+  views::RegionNested view(storage);
+  EXPECT_FALSE(view.owns_storage());
+  EXPECT_EQ(view.backing_storage().data(), &plain);
+  view.basic_types_value().int32_value(24);
+  EXPECT_EQ(plain.int32_value, 24);
+  EXPECT_EQ(view.backing_storage().size(), sizeof(plain));
+  views::ConstRegionNested read_only(storage);
+  EXPECT_EQ(read_only.basic_types_value().int32_value(), 24);
+}
+
+TEST(test_views, region_views_borrow_bounded_string_storage) {
+  char value[4] = "one";
+  char array0[4] = "a";
+  char array1[4] = "b";
+  char sequence0[4] = "c";
+  char sequence1[4] = "d";
+  views::ViewConstraintCasesRegionStorage storage;
+  storage.members.bounded_value = {value, sizeof(value)};
+  storage.members.bounded_array = {{{array0, sizeof(array0)}, {array1, sizeof(array1)}}};
+  storage.members.bounded_sequence.elements = {{sequence0, sizeof(sequence0)}};
+  storage.members.bounded_sequence.size = 1;
+  storage.members.unbounded_sequence.elements = {{sequence1, sizeof(sequence1)}};
+  storage.members.unbounded_sequence.size = 1;
+
+  views::RegionViewConstraintCases borrowed(storage);
+  EXPECT_FALSE(borrowed.owns_storage());
+  borrowed.bounded_value().assign("two");
+  borrowed.bounded_array()[1].assign("xyz");
+  borrowed.bounded_sequence()[0].assign("hi");
+  EXPECT_STREQ(value, "two");
+  EXPECT_STREQ(array1, "xyz");
+  EXPECT_STREQ(sequence0, "hi");
+  EXPECT_THROW(borrowed.bounded_value().assign("long"), std::length_error);
+  EXPECT_THROW(borrowed.bounded_sequence().resize(3), std::length_error);
+
+  views::ConstRegionViewConstraintCases const_view(storage);
+  static_assert(std::is_const_v<std::remove_reference_t<
+      decltype(const_view.bounded_value())>>);
+  EXPECT_EQ(const_view.bounded_value().view(), "two");
+
+  storage.members.bounded_sequence.size = 2;
+  EXPECT_THROW((views::RegionViewConstraintCases{storage}), std::length_error);
+  storage.members.bounded_sequence.elements.clear();
+  storage.members.bounded_sequence.size = 0;
+  views::RegionViewConstraintCases empty_borrow(storage);
+  EXPECT_THROW(empty_borrow.bounded_sequence().resize(1), std::length_error);
+  char unterminated[4] = {'a', 'b', 'c', 'd'};
+  storage.members.bounded_value = {unterminated, sizeof(unterminated)};
+  EXPECT_THROW((views::RegionViewConstraintCases{storage}), std::invalid_argument);
+}
+
+TEST(test_views, region_views_validate_nested_constraints) {
+  views::RegionMultiNested message;
+  auto & item = message.bounded_sequence_of_bounded_sequences().emplace_back();
+  item.string_values().emplace_back().assign("abcd");
+
+  views::RegionMultiNested::Constraints limits;
+  limits.bounded_sequence_of_bounded_sequences.size = 2;
+  limits.bounded_sequence_of_bounded_sequences.element.string_values.size = 2;
+  limits.bounded_sequence_of_bounded_sequences.element.string_values.element.size = 3;
+  std::string path;
+  const auto report = [&path](std::string_view field, int) {path = field;};
+  EXPECT_FALSE(limits.CheckCompatibleView(message, report));
+  EXPECT_EQ("bounded_sequence_of_bounded_sequences[0].string_values[0]", path);
+  limits.bounded_sequence_of_bounded_sequences.element.string_values.element.size = 4;
+  EXPECT_TRUE(limits.CheckCompatibleView(message));
+}
+
+TEST(test_views, bounded_constraints_reject_limits_above_idl_bounds) {
+  views::RegionViewConstraintCases::Constraints limits;
+  const views::RegionViewConstraintCases::Constraints baseline;
+  std::string path;
+  const auto report = [&path](std::string_view field, int) {path = field;};
+
+  limits.bounded_value.size = 4;
+  EXPECT_FALSE(limits.CheckCompatible(baseline, report));
+  EXPECT_EQ("bounded_value", path);
+  limits.bounded_value.size = 0;
+  limits.bounded_array.size = 4;
+  EXPECT_FALSE(limits.CheckCompatible(baseline, report));
+  EXPECT_EQ("bounded_array", path);
+  limits.bounded_array.size = 0;
+  limits.bounded_sequence.size = 3;
+  EXPECT_FALSE(limits.CheckCompatible(baseline, report));
+  EXPECT_EQ("bounded_sequence", path);
+  limits.bounded_sequence.size = 0;
+  limits.unbounded_sequence.element.size = 4;
+  EXPECT_FALSE(limits.CheckCompatible(baseline, report));
+  EXPECT_EQ("unbounded_sequence", path);
+  limits.unbounded_sequence.element.size = 3;
+  EXPECT_TRUE(limits.CheckCompatible(baseline));
+}
 
 TEST(test_views, owning_and_borrowed_plain_message_adapters) {
   views::BasicTypes owned;
@@ -182,6 +328,19 @@ TEST(test_views, bounded_strings_are_validated_in_plain_messages) {
   message.unbounded_sequence[0] = "abcd";
   EXPECT_FALSE(limits.CheckCompatible(message, report));
   EXPECT_EQ("unbounded_sequence[0]", path);
+
+  message.unbounded_sequence[0] = "abc";
+  limits.bounded_value.size = 2;
+  EXPECT_FALSE(limits.CheckCompatible(message, report));
+  EXPECT_EQ("bounded_value", path);
+  limits.bounded_value.size = 0;
+  limits.bounded_array.size = 2;
+  EXPECT_FALSE(limits.CheckCompatible(message, report));
+  EXPECT_EQ("bounded_array[1]", path);
+  limits.bounded_array.size = 0;
+  limits.bounded_sequence.element.size = 2;
+  EXPECT_FALSE(limits.CheckCompatible(message, report));
+  EXPECT_EQ("bounded_sequence[0]", path);
 }
 
 TEST(test_views, nested_constraints_preserve_zero_and_reject_looser_limits) {

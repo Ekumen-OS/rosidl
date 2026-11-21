@@ -21,7 +21,7 @@
 #include <type_traits>
 #include <string>
 
-#include "rosidl_runtime_c/message_type_support_struct.h"
+#include "rosidl_runtime_c/constraints.h"
 #include "rosidl_runtime_cpp/traits.hpp"
 #include "rosidl_runtime_cpp/views/string.hpp"
 
@@ -69,7 +69,7 @@ struct MessageConstraints
   MessageConstraints() = default;
 
   /// Convert to the C struct for passing to rmw/rcl.
-  rosidl_message_type_constraints_t
+  rosidl_runtime_c__message_type_constraints_t
   to_rosidl_message_type_constraints() const
   {
     return {nullptr, max_string_length, max_total_size, strict};
@@ -96,12 +96,11 @@ struct MessageConstraints<T, std::void_t<typename T::Constraints>>
   : type_specific(ts) {}
 
   /// Convert to the C struct for passing to rmw/rcl.
-  rosidl_message_type_constraints_t
+  rosidl_runtime_c__message_type_constraints_t
   to_rosidl_message_type_constraints() const
   {
     return {
-      // Cast away constness to match C struct (and conventions)
-      const_cast<void *>(static_cast<const void *>(&type_specific)),
+      &type_specific,
       max_string_length,
       max_total_size,
       strict
@@ -118,7 +117,7 @@ namespace rosidl_generator_traits
 
 template<typename CharT, std::size_t UpperBound>
 inline void value_to_yaml(
-  const rosidl_runtime_cpp::BasicString<CharT, UpperBound> & s,
+  const rosidl_runtime_cpp::views::BasicString<CharT, UpperBound> & s,
   std::ostream & out)
 {
   value_to_yaml(std::basic_string<CharT>(s.begin(), s.end()), out);

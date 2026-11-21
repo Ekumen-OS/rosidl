@@ -29,6 +29,7 @@
 #include <variant>
 
 #include "rosidl_runtime_cpp/memory.hpp"
+#include "rosidl_runtime_cpp/views/region_storage.hpp"
 
 namespace rosidl_runtime_cpp::views
 {
@@ -122,6 +123,15 @@ public:
 
   /// @brief Construct over fixed external storage.
   explicit BasicString(MemoryRegion<CharT> storage_region)
+  : BasicString(storage_region, std::nullopt)
+  {}
+
+  explicit BasicString(const StringStorage<CharT> & storage)
+  : BasicString(storage.region, storage.size)
+  {}
+
+private:
+  BasicString(MemoryRegion<CharT> storage_region, std::optional<size_type> length)
   : storage_pool_(nullptr), storage_(storage_region), capacity_(0), size_(0)
   {
     if (!storage_region) {
@@ -132,14 +142,24 @@ public:
       throw std::invalid_argument(
               "BasicString storage region has no room for null terminator");
     }
-    capacity_ = total_characters - 1;
-    // Auto-detect size from the null terminator in the backing buffer.
-    // XCDR ensures strings are null-terminated, so this is safe.
-    // For freshly-zeroed buffers (construct_message_at) this yields 0.
-    // For serialized buffers (cast_message_at) this yields the correct length.
-    size_ = std::char_traits<CharT>::length(data());
+    const auto * terminator = length && *length < total_characters ?
+      data() + *length : std::find(data(), data() + total_characters, CharT{});
+    if (length && (*length >= total_characters || *terminator != CharT{})) {
+      throw std::invalid_argument("BasicString explicit length has no null terminator");
+    }
+    if (terminator == data() + total_characters) {
+      throw std::invalid_argument("BasicString storage region is not null-terminated");
+    }
+    size_ = static_cast<size_type>(terminator - data());
+    if (UpperBound != 0 && size_ > UpperBound) {
+      throw std::length_error("BasicString upper bound exceeded");
+    }
+    capacity_ = UpperBound != 0 ?
+      std::min(total_characters - 1, static_cast<size_type>(UpperBound)) :
+      total_characters - 1;
   }
 
+public:
   BasicString(const CharT * value)  // NOLINT(runtime/explicit)
   : BasicString(std::pmr::get_default_resource())
   {

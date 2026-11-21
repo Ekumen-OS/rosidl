@@ -32,26 +32,7 @@
 #include "rosidl_runtime_cpp/memory.hpp"
 #include "rosidl_runtime_cpp/traits.hpp"
 #include "rosidl_runtime_cpp/message_initialization.hpp"
-
-namespace rosidl_runtime_cpp::views
-{
-
-template<typename T, typename = void>
-struct external_storage_type
-{
-  using type = void;
-};
-
-template<typename T>
-struct external_storage_type<T, std::void_t<typename T::ExternalStorage>>
-{
-  using type = typename T::ExternalStorage;
-};
-
-template<typename T>
-using external_storage_type_t = typename external_storage_type<T>::type;
-
-}  // namespace rosidl_runtime_cpp::views
+#include "rosidl_runtime_cpp/views/traits.hpp"
 
 // Forward declaration for partial specialization
 namespace rosidl_runtime_cpp::views
@@ -93,16 +74,16 @@ public:
 
   /// @brief Construct with default PMR resource.
   BasicSequence()
-  : shared_storage_pool_(std::pmr::get_default_resource()), storage_(),
-    element_storage_pool_(), capacity_(0), size_(0)
+  : shared_storage_pool_(std::pmr::get_default_resource()), element_storage_pool_(),
+    storage_(), capacity_(0), size_(0)
   {}
 
   /// @brief Construct with explicit PMR resource.
   explicit BasicSequence(std::pmr::memory_resource * shared_storage_pool)
   : shared_storage_pool_(shared_storage_pool ? shared_storage_pool :
       std::pmr::get_default_resource()),
-    storage_(),
     element_storage_pool_(),
+    storage_(),
     capacity_(0),
     size_(0)
   {}
@@ -115,20 +96,22 @@ public:
     std::vector<ElementStorage> element_storage_pool)
   : shared_storage_pool_(shared_storage_pool ? shared_storage_pool :
       std::pmr::get_default_resource()),
-    storage_(),
     element_storage_pool_(std::move(element_storage_pool)),
+    storage_(),
     capacity_(0),
-    size_(0)
+    size_(0),
+    has_element_storage_(true)
   {}
 
   /// @brief Construct with per-element storage using default PMR resource.
   /// @param element_storage_pool Vector of storage for each element.
   explicit BasicSequence(std::vector<ElementStorage> element_storage_pool)
   : shared_storage_pool_(std::pmr::get_default_resource()),
-    storage_(),
     element_storage_pool_(std::move(element_storage_pool)),
+    storage_(),
     capacity_(0),
-    size_(0)
+    size_(0),
+    has_element_storage_(true)
   {}
 
   /// @brief Construct with per-element storage and explicit initial size.
@@ -141,9 +124,11 @@ public:
     size_type initial_size)
   : BasicSequence(std::move(element_storage_pool))
   {
-    const size_type count = std::min(initial_size, element_storage_pool_.size());
-    ensure_capacity_or_fail(count);
-    for (size_type position = 0; position < count; ++position) {
+    if (initial_size > element_storage_pool_.size()) {
+      throw std::length_error("Sequence initial size exceeds element storage");
+    }
+    ensure_capacity_or_fail(initial_size);
+    for (size_type position = 0; position < initial_size; ++position) {
       // Construct view objects without resetting the prepopulated regions.
       if constexpr (std::is_constructible_v<value_type,
         const ElementStorage &, rosidl_runtime_cpp::MessageInitialization>)
@@ -164,11 +149,16 @@ public:
     MemoryRegion<value_type> storage_region,
     std::vector<ElementStorage> element_storage_pool)
   : shared_storage_pool_(nullptr),
-    storage_(storage_region),
     element_storage_pool_(std::move(element_storage_pool)),
+    storage_(storage_region),
     capacity_(std::min(storage_region.capacity(), element_storage_pool_.size())),
-    size_(0)
-  {}
+    size_(0),
+    has_element_storage_(true)
+  {
+    if (!storage_region) {
+      throw std::invalid_argument("Sequence storage region is null");
+    }
+  }
 
   /// @brief Construct over fixed external storage.
   explicit BasicSequence(MemoryRegion<value_type> storage_region)
@@ -177,7 +167,11 @@ public:
     storage_(storage_region),
     capacity_(storage_region.capacity()),
     size_(0)
-  {}
+  {
+    if (!storage_region) {
+      throw std::invalid_argument("Sequence storage region is null");
+    }
+  }
 
   explicit BasicSequence(
     size_type count,
@@ -236,12 +230,14 @@ public:
     element_storage_pool_(std::move(other.element_storage_pool_)),
     storage_(other.storage_),
     capacity_(other.capacity_),
-    size_(other.size_)
+    size_(other.size_),
+    has_element_storage_(other.has_element_storage_)
   {
     other.storage_ = MemoryRegion<value_type>();
     other.element_storage_pool_.clear();
     other.capacity_ = 0;
     other.size_ = 0;
+    other.has_element_storage_ = false;
   }
 
   ~BasicSequence()
@@ -265,12 +261,14 @@ public:
     return *this;
   }
 
-  BasicSequence & operator=(BasicSequence && other) noexcept
+  BasicSequence & operator=(BasicSequence && other)
   {
     if (this == &other) {
       return *this;
     }
-    if (!shared_storage_pool_ || shared_storage_pool_ != other.shared_storage_pool_) {
+    if (has_element_storage_ || !shared_storage_pool_ ||
+      shared_storage_pool_ != other.shared_storage_pool_)
+    {
       assign(std::make_move_iterator(other.begin()), std::make_move_iterator(other.end()));
       return *this;
     }
@@ -280,10 +278,12 @@ public:
     element_storage_pool_ = std::move(other.element_storage_pool_);
     capacity_ = other.capacity_;
     size_ = other.size_;
+    has_element_storage_ = other.has_element_storage_;
     other.storage_ = MemoryRegion<value_type>();
     other.element_storage_pool_.clear();
     other.capacity_ = 0;
     other.size_ = 0;
+    other.has_element_storage_ = false;
     return *this;
   }
 
@@ -348,7 +348,8 @@ public:
   size_type max_size() const noexcept
   {
     const size_type runtime_max_size = std::numeric_limits<size_type>::max() / sizeof(value_type);
-    return runtime_max_size;
+    return UpperBound > 0 ? std::min(runtime_max_size, static_cast<size_type>(UpperBound)) :
+           runtime_max_size;
   }
 
   bool using_fixed_storage() const noexcept {return !shared_storage_pool_;}
@@ -599,11 +600,14 @@ public:
 private:
   void ensure_capacity_or_fail(size_type requested_capacity)
   {
+    if (requested_capacity > max_size()) {
+      throw std::length_error("Sequence upper bound exceeded");
+    }
     if (requested_capacity <= capacity_) {
       return;
     }
     // Check element storage pool limit first (applies to both fixed and PMR storage)
-    if (!element_storage_pool_.empty() && requested_capacity > element_storage_pool_.size()) {
+    if (has_element_storage_ && requested_capacity > element_storage_pool_.size()) {
       throw std::length_error(
           "Sequence capacity exceeded: no more element storage regions available");
     }
@@ -619,16 +623,17 @@ private:
       }
     }
     // Clamp to element_storage_pool size if provided
-    if (!element_storage_pool_.empty()) {
+    if (has_element_storage_) {
       new_capacity = std::min(new_capacity, element_storage_pool_.size());
     }
+    new_capacity = std::min(new_capacity, max_size());
     reallocate_owned_storage(new_capacity);
   }
 
   template<typename ... Arguments>
   void emplace_value(pointer element_pointer, size_type position, Arguments && ... arguments)
   {
-    if (!element_storage_pool_.empty() && position < element_storage_pool_.size()) {
+    if (has_element_storage_ && position < element_storage_pool_.size()) {
       ::new (static_cast<void *>(element_pointer)) value_type(element_storage_pool_[position]);
       if constexpr (sizeof...(Arguments) > 0) {
         *element_pointer = value_type(std::forward<Arguments>(arguments)...);
@@ -681,6 +686,7 @@ private:
   MemoryRegion<value_type> storage_;
   size_type capacity_;
   size_type size_;
+  bool has_element_storage_{false};
 };
 
 /// @brief Specialization for types without per-element storage support.
@@ -740,10 +746,13 @@ public:
   : shared_storage_pool_(nullptr),
     storage_(storage_region),
     capacity_(clamp_to_upper_bound(storage_region.capacity())),
-    size_(std::min(initial_size, capacity_))
+    size_(initial_size)
   {
     if (!storage_region) {
       throw std::invalid_argument("Sequence storage region is null");
+    }
+    if (initial_size > capacity_) {
+      throw std::length_error("Sequence initial size exceeds storage capacity or upper bound");
     }
   }
 

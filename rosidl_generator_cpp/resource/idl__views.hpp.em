@@ -7,6 +7,7 @@ from rosidl_parser.definition import AbstractSequence
 from rosidl_parser.definition import AbstractString
 from rosidl_parser.definition import AbstractWString
 from rosidl_parser.definition import Array
+from rosidl_parser.definition import BoundedSequence
 from rosidl_parser.definition import Message
 from rosidl_parser.definition import NamespacedType
 
@@ -35,22 +36,19 @@ def field_constraint_type(
         AbstractWString=AbstractWString, Array=Array, NamespacedType=NamespacedType,
         nested_constraints_type=nested_constraints_type):
     if isinstance(type_, (AbstractString, AbstractWString)):
-        return 'rosidl_runtime_cpp::StringConstraint' \
-            if not type_.has_maximum_size() else None
+        return 'rosidl_runtime_cpp::StringConstraint'
     if isinstance(type_, AbstractSequence):
         element_type = type_.value_type
         if isinstance(element_type, (AbstractString, AbstractWString)):
-            if not element_type.has_maximum_size():
-                return ('rosidl_runtime_cpp::NestedSequenceConstraint<'
-                        'rosidl_runtime_cpp::StringConstraint>')
+            return ('rosidl_runtime_cpp::NestedSequenceConstraint<'
+                    'rosidl_runtime_cpp::StringConstraint>')
         if isinstance(element_type, NamespacedType):
             nested_type = nested_constraints_type(element_type)
             return 'rosidl_runtime_cpp::NestedSequenceConstraint<' + nested_type + '>'
         return 'rosidl_runtime_cpp::SequenceConstraint'
     if isinstance(type_, Array):
         element_type = type_.value_type
-        if isinstance(element_type, (AbstractString, AbstractWString)) and \
-                not element_type.has_maximum_size():
+        if isinstance(element_type, (AbstractString, AbstractWString)):
             return 'rosidl_runtime_cpp::StringConstraint'
         if isinstance(element_type, NamespacedType):
             return nested_constraints_type(element_type)
@@ -195,6 +193,27 @@ needs_item_path = any(
         field_path += '.';
       }
       field_path += "@(member.name)";
+@{
+type_ = member.type
+bound_checks = []
+if isinstance(type_, (AbstractString, AbstractWString)) and type_.has_maximum_size():
+    bound_checks.append((member.name + '.size', type_.maximum_size))
+elif isinstance(type_, (AbstractSequence, Array)):
+    if isinstance(type_, BoundedSequence):
+        bound_checks.append((member.name + '.size', type_.maximum_size))
+    element = type_.value_type
+    if isinstance(element, (AbstractString, AbstractWString)) and element.has_maximum_size():
+        suffix = '.element.size' if isinstance(type_, AbstractSequence) else '.size'
+        bound_checks.append((member.name + suffix, element.maximum_size))
+}@
+@[for expression, maximum in bound_checks]@
+      if (@(expression) > @(maximum)) {
+        if (report) {
+          report(field_path, 0);
+        }
+        return false;
+      }
+@[end for]@
       if (!@(member.name).CheckCompatible(baseline.@(member.name), report, field_path)) {
         return false;
       }
@@ -202,8 +221,15 @@ needs_item_path = any(
       return true;
     }
 
+@[for region_validation in (False, True)]@
+@[if region_validation]@
+    template<typename MessageViewT>
+    bool CheckCompatibleView(
+      const MessageViewT & message,
+@[else]@
     bool CheckCompatible(
       const @(message.structure.namespaced_type.name) & message,
+@[end if]@
       rosidl_runtime_cpp::ConstraintReportCallback report = {},
       std::string_view prefix = "") const
     {
@@ -223,21 +249,23 @@ needs_item_path = any(
       }
       field_path += "@(member.name)";
 @[if kind == 'string']@
-      if (@(member.name).size != 0 && message.@(member.name).size() > @(member.name).size) {
+      if (@(member.name).size != 0 && message.@(member.name)@('()' if region_validation else '').size() > @(member.name).size) {
         if (report) {
           report(field_path, 0);
         }
         return false;
       }
 @[elif kind == 'bounded_string']@
-      if (message.@(member.name).size() > @(member.type.maximum_size)) {
+      if (message.@(member.name)@('()' if region_validation else '').size() > @(member.type.maximum_size) ||
+        (@(member.name).size != 0 && message.@(member.name)@('()' if region_validation else '').size() > @(member.name).size))
+      {
         if (report) {
           report(field_path, 0);
         }
         return false;
       }
 @[elif kind in ('sequence', 'sequence_string', 'sequence_bounded_string', 'sequence_nested')]@
-      if (@(member.name).size != 0 && message.@(member.name).size() > @(member.name).size) {
+      if (@(member.name).size != 0 && message.@(member.name)@('()' if region_validation else '').size() > @(member.name).size) {
         if (report) {
           report(field_path, 0);
         }
@@ -245,8 +273,8 @@ needs_item_path = any(
       }
 @[if kind == 'sequence_string']@
       if (@(member.name).element.size != 0) {
-        for (std::size_t i = 0; i < message.@(member.name).size(); ++i) {
-          if (message.@(member.name)[i].size() > @(member.name).element.size) {
+        for (std::size_t i = 0; i < message.@(member.name)@('()' if region_validation else '').size(); ++i) {
+          if (message.@(member.name)@('()' if region_validation else '')[i].size() > @(member.name).element.size) {
             if (report) {
               item_path = field_path + "[" + std::to_string(i) + "]";
               report(item_path, 0);
@@ -256,8 +284,10 @@ needs_item_path = any(
         }
       }
 @[elif kind == 'sequence_bounded_string']@
-      for (std::size_t i = 0; i < message.@(member.name).size(); ++i) {
-        if (message.@(member.name)[i].size() > @(member.type.value_type.maximum_size)) {
+      for (std::size_t i = 0; i < message.@(member.name)@('()' if region_validation else '').size(); ++i) {
+        if (message.@(member.name)@('()' if region_validation else '')[i].size() > @(member.type.value_type.maximum_size) ||
+          (@(member.name).element.size != 0 && message.@(member.name)@('()' if region_validation else '')[i].size() > @(member.name).element.size))
+        {
           if (report) {
             item_path = field_path + "[" + std::to_string(i) + "]";
             report(item_path, 0);
@@ -266,17 +296,17 @@ needs_item_path = any(
         }
       }
 @[elif kind == 'sequence_nested']@
-      for (std::size_t i = 0; i < message.@(member.name).size(); ++i) {
+      for (std::size_t i = 0; i < message.@(member.name)@('()' if region_validation else '').size(); ++i) {
         item_path = field_path + "[" + std::to_string(i) + "]";
-        if (!@(member.name).element.CheckCompatible(message.@(member.name)[i], report, item_path)) {
+        if (!@(member.name).element.@('CheckCompatibleView' if region_validation else 'CheckCompatible')(message.@(member.name)@('()' if region_validation else '')[i], report, item_path)) {
           return false;
         }
       }
 @[end if]@
 @[elif kind == 'array_string']@
       if (@(member.name).size != 0) {
-        for (std::size_t i = 0; i < message.@(member.name).size(); ++i) {
-          if (message.@(member.name)[i].size() > @(member.name).size) {
+        for (std::size_t i = 0; i < message.@(member.name)@('()' if region_validation else '').size(); ++i) {
+          if (message.@(member.name)@('()' if region_validation else '')[i].size() > @(member.name).size) {
             if (report) {
               item_path = field_path + "[" + std::to_string(i) + "]";
               report(item_path, 0);
@@ -286,8 +316,10 @@ needs_item_path = any(
         }
       }
 @[elif kind == 'array_bounded_string']@
-      for (std::size_t i = 0; i < message.@(member.name).size(); ++i) {
-        if (message.@(member.name)[i].size() > @(member.type.value_type.maximum_size)) {
+      for (std::size_t i = 0; i < message.@(member.name)@('()' if region_validation else '').size(); ++i) {
+        if (message.@(member.name)@('()' if region_validation else '')[i].size() > @(member.type.value_type.maximum_size) ||
+          (@(member.name).size != 0 && message.@(member.name)@('()' if region_validation else '')[i].size() > @(member.name).size))
+        {
           if (report) {
             item_path = field_path + "[" + std::to_string(i) + "]";
             report(item_path, 0);
@@ -296,13 +328,13 @@ needs_item_path = any(
         }
       }
 @[elif kind == 'nested']@
-      if (!@(member.name).CheckCompatible(message.@(member.name), report, field_path)) {
+      if (!@(member.name).@('CheckCompatibleView' if region_validation else 'CheckCompatible')(message.@(member.name)@('()' if region_validation else ''), report, field_path)) {
         return false;
       }
 @[elif kind == 'array_nested']@
-      for (std::size_t i = 0; i < message.@(member.name).size(); ++i) {
+      for (std::size_t i = 0; i < message.@(member.name)@('()' if region_validation else '').size(); ++i) {
         item_path = field_path + "[" + std::to_string(i) + "]";
-        if (!@(member.name).CheckCompatible(message.@(member.name)[i], report, item_path)) {
+        if (!@(member.name).@('CheckCompatibleView' if region_validation else 'CheckCompatible')(message.@(member.name)@('()' if region_validation else '')[i], report, item_path)) {
           return false;
         }
       }
@@ -311,6 +343,7 @@ needs_item_path = any(
 @[end if]@
       return true;
     }
+@[end for]@
   };
 
 @[for i, member in enumerate(message.structure.members)]@

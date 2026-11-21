@@ -31,6 +31,7 @@ foreach(_abs_idl_file ${rosidl_generate_interfaces_ABS_IDL_FILES})
     "${_output_path}/${_parent_folder}/detail/${_header_name}__traits.hpp"
     "${_output_path}/${_parent_folder}/detail/${_header_name}__type_support.hpp"
     "${_output_path}/${_parent_folder}/views/${_header_name}.hpp"
+    "${_output_path}/${_parent_folder}/views/${_header_name}__region.hpp"
   )
 endforeach()
 
@@ -68,6 +69,7 @@ set(target_dependencies
   "${rosidl_generator_cpp_TEMPLATE_DIR}/idl__traits.hpp.em"
   "${rosidl_generator_cpp_TEMPLATE_DIR}/idl__type_support.hpp.em"
   "${rosidl_generator_cpp_TEMPLATE_DIR}/idl__views.hpp.em"
+  "${rosidl_generator_cpp_TEMPLATE_DIR}/idl__region_views.hpp.em"
   "${rosidl_generator_cpp_TEMPLATE_DIR}/msg__builder.hpp.em"
   "${rosidl_generator_cpp_TEMPLATE_DIR}/msg__struct.hpp.em"
   "${rosidl_generator_cpp_TEMPLATE_DIR}/msg__traits.hpp.em"

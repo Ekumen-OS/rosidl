@@ -19,6 +19,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "rosidl_buffer/buffer.hpp"
@@ -54,6 +55,21 @@ TEST(TestBuffer, sized_value_construction) {
   for (size_t i = 0; i < buffer.size(); ++i) {
     EXPECT_EQ(42, buffer[i]);
   }
+}
+
+TEST(TestBuffer, span_borrows_cpu_storage) {
+  Buffer<uint8_t> buffer(3, 42);
+  auto borrowed = buffer.span();
+  EXPECT_EQ(buffer.data(), borrowed.data());
+  EXPECT_EQ(buffer.size(), borrowed.size());
+  borrowed[1] = 7;
+  EXPECT_EQ(buffer[1], 7);
+
+  const auto & read_only = buffer;
+  auto const_borrowed = read_only.span();
+  static_assert(std::is_same_v<decltype(const_borrowed)::element_type, const uint8_t>);
+  EXPECT_EQ(const_borrowed.data(), buffer.data());
+  EXPECT_EQ(const_borrowed[1], 7);
 }
 
 // Test copy construction
@@ -927,6 +943,7 @@ TEST(TestBufferNonCpu, element_access_throws) {
   EXPECT_THROW(buffer.front(), std::runtime_error);
   EXPECT_THROW(buffer.back(), std::runtime_error);
   EXPECT_THROW(buffer.data(), std::runtime_error);
+  EXPECT_THROW(buffer.span(), std::runtime_error);
 }
 
 TEST(TestBufferNonCpu, const_element_access_throws) {
@@ -938,6 +955,7 @@ TEST(TestBufferNonCpu, const_element_access_throws) {
   EXPECT_THROW(buffer.front(), std::runtime_error);
   EXPECT_THROW(buffer.back(), std::runtime_error);
   EXPECT_THROW(buffer.data(), std::runtime_error);
+  EXPECT_THROW(buffer.span(), std::runtime_error);
 }
 
 TEST(TestBufferNonCpu, iterators_throw) {

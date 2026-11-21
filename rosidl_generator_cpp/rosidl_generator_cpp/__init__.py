@@ -48,6 +48,7 @@ def generate_cpp(generator_arguments_file) -> List[str]:
         'idl__traits.hpp.em': 'detail/%s__traits.hpp',
         'idl__type_support.hpp.em': 'detail/%s__type_support.hpp',
         'idl__views.hpp.em': 'views/%s.hpp',
+        'idl__region_views.hpp.em': 'views/%s__region.hpp',
     }
     return generate_files(
         generator_arguments_file, mapping,

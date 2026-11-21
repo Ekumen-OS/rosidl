@@ -16,6 +16,7 @@
 #define ROSIDL_RUNTIME_CPP__VIEWS__SCALAR_HPP_
 
 #include <cmath>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -45,9 +46,12 @@ public:
 
   /// @brief Construct using external storage.
   /// @param memory External memory descriptor.
-  explicit Scalar(Memory<T> memory) noexcept
+  explicit Scalar(Memory<T> memory)
   : storage_(memory)
   {
+    if (!memory) {
+      throw std::invalid_argument("Scalar external memory is null");
+    }
   }
 
   Scalar(const Scalar & other) noexcept
