@@ -39,9 +39,33 @@
 #include "rosidl_generator_tests/msg/views/unbounded_sequences__region.hpp"
 #include "rosidl_generator_tests/msg/views/view_constraint_cases.hpp"
 #include "rosidl_generator_tests/msg/views/view_constraint_cases__region.hpp"
+#include "rosidl_generator_tests/srv/views/basic_types.hpp"
+#include "rosidl_generator_tests/srv/views/basic_types__region.hpp"
 
 namespace msg = rosidl_generator_tests::msg;
 namespace views = rosidl_generator_tests::msg::views;
+
+TEST(test_views, service_request_and_response_views) {
+  namespace service_views = rosidl_generator_tests::srv::views;
+  rosidl_generator_tests::srv::BasicTypes_Request request;
+  service_views::BasicTypes_Request borrowed(request);
+  borrowed.int32_value(42);
+  borrowed.string_value("request");
+  EXPECT_EQ(request.int32_value, 42);
+  EXPECT_EQ(request.string_value, "request");
+
+  service_views::RegionBasicTypes_Response response;
+  response.string_value().assign("response");
+  response.int32_value(7);
+  service_views::RegionBasicTypes_Response::Constraints constraints;
+  constraints.string_value.size = 4;
+  EXPECT_FALSE(constraints.CheckCompatibleView(response));
+  constraints.string_value.size = 8;
+  EXPECT_TRUE(constraints.CheckCompatibleView(response));
+  EXPECT_EQ(response.int32_value(), 7);
+  static_assert(std::is_const_v<std::remove_reference_t<
+      decltype(std::declval<service_views::ConstRegionBasicTypes_Response &>().string_value())>>);
+}
 
 TEST(test_views, region_views_own_and_move_nested_fields) {
   views::RegionNested owned;

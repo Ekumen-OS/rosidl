@@ -92,6 +92,14 @@ def get_all_messages(content) -> List[Message]:
     return messages
 
 
+def get_view_messages(content) -> List[Message]:
+    """Return topic messages and service requests and responses."""
+    messages = list(content.get_elements_of_type(Message))
+    for service in content.get_elements_of_type(Service):
+        messages.extend([service.request_message, service.response_message])
+    return messages
+
+
 MSG_TYPE_TO_CPP = {
     'boolean': 'bool',
     'octet': 'unsigned char',  # TODO change to std::byte with C++17

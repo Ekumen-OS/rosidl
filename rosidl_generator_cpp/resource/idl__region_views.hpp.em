@@ -3,11 +3,13 @@
 // generated code does not contain a copyright notice
 @{
 from rosidl_generator_cpp import MSG_TYPE_TO_CPP
+from rosidl_generator_cpp import get_view_messages
 from rosidl_parser.definition import AbstractSequence, AbstractString, AbstractWString
-from rosidl_parser.definition import Array, BasicType, Message, NamespacedType
+from rosidl_parser.definition import Array, BasicType, NamespacedType, Service
 from rosidl_pycommon import convert_camel_case_to_lower_case_underscore
 
-messages = content.get_elements_of_type(Message)
+messages = get_view_messages(content)
+services = content.get_elements_of_type(Service)
 stem = convert_camel_case_to_lower_case_underscore(interface_path.stem)
 parts = [package_name] + list(interface_path.parents[0].parts)
 guard = '__'.join(part.upper() for part in parts + ['views', stem]) + '__REGION_HPP_'
@@ -269,6 +271,14 @@ private:
 
 using Region@(name) = @(name)RegionView<true>;
 using ConstRegion@(name) = @(name)RegionView<false>;
+
+@[end for]@
+@[for service in services]@
+struct Region@(service.namespaced_type.name)
+{
+  using Request = @(service.request_message.structure.namespaced_type.name)RegionView<true>;
+  using Response = @(service.response_message.structure.namespaced_type.name)RegionView<true>;
+};
 
 @[end for]@
 }  // namespace views

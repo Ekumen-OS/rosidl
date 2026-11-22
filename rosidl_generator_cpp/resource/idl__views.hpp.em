@@ -3,15 +3,15 @@
 // generated code does not contain a copyright notice
 @{
 from rosidl_pycommon import convert_camel_case_to_lower_case_underscore
+from rosidl_generator_cpp import get_view_messages
 from rosidl_parser.definition import AbstractSequence
 from rosidl_parser.definition import AbstractString
 from rosidl_parser.definition import AbstractWString
 from rosidl_parser.definition import Array
 from rosidl_parser.definition import BoundedSequence
-from rosidl_parser.definition import Message
 from rosidl_parser.definition import NamespacedType
 
-messages = content.get_elements_of_type(Message)
+messages = get_view_messages(content)
 include_parts = [package_name] + list(interface_path.parents[0].parts) + [
     'views', convert_camel_case_to_lower_case_underscore(interface_path.stem)]
 guard = '__'.join(part.upper() for part in include_parts) + '_HPP_'

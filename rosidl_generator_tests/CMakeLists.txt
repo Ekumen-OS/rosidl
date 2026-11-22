@@ -105,6 +105,14 @@ if(BUILD_TESTING)
     rosidl_runtime_c::rosidl_runtime_c
   )
 
+  add_executable(test_views_c test/rosidl_generator_c/test_views.c)
+  ament_add_test(
+    test_views_c
+    COMMAND "$<TARGET_FILE:test_views_c>"
+    GENERATE_RESULT_FOR_RETURN_CODE_ZERO
+  )
+  target_link_libraries(test_views_c ${c_generator_target})
+
   add_executable(
     test_invalid_initialization_c
     test/rosidl_generator_c/test_invalid_initialization.c

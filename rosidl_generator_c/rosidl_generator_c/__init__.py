@@ -39,6 +39,7 @@ def generate_c(generator_arguments_file, disable_description_codegen: bool = Fal
         'idl__struct.h.em': 'detail/%s__struct.h',
         'idl__type_support.c.em': 'detail/%s__type_support.c',
         'idl__type_support.h.em': 'detail/%s__type_support.h',
+        'idl__views.h.em': 'views/%s.h',
     }
     return generate_files(
         generator_arguments_file, mapping,
