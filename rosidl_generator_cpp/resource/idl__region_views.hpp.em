@@ -17,8 +17,11 @@ def element_type(t, BasicType=BasicType, AbstractString=AbstractString,
                  MSG_TYPE_TO_CPP=MSG_TYPE_TO_CPP):
     if isinstance(t, BasicType):
         return MSG_TYPE_TO_CPP[t.typename]
-    if isinstance(t, (AbstractString, AbstractWString)):
-        char = 'char16_t' if isinstance(t, AbstractWString) else 'char'
+    if isinstance(t, AbstractWString):
+        bound = t.maximum_size if t.has_maximum_size() else 0
+        return 'rosidl_runtime_cpp::views::WideString<{}>'.format(bound)
+    if isinstance(t, AbstractString):
+        char = 'char'
         bound = t.maximum_size if t.has_maximum_size() else 0
         return 'rosidl_runtime_cpp::views::BasicString<{}, {}>'.format(char, bound)
     if isinstance(t, NamespacedType):
@@ -35,7 +38,7 @@ def field_type(t, BasicType=BasicType, Array=Array, AbstractSequence=AbstractSeq
     if isinstance(t, AbstractSequence):
         bound = t.maximum_size if t.has_maximum_size() else 0
         if isinstance(t.value_type, (AbstractString, AbstractWString)):
-            char = 'char16_t' if isinstance(t.value_type, AbstractWString) else 'char'
+            char = 'uint32_t' if isinstance(t.value_type, AbstractWString) else 'char'
             return 'rosidl_runtime_cpp::views::BasicSequence<{}, {}, rosidl_runtime_cpp::views::StringStorage<{}>>'.format(
                 element_type(t.value_type), bound, char)
         return 'rosidl_runtime_cpp::views::BasicSequence<{}, {}>'.format(
@@ -48,7 +51,7 @@ def storage_element_type(t, BasicType=BasicType, AbstractString=AbstractString,
     if isinstance(t, BasicType):
         return 'rosidl_runtime_cpp::Memory<{}>'.format(element_type(t))
     if isinstance(t, (AbstractString, AbstractWString)):
-        char = 'char16_t' if isinstance(t, AbstractWString) else 'char'
+        char = 'uint32_t' if isinstance(t, AbstractWString) else 'char'
         return 'rosidl_runtime_cpp::views::StringStorage<{}>'.format(char)
     if isinstance(t, NamespacedType):
         return '::' + '::'.join(t.namespaces + ['views', t.name + 'RegionStorage'])
@@ -109,6 +112,7 @@ for msg in messages:
 #include "rosidl_runtime_cpp/views/scalar.hpp"
 #include "rosidl_runtime_cpp/views/sequence.hpp"
 #include "rosidl_runtime_cpp/views/string.hpp"
+#include "rosidl_runtime_cpp/views/wide_string.hpp"
 
 @[for ns in parts]@
 namespace @(ns)

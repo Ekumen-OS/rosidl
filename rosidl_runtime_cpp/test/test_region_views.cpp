@@ -16,6 +16,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <iterator>
 #include <stdexcept>
 #include <type_traits>
 #include <tuple>
@@ -28,6 +29,7 @@
 #include "rosidl_runtime_cpp/views/sequence.hpp"
 #include "rosidl_runtime_cpp/views/string.hpp"
 #include "rosidl_runtime_cpp/views/traits.hpp"
+#include "rosidl_runtime_cpp/views/wide_string.hpp"
 
 namespace
 {
@@ -80,6 +82,53 @@ struct ArrayElement
 };
 
 }  // namespace
+
+TEST(region_views, wide_string_uses_external_slots)
+{
+  using Wide = rosidl_runtime_cpp::views::WideString<3>;
+  static_assert(std::forward_iterator<Wide::iterator>);
+  static_assert(std::forward_iterator<Wide::const_iterator>);
+  uint32_t slots[] = {u'A', 0, u'B'};
+  rosidl_runtime_cpp::views::StringStorage<uint32_t> storage(slots, sizeof(slots));
+  storage.size = 3;
+  Wide wide(storage);
+  EXPECT_EQ(std::u16string(u"A\0B", 3), wide.to_string());
+  wide[1] = u'X';
+  EXPECT_EQ(static_cast<uint32_t>(u'X'), slots[1]);
+  auto part = wide.substr(1, 2);
+  EXPECT_EQ(2u, part.size());
+  part[1] = u'C';
+  EXPECT_EQ(static_cast<uint32_t>(u'C'), slots[2]);
+  const auto & const_wide = wide;
+  EXPECT_EQ(u'X', const_wide.substr(1)[0]);
+  EXPECT_THROW(wide.substr(4), std::out_of_range);
+  wide.assign(u"yz");
+  EXPECT_EQ(u"yz", wide.to_string());
+  EXPECT_THROW(wide.at(2), std::out_of_range);
+  wide.push_back(u'!');
+  EXPECT_THROW(wide.push_back(u'!'), std::length_error);
+  storage.size = 1;
+  slots[0] = 0x10000;
+  EXPECT_THROW((rosidl_runtime_cpp::views::WideString<3>(storage)), std::range_error);
+  EXPECT_THROW(
+    (rosidl_runtime_cpp::views::WideString<3>(
+      rosidl_runtime_cpp::views::StringStorage<uint32_t>())), std::invalid_argument);
+}
+
+TEST(region_views, wide_string_sequence_keeps_external_element_storage)
+{
+  uint32_t slots[3]{};
+  using Storage = rosidl_runtime_cpp::views::StringStorage<uint32_t>;
+  using Wide = rosidl_runtime_cpp::views::WideString<3>;
+  std::vector<Storage> elements;
+  elements.emplace_back(slots, sizeof(slots));
+  rosidl_runtime_cpp::views::BasicSequence<Wide, 1, Storage> sequence(std::move(elements));
+  auto & wide = sequence.emplace_back(u"ab");
+  EXPECT_EQ(static_cast<uint32_t>(u'a'), slots[0]);
+  wide[1] = u'X';
+  EXPECT_EQ(static_cast<uint32_t>(u'X'), slots[1]);
+  EXPECT_EQ(u"aX", wide.to_string());
+}
 
 TEST(region_views, piecewise_array_constructs_only_live_elements)
 {
