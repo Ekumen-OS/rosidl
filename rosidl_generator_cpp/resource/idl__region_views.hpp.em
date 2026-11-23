@@ -185,6 +185,50 @@ public:
     return _storage ? _storage->block : rosidl_runtime_cpp::MemoryRegion<void>{};
   }
 
+  /// Copy fields from an ordinary message; a failed assignment may leave partial changes.
+  template<bool M = Mutable, std::enable_if_t<M && Mutable, int> = 0>
+  void assign(const PlainMessage & message)
+  {
+    require_valid();
+    assign_plain(message);
+  }
+
+  /// Copy fields into an ordinary message.
+  PlainMessage to_plain() const
+  {
+    require_valid();
+    PlainMessage message;
+@[for member in message.structure.members]@
+@{t = member.type}@
+@[if isinstance(t, BasicType)]@
+    message.@(member.name) = this->@(member.name)();
+@[elif isinstance(t, AbstractWString)]@
+    message.@(member.name) = this->@(member.name)().to_string();
+@[elif isinstance(t, AbstractString)]@
+    message.@(member.name).assign(this->@(member.name)().data(), this->@(member.name)().size());
+@[elif isinstance(t, NamespacedType)]@
+    message.@(member.name) = this->@(member.name)().to_plain();
+@[elif isinstance(t, (Array, AbstractSequence))]@
+@[if isinstance(t, AbstractSequence)]@
+    message.@(member.name).resize(this->@(member.name)().size());
+@[end if]@
+    for (std::size_t i = 0; i < this->@(member.name)().size(); ++i) {
+@[if isinstance(t.value_type, BasicType)]@
+      message.@(member.name)[i] = this->@(member.name)()[i];
+@[elif isinstance(t.value_type, AbstractWString)]@
+      message.@(member.name)[i] = this->@(member.name)()[i].to_string();
+@[elif isinstance(t.value_type, AbstractString)]@
+      message.@(member.name)[i].assign(
+        this->@(member.name)()[i].data(), this->@(member.name)()[i].size());
+@[else]@
+      message.@(member.name)[i] = this->@(member.name)()[i].to_plain();
+@[end if]@
+    }
+@[end if]@
+@[end for]@
+    return message;
+  }
+
 @[for member in message.structure.members]@
   auto & @(member.name)()
   {
@@ -276,6 +320,7 @@ using ConstRegion@(name) = @(name)RegionView<false>;
 @[for service in services]@
 struct Region@(service.namespaced_type.name)
 {
+  using PlainService = ::@('::'.join(parts + [service.namespaced_type.name]));
   using Request = @(service.request_message.structure.namespaced_type.name)RegionView<true>;
   using Response = @(service.response_message.structure.namespaced_type.name)RegionView<true>;
 };

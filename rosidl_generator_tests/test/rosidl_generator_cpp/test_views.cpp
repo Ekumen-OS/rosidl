@@ -93,6 +93,33 @@ TEST(test_views, region_views_own_and_move_nested_fields) {
   EXPECT_EQ(defaulted.string_values_default()[1].view(), plain.string_values_default[1]);
 }
 
+TEST(test_views, region_views_copy_plain_messages) {
+  msg::MultiNested plain;
+  plain.bounded_sequence_of_bounded_sequences.resize(1);
+  plain.bounded_sequence_of_bounded_sequences[0].string_values = {"first", "second"};
+  views::RegionMultiNested view;
+  view.assign(plain);
+  EXPECT_EQ(view.bounded_sequence_of_bounded_sequences()[0].string_values()[1].view(), "second");
+  view.bounded_sequence_of_bounded_sequences()[0].string_values()[1].assign("changed");
+  auto copy = view.to_plain();
+  EXPECT_EQ(copy.bounded_sequence_of_bounded_sequences[0].string_values[1], "changed");
+  EXPECT_EQ(plain.bounded_sequence_of_bounded_sequences[0].string_values[1], "second");
+
+  msg::UnboundedSequences sequences;
+  sequences.bool_values = {true, false, true};
+  sequences.string_values = {"hello", "world"};
+  views::RegionUnboundedSequences sequence_view;
+  sequence_view.assign(sequences);
+  EXPECT_EQ(sequence_view.to_plain().bool_values, sequences.bool_values);
+  EXPECT_EQ(sequence_view.to_plain().string_values, sequences.string_values);
+
+  views::ConstRegionNested const_view;
+  EXPECT_EQ(const_view.to_plain().basic_types_value.int32_value, 0);
+  views::RegionMultiNested moved(std::move(view));
+  EXPECT_THROW(view.to_plain(), std::logic_error);
+  EXPECT_THROW(view.assign(plain), std::logic_error);
+}
+
 TEST(test_views, region_views_borrow_nested_scalar_storage) {
   msg::BasicTypes plain;
   views::NestedRegionStorage storage;
@@ -123,6 +150,7 @@ TEST(test_views, region_views_borrow_nested_scalar_storage) {
   EXPECT_EQ(view.backing_storage().size(), sizeof(plain));
   views::ConstRegionNested read_only(storage);
   EXPECT_EQ(read_only.basic_types_value().int32_value(), 24);
+  EXPECT_EQ(read_only.to_plain().basic_types_value.int32_value, 24);
 }
 
 TEST(test_views, region_views_borrow_bounded_string_storage) {
